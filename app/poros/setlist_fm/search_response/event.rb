@@ -20,13 +20,10 @@ module SetlistFm
       end
 
       def setlist
-        sets_json = (response.fetch('sets'))
-        setlist_json = Array[sets_json.fetch('set')].flatten
+        songs = SetListParser.new(response).json_songs_array
 
-        setlist_json.each_with_object([]) do |set, songs|
-          songs_json = set.fetch('song')
-
-          songs.concat(songs_json.map { |song_json| Song.new(song_json.fetch('@name')) })
+        songs.map do |song_json|
+          Song.new(song_json.fetch('@name'))
         end
       end
 
@@ -47,6 +44,11 @@ module SetlistFm
       private
 
       attr_reader :response
+
+      def songlist_json_array
+        sets_json = response.fetch('sets')
+        Array[sets_json.fetch('set')].flatten
+      end
     end
   end
 end
