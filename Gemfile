@@ -49,3 +49,5 @@ group :development, :test do
   gem 'pry-stack_explorer'
   gem 'rubocop'
 end
+
+gem 'figaro'
