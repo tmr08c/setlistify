@@ -1,0 +1,275 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: http://api.setlist.fm/rest/0.1/search/setlists.json?artistName=modest%20mouse
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Server:
+      - nginx
+      Date:
+      - Sat, 24 Oct 2015 14:37:52 GMT
+      Content-Type:
+      - application/json;charset=UTF-8
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Accept-Encoding
+      X-Application-Context:
+      - application
+      Cache-Control:
+      - no-transform, max-age=60
+      X-Upstream-Addr:
+      - 52.4.149.202:8084
+    body:
+      encoding: ASCII-8BIT
+      string: '{"setlists":{"@itemsPerPage":"20","@page":"1","@total":"781","setlist":[{"@eventDate":"22-10-2015","@id":"3f58d8b","@lastUpdated":"2015-10-23T19:41:44.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"33bcd0a1","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"53d483fd","@name":"The
+        Space at Westbury","city":{"@id":"5144040","@name":"Westbury","@state":"New
+        York","@stateCode":"NY","coords":{"@lat":"40.7556561","@long":"-73.5876273"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/the-space-at-westbury-westbury-ny-usa-53d483fd.html"},"sets":{"set":[{"song":[{"@name":"Strangers
+        to Ourselves"},{"@name":"A Different City","info":"As \"A Different Suburb\"
+        on the setlist"},{"@name":"Ocean Breathes Salty"},{"@name":"Missed the Boat"},{"@name":"Lampshades
+        on Fire"},{"@name":"Broke"},{"@name":"Bukowski"},{"@name":"King Rat","info":"shortened"},{"@name":"The
+        Tortoise and the Tourist"},{"@name":"Dashboard"},{"@name":"Night on the Sun"},{"@name":"Wicked
+        Campaign"},{"@name":"Float On"},{"@name":"Doin'' the Cockroach"},{"@name":"Sleepwalking"},{"@name":"Fly
+        Trapped in a Jar"}]},{"@encore":"1","song":[{"@name":"Dark Center of the Universe"},{"@name":"Shit
+        in Your Cut"},{"@name":"Fire It Up"},{"@name":"Trailer Trash"},{"@name":"Dance
+        Hall"},{"@name":"Shit Luck"},{"@name":"Parting of the Sensory"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/the-space-at-westbury-westbury-ny-3f58d8b.html"},{"@eventDate":"21-10-2015","@id":"73f59a11","@lastUpdated":"2015-10-22T19:47:49.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"bbce1a6","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"4bd4479e","@name":"College
+        Street Music Hall","city":{"@id":"4839366","@name":"New Haven","@state":"Connecticut","@stateCode":"CT","coords":{"@lat":"41.3081527","@long":"-72.9281578"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/college-street-music-hall-new-haven-ct-usa-4bd4479e.html"},"sets":{"set":[{"song":[{"@name":"The
+        Whale Song"},{"@name":"Talking Shit About a Pretty Sunset"},{"@name":"Invisible"},{"@name":"Styrofoam
+        Boots\/It''s All Nice on Ice, Alright","info":"Incomplete - Led into Tiny
+        Cities"},{"@name":"Tiny Cities Made of Ashes"},{"@name":"Lampshades on Fire"},{"@name":"3rd
+        Planet"},{"@name":"Black Cadillacs"},{"@name":"King Rat"},{"@name":"Bukowski"},{"@name":"Coyotes"},{"@name":"Here''s
+        to Now","cover":{"@disambiguation":"","@mbid":"5c2d7596-2366-47c5-b4a2-0550ac8f9e69","@name":"Ugly
+        Casanova","@sortName":"Ugly Casanova","@tmid":"732801","url":"http:\/\/www.setlist.fm\/setlists\/ugly-casanova-63d6ae4f.html"}},{"@name":"The
+        Best Room"},{"@name":"Dashboard"},{"@name":"Heart Cooks Brain"},{"@name":"The
+        Tortoise and the Tourist"},{"@name":"Doin'' the Cockroach"}]},{"@encore":"1","song":[{"@name":"Strangers
+        to Ourselves"},{"@name":"Fire It Up"},{"@name":"Gravity Rides Everything"},{"@name":"Shit
+        in Your Cut"},{"@name":"Ocean Breathes Salty"},{"@name":"Shit Luck"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/college-street-music-hall-new-haven-ct-73f59a11.html"},{"@eventDate":"20-10-2015","@id":"7bf59e04","@lastUpdated":"2015-10-21T19:23:16.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"63bcfa8b","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"73d46285","@name":"Cross
+        Insurance Arena","city":{"@id":"4975802","@name":"Portland","@state":"Maine","@stateCode":"ME","coords":{"@lat":"43.661471","@long":"-70.2553259"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/cross-insurance-arena-portland-me-usa-73d46285.html"},"sets":{"set":[{"song":[{"@name":"I
+        Came as a Rat"},{"@name":"The World at Large"},{"@name":"Be Brave"},{"@name":"Missed
+        the Boat"},{"@name":"Dashboard"},{"@name":"Breakthrough"},{"@name":"Baby Blue
+        Sedan"},{"@name":"Pistol (A. Cunanan, Miami, FL. 1996)"},{"@name":"Blame It
+        on the Tetons"},{"@name":"Bukowski"},{"@name":"This Devil''s Workday"},{"@name":"Lampshades
+        on Fire"},{"@name":"Sugar Boats"},{"@name":"Float On"},{"@name":"Broke"},{"@name":"The
+        Tortoise and the Tourist"},{"@name":"Paper Thin Walls"}]},{"@encore":"1","song":[{"@name":"The
+        Ground Walks, With Time in a Box"},{"@name":"Wild Packs of Family Dogs"},{"@name":"Pups
+        to Dust"},{"@name":"A Different City"},{"@name":"The Good Times Are Killing
+        Me"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/cross-insurance-arena-portland-me-7bf59e04.html"},{"@eventDate":"19-10-2015","@id":"3f5a13b","@lastUpdated":"2015-10-21T22:38:04.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"23bcf4bf","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"3bd624ac","@name":"Memorial
+        Auditorium","city":{"@id":"5234372","@name":"Burlington","@state":"Vermont","@stateCode":"VT","coords":{"@lat":"44.4758825","@long":"-73.212072"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/memorial-auditorium-burlington-vt-usa-3bd624ac.html"},"sets":{"set":[{"song":[{"@name":"Of
+        Course We Know"},{"@name":"Dark Center of the Universe"},{"@name":"The View"},{"@name":"Lampshades
+        on Fire"},{"@name":"Missed the Boat"},{"@name":"Shit in Your Cut"},{"@name":"Grey
+        Ice Water"},{"@name":"King Rat"},{"@name":"Bukowski"},{"@name":"Education"},{"@name":"Dashboard"},{"@name":"Shit
+        Luck"},{"@name":"Dramamine","info":"with Life Like Weeds tease"},{"@name":"The
+        Ground Walks, With Time in a Box"},{"@name":"Sugar Boats"},{"@name":"Doin''
+        the Cockroach"}]},{"@encore":"1","song":[{"@name":"Spitting Venom"},{"@name":"Custom
+        Concern"},{"@name":"3rd Planet"},{"@name":"A Different City"},{"@name":"Black
+        Cadillacs"},{"@name":"Cowboy Dan"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/memorial-auditorium-burlington-vt-3f5a13b.html"},{"@eventDate":"17-10-2015","@id":"63f44e9f","@lastUpdated":"2015-10-18T13:41:59.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"2bbf44de","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"43d63b5b","@name":"Walnut
+        Creek Amphitheatre","city":{"@id":"4487042","@name":"Raleigh","@state":"North
+        Carolina","@stateCode":"NC","coords":{"@lat":"35.772096","@long":"-78.6386145"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/walnut-creek-amphitheatre-raleigh-nc-usa-43d63b5b.html"},"sets":{"set":{"song":[{"@name":"Ocean
+        Breathes Salty"},{"@name":"Sugar Boats"},{"@name":"Lampshades on Fire"},{"@name":"Bukowski"},{"@name":"King
+        Rat"},{"@name":"This Devil''s Workday"},{"@name":"Satellite Skin"},{"@name":"Dashboard"},{"@name":"The
+        Ground Walks, With Time in a Box"},{"@name":"Coyotes"},{"@name":"Float On"},{"@name":"Missed
+        the Boat"},{"@name":"Fire It Up"},{"@name":"The Good Times Are Killing Me"}]}},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/walnut-creek-amphitheatre-raleigh-nc-63f44e9f.html"},{"@eventDate":"16-10-2015","@id":"4bf447be","@lastUpdated":"2015-10-17T02:58:15.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"5bbf6770","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"6bd62a9e","@name":"Lifestyle
+        Communities Pavilion","city":{"@id":"4509177","@name":"Columbus","@state":"Ohio","@stateCode":"OH","coords":{"@lat":"39.9611755","@long":"-82.9987942"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/lifestyle-communities-pavilion-columbus-oh-usa-6bd62a9e.html"},"sets":{"set":[{"song":[{"@name":"The
+        Tortoise and the Tourist"},{"@name":"Black Cadillacs"},{"@name":"Missed the
+        Boat"},{"@name":"Lampshades on Fire"},{"@name":"Cowboy Dan"},{"@name":"Pups
+        to Dust"},{"@name":"Grey Ice Water"},{"@name":"Fire It Up"},{"@name":"Satin
+        in a Coffin"},{"@name":"This Devil''s Workday"},{"@name":"Dashboard"},{"@name":"The
+        Ground Walks, With Time in a Box"},{"@name":"Satellite Skin"},{"@name":"Float
+        On"},{"@name":"Wicked Campaign"},{"@name":"Tiny Cities Made of Ashes"}]},{"@encore":"1","song":[{"@name":"Night
+        on the Sun"},{"@name":"Out of Gas"},{"@name":"Be Brave"},{"@name":"The Good
+        Times Are Killing Me"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/lifestyle-communities-pavilion-columbus-oh-4bf447be.html"},{"@eventDate":"14-10-2015","@id":"43f457af","@lastUpdated":"2015-10-15T04:49:15.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"3bf11d3","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"4bd61fde","@name":"War
+        Memorial Auditorium","city":{"@id":"4644585","@name":"Nashville","@state":"Tennessee","@stateCode":"TN","coords":{"@lat":"36.1658899","@long":"-86.7844432"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/war-memorial-auditorium-nashville-tn-usa-4bd61fde.html"},"sets":{"set":[{"song":[{"@name":"The
+        Tortoise and the Tourist"},{"@name":"Ocean Breathes Salty"},{"@name":"Dashboard"},{"@name":"The
+        Ground Walks, With Time in a Box"},{"@name":"Baby Blue Sedan"},{"@name":"Fire
+        It Up"},{"@name":"Lampshades on Fire"},{"@name":"Satin in a Coffin"},{"@name":"This
+        Devil''s Workday"},{"@name":"Here''s to Now","cover":{"@disambiguation":"","@mbid":"5c2d7596-2366-47c5-b4a2-0550ac8f9e69","@name":"Ugly
+        Casanova","@sortName":"Ugly Casanova","@tmid":"732801","url":"http:\/\/www.setlist.fm\/setlists\/ugly-casanova-63d6ae4f.html"}},{"@name":"The
+        Best Room"},{"@name":"Tiny Cities Made of Ashes"},{"@name":"The World at Large"},{"@name":"Cowboy
+        Dan"},{"@name":"The View"}]},{"@encore":"1","song":[{"@name":"Strangers to
+        Ourselves"},{"@name":"Dark Center of the Universe"},{"@name":"Paper Thin Walls"},{"@name":"Spitting
+        Venom"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/war-memorial-auditorium-nashville-tn-43f457af.html"},{"@eventDate":"13-10-2015","@id":"7bf45af4","@lastUpdated":"2015-10-14T12:57:29.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"73bf22b5","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"4bd61fde","@name":"War
+        Memorial Auditorium","city":{"@id":"4644585","@name":"Nashville","@state":"Tennessee","@stateCode":"TN","coords":{"@lat":"36.1658899","@long":"-86.7844432"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/war-memorial-auditorium-nashville-tn-usa-4bd61fde.html"},"sets":{"set":[{"song":[{"@name":"The
+        Whale Song"},{"@name":"3rd Planet"},{"@name":"Sugar Boats"},{"@name":"Lampshades
+        on Fire"},{"@name":"Grey Ice Water"},{"@name":"Never Ending Math Equation"},{"@name":"Missed
+        the Boat"},{"@name":"Dramamine","info":"with Life Like Weeds tease"},{"@name":"Bukowski"},{"@name":"King
+        Rat"},{"@name":"Shit in Your Cut"},{"@name":"Float On"},{"@name":"Doin'' the
+        Cockroach","info":"intro instrumental medley Cowboy Dan-->Custom Concern-->Out
+        of Gas-->Doin'' the Cockroach"}]},{"@encore":"1","song":[{"@name":"Dark Center
+        of the Universe"},{"@name":"The Ground Walks, With Time in a Box"},{"@name":"The
+        Good Times Are Killing Me"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/war-memorial-auditorium-nashville-tn-7bf45af4.html"},{"@eventDate":"10-10-2015","@id":"13f40575","@lastUpdated":"2015-10-11T13:57:43.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"43bfd7b3","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"33d638ad","@name":"Zilker
+        Park","city":{"@id":"4671654","@name":"Austin","@state":"Texas","@stateCode":"TX","coords":{"@lat":"30.267153","@long":"-97.7430608"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/zilker-park-austin-tx-usa-33d638ad.html"},"sets":{"set":{"song":[{"@name":"Missed
+        the Boat"},{"@name":"Ocean Breathes Salty"},{"@name":"Lampshades on Fire"},{"@name":"Tiny
+        Cities Made of Ashes"},{"@name":"Pups to Dust"},{"@name":"Dashboard"},{"@name":"The
+        Ground Walks, With Time in a Box"},{"@name":"This Devil''s Workday"},{"@name":"King
+        Rat"},{"@name":"Dramamine"},{"@name":"Float On"},{"@name":"The Tortoise and
+        the Tourist"}]}},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/zilker-park-austin-tx-13f40575.html"},{"@eventDate":"09-10-2015","@id":"7bf40e80","@lastUpdated":"2015-10-10T20:24:33.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"13bfe5b9","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"bd63d32","@name":"Cain''s
+        Ballroom","city":{"@id":"4553433","@name":"Tulsa","@state":"Oklahoma","@stateCode":"OK","coords":{"@lat":"36.1539816","@long":"-95.992775"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/cains-ballroom-tulsa-ok-usa-bd63d32.html"},"sets":{"set":[{"song":[{"@name":"Dark
+        Center of the Universe"},{"@name":"Sugar Boats"},{"@name":"Lampshades on Fire"},{"@name":"Missed
+        the Boat"},{"@name":"Bury Me With It"},{"@name":"King Rat"},{"@name":"Bukowski"},{"@name":"Pups
+        to Dust"},{"@name":"Dashboard"},{"@name":"The Ground Walks, With Time in a
+        Box"},{"@name":"Grey Ice Water"},{"@name":"Gravity Rides Everything"},{"@name":"The
+        Tortoise and the Tourist"},{"@name":"Doin'' the Cockroach"}]},{"@encore":"1","song":[{"@name":"Satellite
+        Skin"},{"@name":"Paper Thin Walls"},{"@name":"Night on the Sun"},{"@name":"The
+        Good Times Are Killing Me"},{"@name":"This Devil''s Workday"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/cains-ballroom-tulsa-ok-7bf40e80.html"},{"@eventDate":"19-09-2015","@id":"73f42a9d","@lastUpdated":"2015-10-03T14:09:59.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"5bbe7350","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"63d7e223","@name":"Royal
+        Athletic Park","city":{"@id":"6174041","@name":"Victoria","@state":"British
+        Columbia","@stateCode":"BC","coords":{"@lat":"48.432935738","@long":"-123.369299678"},"country":{"@code":"CA","@name":"Canada"}},"url":"http:\/\/www.setlist.fm\/venue\/royal-athletic-park-victoria-bc-canada-63d7e223.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/royal-athletic-park-victoria-bc-canada-73f42a9d.html"},{"@eventDate":"18-09-2015","@id":"13f49111","@lastUpdated":"2015-09-19T05:57:23.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"33b1e09d","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"43d6db73","@name":"Malkin
+        Bowl","city":{"@id":"6173331","@name":"Vancouver","@state":"British Columbia","@stateCode":"BC","coords":{"@lat":"49.249657393","@long":"-123.119340403"},"country":{"@code":"CA","@name":"Canada"}},"url":"http:\/\/www.setlist.fm\/venue\/malkin-bowl-vancouver-bc-canada-43d6db73.html"},"sets":{"set":[{"song":[{"@name":"Spitting
+        Venom"},{"@name":"Sugar Boats"},{"@name":"Dark Center of the Universe"},{"@name":"Lampshades
+        on Fire"},{"@name":"Missed the Boat"},{"@name":"Pups to Dust"},{"@name":"King
+        Rat"},{"@name":"Bukowski"},{"@name":"Night on the Sun"},{"@name":"Dance Hall"},{"@name":"Talking
+        Shit About a Pretty Sunset"},{"@name":"Dashboard"},{"@name":"Grey Ice Water"},{"@name":"The
+        Tortoise and the Tourist"},{"@name":"The View"}]},{"@encore":"1","song":[{"@name":"The
+        World at Large"},{"@name":"Paper Thin Walls","info":"short"},{"@name":"Heart
+        Cooks Brain"},{"@name":"The Ground Walks, With Time in a Box"},{"@name":"The
+        Good Times Are Killing Me"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/malkin-bowl-vancouver-bc-canada-13f49111.html"},{"@eventDate":"15-09-2015","@id":"6bf4a2ee","@lastUpdated":"2015-09-17T00:06:51.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"33b1fce5","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"43d7f3a7","@name":"Bluestem
+        Center for the Arts","city":{"@id":"5038108","@name":"Moorhead","@state":"Minnesota","@stateCode":"MN","coords":{"@lat":"46.8738524","@long":"-96.7675807"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/bluestem-center-for-the-arts-moorhead-mn-usa-43d7f3a7.html"},"sets":{"set":[{"song":[{"@name":"The
+        Tortoise and the Tourist"},{"@name":"Sugar Boats"},{"@name":"3rd Planet"},{"@name":"Float
+        On"},{"@name":"Doin'' the Cockroach"},{"@name":"Coyotes"},{"@name":"Night
+        on the Sun"},{"@name":"Root Beer Song","info":"Improvised song"},{"@name":"King
+        Rat"},{"@name":"Bukowski"},{"@name":"Satellite Skin"},{"@name":"Lampshades
+        on Fire"},{"@name":"Paper Thin Walls"},{"@name":"Dashboard"},{"@name":"Blame
+        It on the Tetons"},{"@name":"Wild Packs of Family Dogs"},{"@name":"The Ground
+        Walks, With Time in a Box"},{"@name":"Fly Trapped in a Jar"}]},{"@encore":"1","song":[{"@name":"Ocean
+        Breathes Salty"},{"@name":"Be Brave"},{"@name":"Cowboy Dan"},{"@name":"Missed
+        the Boat"},{"@name":"Strangers to Ourselves"}]},{"@encore":"2","song":[{"@name":"Pistol
+        (A. Cunanan, Miami, FL. 1996)"},{"@name":"Black Candy","cover":{"@disambiguation":"","@mbid":"449e44cb-bcae-4c48-a1af-5d8df0f81456","@name":"Beat
+        Happening","@sortName":"Beat Happening","url":"http:\/\/www.setlist.fm\/setlists\/beat-happening-13d6a9a9.html"},"info":"Tease
+        only, Isaac had the crowd guess what band wrote the song"},{"@name":"I Came
+        as a Rat"},{"@name":"This Devil''s Workday"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/bluestem-center-for-the-arts-moorhead-mn-6bf4a2ee.html"},{"@eventDate":"13-09-2015","@id":"6bf74256","@lastUpdated":"2015-09-14T16:28:54.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"23b1a46b","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"1bd7ed00","@name":"Douglas
+        Park","city":{"@id":"4887398","@name":"Chicago","@state":"Illinois","@stateCode":"IL","coords":{"@lat":"41.850033","@long":"-87.6500523"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/douglas-park-chicago-il-usa-1bd7ed00.html"},"sets":{"set":[{"song":[{"@name":"Night
+        on the Sun"},{"@name":"The World at Large"},{"@name":"Sugar Boats"},{"@name":"Missed
+        the Boat"},{"@name":"Tiny Cities Made of Ashes"},{"@name":"Grey Ice Water"},{"@name":"King
+        Rat"},{"@name":"Lampshades on Fire"},{"@name":"Dark Center of the Universe"},{"@name":"The
+        Tortoise and the Tourist"},{"@name":"Dashboard"},{"@name":"The Ground Walks,
+        With Time in a Box"},{"@name":"Float On"}]},{"@encore":"1","song":{"@name":"Spitting
+        Venom"}}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/douglas-park-chicago-il-6bf74256.html"},{"@eventDate":"12-09-2015","@id":"5bf4bbd0","@lastUpdated":"2015-09-14T03:57:15.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"6bb1b2aa","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"4bd71bf2","@name":"Buffalo
+        Outer Harbor","city":{"@id":"5110629","@name":"Buffalo","@state":"New York","@stateCode":"NY","coords":{"@lat":"42.8864468","@long":"-78.8783689"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/buffalo-outer-harbor-buffalo-ny-usa-4bd71bf2.html"},"sets":{"set":{"song":[{"@name":"Missed
+        the Boat"},{"@name":"Tiny Cities Made of Ashes"},{"@name":"Wicked Campaign"},{"@name":"Dashboard"},{"@name":"King
+        Rat"},{"@name":"Lampshades on Fire"},{"@name":"The Tortoise and the Tourist"},{"@name":"The
+        Ground Walks, With Time in a Box"},{"@name":"Float On"},{"@name":"The View"},{"@name":"Black
+        Cadillacs"},{"@name":"Dramamine","info":"with Life Like Weeds tease"},{"@name":"Styrofoam
+        Boots\/It''s All Nice on Ice, Alright"}]}},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/buffalo-outer-harbor-buffalo-ny-5bf4bbd0.html"},{"@eventDate":"10-09-2015","@id":"43f7439f","@lastUpdated":"2015-09-11T17:53:52.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"3bb05410","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"43d79f17","@name":"London
+        Music Hall","city":{"@id":"6058560","@name":"London","@state":"Ontario","@stateCode":"ON","coords":{"@lat":"42.983389283","@long":"-81.233042387"},"country":{"@code":"CA","@name":"Canada"}},"url":"http:\/\/www.setlist.fm\/venue\/london-music-hall-london-on-canada-43d79f17.html"},"sets":{"set":[{"@name":"Set
+        1","song":[{"@name":"Missed the Boat"},{"@name":"Never Ending Math Equation"},{"@name":"Lampshades
+        on Fire"},{"@name":"Coyotes"},{"@name":"3rd Planet"},{"@name":"King Rat"},{"@name":"Horn
+        Intro"},{"@name":"Dashboard"},{"@name":"Tiny Cities Made of Ashes"},{"@name":"Wicked
+        Campaign"},{"@name":"Trailer Trash"},{"@name":"Ocean Breathes Salty"},{"@name":"The
+        Good Times Are Killing Me"}]},{"@name":"Set 2","song":[{"@name":"Grey Ice
+        Water"},{"@name":"Sugar Boats"},{"@name":"Dark Center of the Universe"},{"@name":"Styrofoam
+        Boots\/It''s All Nice on Ice, Alright"},{"@name":"Float On"},{"@name":"Spitting
+        Venom"},{"@name":"Pups to Dust"},{"@name":"Doin'' the Cockroach"},{"@name":"Strangers
+        to Ourselves"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/london-music-hall-london-on-canada-43f7439f.html"},{"@eventDate":"08-09-2015","@id":"2bf74c8a","@lastUpdated":"2015-09-20T00:18:48.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"33b1d4bd","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"6bd6c6da","@name":"Metropolis","city":{"@id":"6077243","@name":"Montreal","@state":"Quebec","@stateCode":"QC","coords":{"@lat":"45.5088375","@long":"-73.587809"},"country":{"@code":"CA","@name":"Canada"}},"url":"http:\/\/www.setlist.fm\/venue\/metropolis-montreal-qc-canada-6bd6c6da.html"},"sets":{"set":[{"song":[{"@name":"Of
+        Course We Know"},{"@name":"Tiny Cities Made of Ashes"},{"@name":"The Whale
+        Song"},{"@name":"Fire It Up"},{"@name":"Lampshades on Fire"},{"@name":"King
+        Rat"},{"@name":"Bukowski"},{"@name":"Heart Cooks Brain"},{"@name":"Pups to
+        Dust"},{"@name":"Night on the Sun"},{"@name":"Dashboard"},{"@name":"Blame
+        It on the Tetons"},{"@name":"3rd Planet"},{"@name":"The Ground Walks, With
+        Time in a Box"},{"@name":"Doin'' the Cockroach"}]},{"@encore":"1","song":[{"@name":"Dark
+        Center of the Universe"},{"@name":"Black Cadillacs"},{"@name":"Shit in Your
+        Cut"},{"@name":"Missed the Boat"},{"@name":"Pistol (A. Cunanan, Miami, FL.
+        1996)"},{"@name":"Grey Ice Water"},{"@name":"Styrofoam Boots\/It''s All Nice
+        on Ice, Alright","info":"first verse only, then aborted"},{"@name":"Broke"},{"@name":"The
+        View"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/metropolis-montreal-qc-canada-2bf74c8a.html"},{"@eventDate":"06-09-2015","@id":"bf759ae","@lastUpdated":"2015-09-11T10:07:43.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"53b05b3d","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"43d48323","@name":"Echostage","city":{"@id":"4140963","@name":"Washington","@state":"Washington,
+        D.C.","@stateCode":"DC","coords":{"@lat":"38.895","@long":"-77.036"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/echostage-washington-dc-usa-43d48323.html"},"sets":{"set":[{"song":[{"@name":"King
+        Rat","info":"full version"},{"@name":"Paper Thin Walls"},{"@name":"Black Cadillacs"},{"@name":"Sugar
+        Boats"},{"@name":"Lampshades on Fire","info":"extended outro"},{"@name":"Grey
+        Ice Water"},{"@name":"Shit in Your Cut"},{"@name":"3rd Planet"},{"@name":"Invisible"},{"@name":"Custom
+        Concern"},{"@name":"Here''s to Now","cover":{"@disambiguation":"","@mbid":"5c2d7596-2366-47c5-b4a2-0550ac8f9e69","@name":"Ugly
+        Casanova","@sortName":"Ugly Casanova","@tmid":"732801","url":"http:\/\/www.setlist.fm\/setlists\/ugly-casanova-63d6ae4f.html"}},{"@name":"The
+        Best Room"},{"@name":"Dashboard"},{"@name":"Tiny Cities Made of Ashes","info":"with
+        extended intro due to mic difficulties"},{"@name":"Coyotes"},{"@name":"Night
+        on the Sun"},{"@name":"Wicked Campaign"},{"@name":"The View"}]},{"@encore":"1","song":[{"@name":"The
+        Tortoise and the Tourist"},{"@name":"Dramamine","info":"with Life Like Weeds
+        tease\/I''ve Got Nothing to Lose lyrics"},{"@name":"Satellite Skin"},{"@name":"Styrofoam
+        Boots\/It''s All Nice on Ice, Alright","info":"stopped\/restarted for Isaac
+        to tell a story about playing the song"},{"@name":"Be Brave"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/echostage-washington-dc-bf759ae.html"},{"@eventDate":"05-09-2015","@id":"13f77139","@lastUpdated":"2015-09-06T01:17:09.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"63b0366b","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"1bd66118","@name":"Benjamin
+        Franklin Parkway","city":{"@id":"4560349","@name":"Philadelphia","@state":"Pennsylvania","@stateCode":"PA","coords":{"@lat":"39.952335","@long":"-75.163789"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/benjamin-franklin-parkway-philadelphia-pa-usa-1bd66118.html"},"sets":{"set":{"song":[{"@name":"The
+        World at Large"},{"@name":"Dark Center of the Universe"},{"@name":"Ocean Breathes
+        Salty"},{"@name":"Lampshades on Fire"},{"@name":"The Tortoise and the Tourist"},{"@name":"This
+        Devil''s Workday"},{"@name":"Missed the Boat"},{"@name":"The Ground Walks,
+        With Time in a Box"},{"@name":"Float On"},{"@name":"Sugar Boats"},{"@name":"Dashboard"},{"@name":"Tiny
+        Cities Made of Ashes"}]}},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/benjamin-franklin-parkway-philadelphia-pa-13f77139.html"},{"@eventDate":"03-09-2015","@id":"13f77909","@lastUpdated":"2015-09-04T11:01:07.000+0000","@tour":"Strangers
+        to Ourselves","@versionId":"4bb0d3b6","artist":{"@disambiguation":"","@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700","@name":"Modest
+        Mouse","@sortName":"Modest Mouse","@tmid":"781346","url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"},"venue":{"@id":"53d4875d","@name":"Concord
+        Music Hall","city":{"@id":"4887398","@name":"Chicago","@state":"Illinois","@stateCode":"IL","coords":{"@lat":"41.850033","@long":"-87.6500523"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/concord-music-hall-chicago-il-usa-53d4875d.html"},"sets":{"set":[{"song":[{"@name":"3rd
+        Planet"},{"@name":"Ocean Breathes Salty"},{"@name":"Breakthrough"},{"@name":"Lampshades
+        on Fire"},{"@name":"Coyotes"},{"@name":"The View"},{"@name":"The Tortoise
+        and the Tourist"},{"@name":"King Rat"},{"@name":"Bukowski"},{"@name":"Pups
+        to Dust"},{"@name":"Dramamine","info":"with Life Like Weeds tease"},{"@name":"Dashboard"},{"@name":"Custom
+        Concern"},{"@name":"Grey Ice Water"},{"@name":"The Ground Walks, With Time
+        in a Box"}]},{"@encore":"1","song":[{"@name":"Satellite Skin"},{"@name":"Missed
+        the Boat"},{"@name":"Sugar Boats"},{"@name":"Trailer Trash"},{"@name":"Styrofoam
+        Boots\/It''s All Nice on Ice, Alright"},{"@name":"Float On"}]}]},"url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/concord-music-hall-chicago-il-13f77909.html"}]}}'
+    http_version: 
+  recorded_at: Sat, 24 Oct 2015 14:37:52 GMT
+recorded_with: VCR 2.9.3

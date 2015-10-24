@@ -49,5 +49,10 @@ group :development, :test do
   gem 'rubocop'
 end
 
+group :test do
+  gem 'vcr'
+  gem 'webmock'
+end
+
 gem 'figaro'
 gem 'httparty'
