@@ -41,7 +41,7 @@ group :development do
 end
 
 group :development, :test do
-  gem 'rspec-rails', '~> 3.0'
+  gem 'rspec-rails', '~> 3.0', require: 'rspec/rails'
   gem 'pry', :git => 'git@github.com:pry/pry.git'
   gem 'pry-rescue'
   gem 'pry-doc'
