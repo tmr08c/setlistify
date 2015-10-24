@@ -1,7 +1,10 @@
 require 'spec_helper'
 
 describe SetlistFm::SearchResponse do
-  let(:api_response) { JSON.parse(File.read('./spec/fixtures/sample_response.json')).fetch('setlists') }
+  let(:api_response) do
+    response = JSON.parse(File.read('./spec/fixtures/sample_response.json'))
+    response.fetch('setlists')
+  end
 
   describe '#page' do
     subject { described_class.new(api_response) }
