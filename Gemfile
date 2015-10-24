@@ -1,6 +1,5 @@
 source 'https://rubygems.org'
 
-
 # Bundle edge Rails instead: gem 'rails', github: 'rails/rails'
 gem 'rails', '4.2.4'
 # Use sqlite3 as the database for Active Record
@@ -42,7 +41,7 @@ end
 
 group :development, :test do
   gem 'rspec-rails', '~> 3.0', require: 'rspec/rails'
-  gem 'pry', :git => 'git@github.com:pry/pry.git'
+  gem 'pry', git: 'git@github.com:pry/pry.git'
   gem 'pry-rescue'
   gem 'pry-doc'
   gem 'pry-byebug'
@@ -51,3 +50,4 @@ group :development, :test do
 end
 
 gem 'figaro'
+gem 'httparty'

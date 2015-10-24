@@ -87,6 +87,9 @@ GEM
     globalid (0.3.6)
       activesupport (>= 4.1.0)
     hirb (0.7.3)
+    httparty (0.13.7)
+      json (~> 1.8)
+      multi_xml (>= 0.5.2)
     i18n (0.7.0)
     instance (0.2.0)
     interactive_editor (0.0.10)
@@ -131,6 +134,7 @@ GEM
     mini_portile (0.6.2)
     minitest (5.8.1)
     multi_json (1.11.2)
+    multi_xml (0.5.5)
     nokogiri (1.6.6.2)
       mini_portile (~> 0.6.0)
     ori (0.1.0)
@@ -254,6 +258,7 @@ PLATFORMS
 DEPENDENCIES
   coffee-rails (~> 4.1.0)
   figaro
+  httparty
   irbtools
   jbuilder (~> 2.0)
   jquery-rails
