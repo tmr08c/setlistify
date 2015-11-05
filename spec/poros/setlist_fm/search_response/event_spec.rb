@@ -113,8 +113,56 @@ describe SetlistFm::SearchResponse::Event do
       { 'url' => 'http://www.setlist.fm/events/1' }
     end
 
-    it 'shold have a link to the setlist.fm page' do
+    it 'should have a link to the setlist.fm page' do
       expect(subject.url).to eq 'http://www.setlist.fm/events/1'
+    end
+  end
+
+  describe '#to_json' do
+    subject { described_class.new(setlists) }
+    let(:setlists) do
+      {
+        "@eventDate" => "22-10-2015",
+        "artist" => { "@name" => "Hip Band Name" },
+        "venue" => {
+          "@name" => "Hip Club",
+          "city" => {
+            "@name" => "Brooklyn",
+            "@state" => "New York",
+          },
+          "country" => {
+            "@code" => "US",
+            "@name" => "United States"
+          }
+        },
+        "sets" => {
+          "set" => [
+            {
+              "song" => [
+                { "@name" => "song1" },
+                { "@name" => "song2", },
+              ]
+            },
+          ]
+        },
+        "url" =>  "setlist.fm/setliests/1"
+      }
+    end
+
+    it 'should include nice versions of all the info' do
+      expect(JSON.parse(subject.to_json)).to eq(
+        'artist' =>  { 'name' =>  'Hip Band Name' },
+        'date' =>  '2015-10-22',
+        'setlist' => [
+          { 'title' => 'song1' },
+          { 'title' => 'song2' },
+        ],
+        'venue' => {
+          'name' => 'Hip Club',
+          'city' => 'Brooklyn',
+          'state' => 'New York',
+        }
+      )
     end
   end
 end
