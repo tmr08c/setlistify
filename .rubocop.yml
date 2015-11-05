@@ -1,0 +1,33 @@
+AllCops:
+  RunRailsCops: true
+  Excludes:
+    - log/**
+    - vendor/**/*
+    - db/**/*
+    - config/**/*
+    - bin/**/*
+    - Gemfile
+    - Rakefile
+    - spec/spec_helper.rb
+    - spec/rails_helper.rb
+
+Documentation:
+  Enabled: false
+
+NumericLiterals:
+  Enabled: false
+
+Encoding:
+  Enabled: false
+
+TrailingComma:
+  Enabled: false
+
+DoubleNegation:
+  Enabled: false
+
+AccessorMethodName:
+  Enabled: false
+
+PredicateName:
+  Enabled: false

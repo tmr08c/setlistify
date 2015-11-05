@@ -1,0 +1,254 @@
+{
+  "setlists":{
+    "@itemsPerPage":"20",
+    "@page":"1",
+    "@total":"781",
+    "setlist":[
+      {
+        "@eventDate":"22-10-2015",
+        "@id":"3f58d8b",
+        "@lastUpdated":"2015-10-23T19:41:44.000+0000",
+        "@tour":"Strangers to Ourselves",
+        "@versionId":"33bcd0a1",
+        "artist":{
+          "@disambiguation":"",
+          "@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700",
+          "@name":"Modest Mouse",
+          "@sortName":"Modest Mouse",
+          "@tmid":"781346",
+          "url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"
+        },
+        "venue":{
+          "@id":"53d483fd",
+          "@name":"The Space at Westbury",
+          "city":{
+            "@id":"5144040",
+            "@name":"Westbury",
+            "@state":"New York",
+            "@stateCode":"NY",
+            "coords":{
+              "@lat":"40.7556561",
+              "@long":"-73.5876273"
+            },
+            "country":{
+              "@code":"US",
+              "@name":"United States"
+            }
+          },
+          "url":"http:\/\/www.setlist.fm\/venue\/the-space-at-westbury-westbury-ny-usa-53d483fd.html"
+        },
+        "sets":{
+          "set":[
+            {
+              "song":[
+                {
+                  "@name":"Strangers to Ourselves"
+                },
+                {
+                  "@name":"A Different City",
+                  "info":"As \"A Different Suburb\" on the setlist"
+                },
+                {
+                  "@name":"Ocean Breathes Salty"
+                },
+                {
+                  "@name":"Missed the Boat"
+                },
+                {
+                  "@name":"Lampshades on Fire"
+                },
+                {
+                  "@name":"Broke"
+                },
+                {
+                  "@name":"Bukowski"
+                },
+                {
+                  "@name":"King Rat",
+                  "info":"shortened"
+                },
+                {
+                  "@name":"The Tortoise and the Tourist"
+                },
+                {
+                  "@name":"Dashboard"
+                },
+                {
+                  "@name":"Night on the Sun"
+                },
+                {
+                  "@name":"Wicked Campaign"
+                },
+                {
+                  "@name":"Float On"
+                },
+                {
+                  "@name":"Doin' the Cockroach"
+                },
+                {
+                  "@name":"Sleepwalking"
+                },
+                {
+                  "@name":"Fly Trapped in a Jar"
+                }
+              ]
+            },
+            {
+              "@encore":"1",
+              "song":[
+                {
+                  "@name":"Dark Center of the Universe"
+                },
+                {
+                  "@name":"Shit in Your Cut"
+                },
+                {
+                  "@name":"Fire It Up"
+                },
+                {
+                  "@name":"Trailer Trash"
+                },
+                {
+                  "@name":"Dance Hall"
+                },
+                {
+                  "@name":"Shit Luck"
+                },
+                {
+                  "@name":"Parting of the Sensory"
+                }
+              ]
+            }
+          ]
+        },
+        "url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/the-space-at-westbury-westbury-ny-3f58d8b.html"
+      },
+      {
+        "@eventDate":"21-10-2015",
+        "@id":"73f59a11",
+        "@lastUpdated":"2015-10-22T19:47:49.000+0000",
+        "@tour":"Strangers to Ourselves",
+        "@versionId":"bbce1a6",
+        "artist":{
+          "@disambiguation":"",
+          "@mbid":"a96ac800-bfcb-412a-8a63-0a98df600700",
+          "@name":"Modest Mouse",
+          "@sortName":"Modest Mouse",
+          "@tmid":"781346",
+          "url":"http:\/\/www.setlist.fm\/setlists\/modest-mouse-73d6ae69.html"
+        },
+        "venue":{
+          "@id":"4bd4479e",
+          "@name":"College Street Music Hall",
+          "city":{
+            "@id":"4839366",
+            "@name":"New Haven",
+            "@state":"Connecticut",
+            "@stateCode":"CT",
+            "coords":{
+              "@lat":"41.3081527",
+              "@long":"-72.9281578"
+            },
+            "country":{
+              "@code":"US",
+              "@name":"United States"
+            }
+          },
+          "url":"http:\/\/www.setlist.fm\/venue\/college-street-music-hall-new-haven-ct-usa-4bd4479e.html"
+        },
+        "sets":{
+          "set":[
+            {
+              "song":[
+                {
+                  "@name":"The Whale Song"
+                },
+                {
+                  "@name":"Talking Shit About a Pretty Sunset"
+                },
+                {
+                  "@name":"Invisible"
+                },
+                {
+                  "@name":"Styrofoam Boots\/It's All Nice on Ice, Alright",
+                  "info":"Incomplete - Led into Tiny Cities"
+                },
+                {
+                  "@name":"Tiny Cities Made of Ashes"
+                },
+                {
+                  "@name":"Lampshades on Fire"
+                },
+                {
+                  "@name":"3rd Planet"
+                },
+                {
+                  "@name":"Black Cadillacs"
+                },
+                {
+                  "@name":"King Rat"
+                },
+                {
+                  "@name":"Bukowski"
+                },
+                {
+                  "@name":"Coyotes"
+                },
+                {
+                  "@name":"Here's to Now",
+                  "cover":{
+                    "@disambiguation":"",
+                    "@mbid":"5c2d7596-2366-47c5-b4a2-0550ac8f9e69",
+                    "@name":"Ugly Casanova",
+                    "@sortName":"Ugly Casanova",
+                    "@tmid":"732801",
+                    "url":"http:\/\/www.setlist.fm\/setlists\/ugly-casanova-63d6ae4f.html"
+                  }
+                },
+                {
+                  "@name":"The Best Room"
+                },
+                {
+                  "@name":"Dashboard"
+                },
+                {
+                  "@name":"Heart Cooks Brain"
+                },
+                {
+                  "@name":"The Tortoise and the Tourist"
+                },
+                {
+                  "@name":"Doin' the Cockroach"
+                }
+              ]
+            },
+            {
+              "@encore":"1",
+              "song":[
+                {
+                  "@name":"Strangers to Ourselves"
+                },
+                {
+                  "@name":"Fire It Up"
+                },
+                {
+                  "@name":"Gravity Rides Everything"
+                },
+                {
+                  "@name":"Shit in Your Cut"
+                },
+                {
+                  "@name":"Ocean Breathes Salty"
+                },
+                {
+                  "@name":"Shit Luck"
+                }
+              ]
+            }
+          ]
+        },
+        "url":"http:\/\/www.setlist.fm\/setlist\/modest-mouse\/2015\/college-street-music-hall-new-haven-ct-73f59a11.html"
+      }
+    ]
+  }
+}
