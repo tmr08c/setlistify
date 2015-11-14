@@ -1,0 +1,154 @@
+---
+http_interactions:
+- request:
+    method: get
+    uri: http://api.setlist.fm/rest/0.1/search/setlists.json?artistName=modern%2Bbaseball
+    body:
+      encoding: US-ASCII
+      string: ''
+    headers:
+      Accept-Encoding:
+      - gzip;q=1.0,deflate;q=0.6,identity;q=0.3
+      Accept:
+      - "*/*"
+      User-Agent:
+      - Ruby
+  response:
+    status:
+      code: 200
+      message: OK
+    headers:
+      Server:
+      - nginx
+      Date:
+      - Thu, 26 Nov 2015 04:49:20 GMT
+      Content-Type:
+      - application/json;charset=UTF-8
+      Transfer-Encoding:
+      - chunked
+      Connection:
+      - keep-alive
+      Vary:
+      - Accept-Encoding
+      X-Application-Context:
+      - application
+      Cache-Control:
+      - no-transform, max-age=60
+      X-Upstream-Addr:
+      - 127.0.0.1:8084
+    body:
+      encoding: ASCII-8BIT
+      string: '{"setlists":{"@itemsPerPage":"20","@page":"1","@total":"180","setlist":[{"@eventDate":"25-11-2015","@id":"23f2b0a7","@lastUpdated":"2015-11-25T19:04:44.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"1bba2560","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"3d5819f","@name":"Gabe''s","city":{"@id":"4862034","@name":"Iowa
+        City","@state":"Iowa","@stateCode":"IA","coords":{"@lat":"41.6611277","@long":"-91.5301683"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/gabes-iowa-city-ia-usa-3d5819f.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/gabes-iowa-city-ia-23f2b0a7.html"},{"@eventDate":"24-11-2015","@id":"33f2b4a5","@lastUpdated":"2015-11-25T07:41:41.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"53ba2f4d","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"bd6191a","@name":"The
+        Firebird","city":{"@id":"4407066","@name":"St. Louis","@state":"Missouri","@stateCode":"MO","coords":{"@lat":"38.6272733","@long":"-90.1978889"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/the-firebird-st-louis-mo-usa-bd6191a.html"},"sets":{"set":[{"song":[{"@name":"The
+        Weekend"},{"@name":"Alpha Kappa Fall of Troy The Movie Part Deux"},{"@name":"Going
+        to Bed Now"},{"@name":"Re-Done"},{"@name":"The Thrash Particle"},{"@name":"Two
+        Good Things"},{"@name":"Re-Do"},{"@name":"Tears Over Beers"},{"@name":"Fine,
+        Great"},{"@name":"Broken Cash Machine"},{"@name":"Apartment"},{"@name":"Rock
+        Bottom"},{"@name":"Your Graduation"}]},{"@encore":"1","song":{"@name":"Mr.Brightside","cover":{"@disambiguation":"American
+        alt. rock","@mbid":"95e1ead9-4d31-4808-a7ac-32c3614c116b","@name":"The Killers","@sortName":"Killers,
+        The","@tmid":"924503","url":"http:\/\/www.setlist.fm\/setlists\/the-killers-23d6e097.html"}}}]},"url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/the-firebird-st-louis-mo-33f2b4a5.html"},{"@eventDate":"22-11-2015","@id":"3f54187","@lastUpdated":"2015-11-22T18:53:40.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"3bad933","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"43d44b87","@name":"The
+        Waiting Room","city":{"@id":"5074472","@name":"Omaha","@state":"Nebraska","@stateCode":"NE","coords":{"@lat":"41.2586096","@long":"-95.937792"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/the-waiting-room-omaha-ne-usa-43d44b87.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/the-waiting-room-omaha-ne-3f54187.html"},{"@eventDate":"21-11-2015","@id":"3bf548a4","@lastUpdated":"2015-11-21T18:35:49.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"1bbaf194","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"5bd61f48","@name":"Marquis
+        Theater","city":{"@id":"5419384","@name":"Denver","@state":"Colorado","@stateCode":"CO","coords":{"@lat":"39.7391536","@long":"-104.9847034"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/marquis-theater-denver-co-usa-5bd61f48.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/marquis-theater-denver-co-3bf548a4.html"},{"@eventDate":"20-11-2015","@id":"bf54de6","@lastUpdated":"2015-11-20T20:38:28.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"7bba82f8","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"53d63bd9","@name":"House
+        of Blues","city":{"@id":"4684888","@name":"Dallas","@state":"Texas","@stateCode":"TX","coords":{"@lat":"32.7830556","@long":"-96.8066667"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/house-of-blues-dallas-tx-usa-53d63bd9.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/house-of-blues-dallas-tx-bf54de6.html"},{"@eventDate":"18-11-2015","@id":"7bf55a78","@lastUpdated":"2015-11-19T03:04:26.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"2bba9802","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"53d4d3c9","@name":"Neumos","city":{"@id":"5809844","@name":"Seattle","@state":"Washington","@stateCode":"WA","coords":{"@lat":"47.6062095","@long":"-122.3320708"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/neumos-seattle-wa-usa-53d4d3c9.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/neumos-seattle-wa-7bf55a78.html"},{"@eventDate":"17-11-2015","@id":"73f562b9","@lastUpdated":"2015-11-18T08:25:07.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"2bbaa422","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"2bd59882","@name":"Analog
+        Theater","city":{"@id":"5746545","@name":"Portland","@state":"Oregon","@stateCode":"OR","coords":{"@lat":"45.5234515","@long":"-122.6762071"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/analog-theater-portland-or-usa-2bd59882.html"},"sets":{"set":[{"song":[{"@name":"The
+        Weekend"},{"@name":"Alpha Kappa Fall of Troy The Movie Part Deux"},{"@name":"Going
+        to Bed Now"},{"@name":"The Old Gospel Choir"},{"@name":"Re-Done"},{"@name":"Charlie
+        Black"},{"@name":"The Thrash Particle"},{"@name":"Two Good Things"},{"@name":"Re-Do"},{"@name":"Tears
+        Over Beers"},{"@name":"Fine, Great"},{"@name":"Broken Cash Machine"},{"@name":"Apartment"},{"@name":"Rock
+        Bottom"},{"@name":"Revenge of the Nameless Ranger"},{"@name":"Your Graduation"}]},{"@encore":"1","song":{"@name":"Mr.Brightside","cover":{"@disambiguation":"American
+        alt. rock","@mbid":"95e1ead9-4d31-4808-a7ac-32c3614c116b","@name":"The Killers","@sortName":"Killers,
+        The","@tmid":"924503","url":"http:\/\/www.setlist.fm\/setlists\/the-killers-23d6e097.html"}}}]},"url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/analog-theater-portland-or-73f562b9.html"},{"@eventDate":"15-11-2015","@id":"3bf56cb0","@lastUpdated":"2015-11-15T18:11:50.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"63bd52cb","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"2bd61c8a","@name":"Oakland
+        Metro","city":{"@id":"5378538","@name":"Oakland","@state":"California","@stateCode":"CA","coords":{"@lat":"37.8043722","@long":"-122.2708026"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/oakland-metro-oakland-ca-usa-2bd61c8a.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/oakland-metro-oakland-ca-3bf56cb0.html"},{"@eventDate":"14-11-2015","@id":"73f576b1","@lastUpdated":"2015-11-14T18:22:45.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"5bbd63f0","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"2bd59cea","@name":"Quartyard","city":{"@id":"5391811","@name":"San
+        Diego","@state":"California","@stateCode":"CA","coords":{"@lat":"32.7153292","@long":"-117.1572551"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/quartyard-san-diego-ca-usa-2bd59cea.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/quartyard-san-diego-ca-73f576b1.html"},{"@eventDate":"13-11-2015","@id":"5bf57bf0","@lastUpdated":"2015-11-14T00:25:26.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"3bd6df7","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"43d63bdb","@name":"House
+        of Blues","city":{"@id":"5323810","@name":"Anaheim","@state":"California","@stateCode":"CA","coords":{"@lat":"33.8352932","@long":"-117.9145036"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/house-of-blues-anaheim-ca-usa-43d63bdb.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/house-of-blues-anaheim-ca-5bf57bf0.html"},{"@eventDate":"12-11-2015","@id":"4bf50376","@lastUpdated":"2015-11-12T18:40:32.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"4bbd0bde","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"53d6c345","@name":"Club
+        Congress","city":{"@id":"5318313","@name":"Tucson","@state":"Arizona","@stateCode":"AZ","coords":{"@lat":"32.2217429","@long":"-110.926479"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/club-congress-tucson-az-usa-53d6c345.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/club-congress-tucson-az-4bf50376.html"},{"@eventDate":"11-11-2015","@id":"bf5055e","@lastUpdated":"2015-11-11T23:37:41.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"43bd1773","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"63d446c7","@name":"The
+        Works","city":{"@id":"5454711","@name":"Albuquerque","@state":"New Mexico","@stateCode":"NM","coords":{"@lat":"35.084","@long":"-106.651"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/the-works-albuquerque-nm-usa-63d446c7.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/the-works-albuquerque-nm-bf5055e.html"},{"@eventDate":"09-11-2015","@id":"53f51741","@lastUpdated":"2015-11-09T18:49:21.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"73bd3eb5","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"1bd6215c","@name":"Trees","city":{"@id":"4684888","@name":"Dallas","@state":"Texas","@stateCode":"TX","coords":{"@lat":"32.7830556","@long":"-96.8066667"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/trees-dallas-tx-usa-1bd6215c.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/trees-dallas-tx-53f51741.html"},{"@eventDate":"08-11-2015","@id":"4bf52bd6","@lastUpdated":"2015-11-20T18:21:33.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"53ba837d","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"43d44feb","@name":"The
+        Paper Tiger","city":{"@id":"4726206","@name":"San Antonio","@state":"Texas","@stateCode":"TX","coords":{"@lat":"29.4241219","@long":"-98.4936282"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/the-paper-tiger-san-antonio-tx-usa-43d44feb.html"},"sets":{"set":{"song":{"@name":"Mr.Brightside","cover":{"@disambiguation":"American
+        alt. rock","@mbid":"95e1ead9-4d31-4808-a7ac-32c3614c116b","@name":"The Killers","@sortName":"Killers,
+        The","@tmid":"924503","url":"http:\/\/www.setlist.fm\/setlists\/the-killers-23d6e097.html"}}}},"url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/the-paper-tiger-san-antonio-tx-4bf52bd6.html"},{"@eventDate":"07-11-2015","@id":"3bf5206c","@lastUpdated":"2015-11-07T20:32:36.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"63bde697","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"63d74637","@name":"Walter''s","city":{"@id":"4699066","@name":"Houston","@state":"Texas","@stateCode":"TX","coords":{"@lat":"29.7632836","@long":"-95.3632715"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/walters-houston-tx-usa-63d74637.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/walters-houston-tx-3bf5206c.html"},{"@eventDate":"05-11-2015","@id":"1bf52d14","@lastUpdated":"2015-11-05T18:50:46.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"73bd8649","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"43d5bf9f","@name":"Saturn","city":{"@id":"4049979","@name":"Birmingham","@state":"Alabama","@stateCode":"AL","coords":{"@lat":"33.5206608","@long":"-86.80249"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/saturn-birmingham-al-usa-43d5bf9f.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/saturn-birmingham-al-1bf52d14.html"},{"@eventDate":"04-11-2015","@id":"5bf53764","@lastUpdated":"2015-11-04T18:52:26.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"3bd919f","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"6bd7daca","@name":"Hell
+        @ The Masquerade","city":{"@id":"4180439","@name":"Atlanta","@state":"Georgia","@stateCode":"GA","coords":{"@lat":"33.7489954","@long":"-84.3879824"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/hell-the-masquerade-atlanta-ga-usa-6bd7daca.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/hell-the-masquerade-atlanta-ga-5bf53764.html"},{"@eventDate":"03-11-2015","@id":"73f53e69","@lastUpdated":"2015-11-03T18:51:24.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"73bda281","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"bd63dce","@name":"The
+        Orpheum","city":{"@id":"4174757","@name":"Tampa","@state":"Florida","@stateCode":"FL","coords":{"@lat":"27.9475216","@long":"-82.4584279"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/the-orpheum-tampa-fl-usa-bd63dce.html"},"sets":"","url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/the-orpheum-tampa-fl-73f53e69.html"},{"@eventDate":"31-10-2015","@id":"63f55aef","@lastUpdated":"2015-11-19T05:55:16.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"6bba9a9e","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"13d77d35","@name":"High
+        Dive","city":{"@id":"4156404","@name":"Gainesville","@state":"Florida","@stateCode":"FL","coords":{"@lat":"29.6516344","@long":"-82.3248262"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/high-dive-gainesville-fl-usa-13d77d35.html"},"sets":{"set":{"@name":"The
+        Killers cover set","song":[{"@name":"When You Were Young","cover":{"@disambiguation":"American
+        alt. rock","@mbid":"95e1ead9-4d31-4808-a7ac-32c3614c116b","@name":"The Killers","@sortName":"Killers,
+        The","@tmid":"924503","url":"http:\/\/www.setlist.fm\/setlists\/the-killers-23d6e097.html"}},{"@name":"Read
+        My Mind","cover":{"@disambiguation":"American alt. rock","@mbid":"95e1ead9-4d31-4808-a7ac-32c3614c116b","@name":"The
+        Killers","@sortName":"Killers, The","@tmid":"924503","url":"http:\/\/www.setlist.fm\/setlists\/the-killers-23d6e097.html"}},{"@name":"Smile
+        Like You Mean It","cover":{"@disambiguation":"American alt. rock","@mbid":"95e1ead9-4d31-4808-a7ac-32c3614c116b","@name":"The
+        Killers","@sortName":"Killers, The","@tmid":"924503","url":"http:\/\/www.setlist.fm\/setlists\/the-killers-23d6e097.html"},"info":"With
+        Tom and Greg from The Menzingers"},{"@name":"Mr.Brightside","cover":{"@disambiguation":"American
+        alt. rock","@mbid":"95e1ead9-4d31-4808-a7ac-32c3614c116b","@name":"The Killers","@sortName":"Killers,
+        The","@tmid":"924503","url":"http:\/\/www.setlist.fm\/setlists\/the-killers-23d6e097.html"}},{"@name":"All
+        These Things That I''ve Done","cover":{"@disambiguation":"American alt. rock","@mbid":"95e1ead9-4d31-4808-a7ac-32c3614c116b","@name":"The
+        Killers","@sortName":"Killers, The","@tmid":"924503","url":"http:\/\/www.setlist.fm\/setlists\/the-killers-23d6e097.html"},"info":"With
+        Bobby from Captain, We''re Sinking"}]}},"url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/high-dive-gainesville-fl-63f55aef.html"},{"@eventDate":"29-10-2015","@id":"13f5d9b5","@lastUpdated":"2015-11-10T00:54:26.000+0000","@tour":"2015
+        Headliner Tour","@versionId":"13bd3599","artist":{"@disambiguation":"","@mbid":"e3513b4f-2a13-45f5-8ead-e79b1af0bf68","@name":"Modern
+        Baseball","@sortName":"Modern Baseball","@tmid":"1770510","url":"http:\/\/www.setlist.fm\/setlists\/modern-baseball-43daebe3.html"},"venue":{"@id":"2bd618b2","@name":"Greene
+        Street Club","city":{"@id":"4469146","@name":"Greensboro","@state":"North
+        Carolina","@stateCode":"NC","coords":{"@lat":"36.0726355","@long":"-79.7919754"},"country":{"@code":"US","@name":"United
+        States"}},"url":"http:\/\/www.setlist.fm\/venue\/greene-street-club-greensboro-nc-usa-2bd618b2.html"},"sets":{"set":{"song":[{"@name":"The
+        Weekend"},{"@name":"The Thrash Particle"},{"@name":"Rock Bottom"},{"@name":"Apartment"},{"@name":"Mr.Brightside","cover":{"@disambiguation":"American
+        alt. rock","@mbid":"95e1ead9-4d31-4808-a7ac-32c3614c116b","@name":"The Killers","@sortName":"Killers,
+        The","@tmid":"924503","url":"http:\/\/www.setlist.fm\/setlists\/the-killers-23d6e097.html"}},{"@name":"Your
+        Graduation"}]}},"url":"http:\/\/www.setlist.fm\/setlist\/modern-baseball\/2015\/greene-street-club-greensboro-nc-13f5d9b5.html"}]}}'
+    http_version: 
+  recorded_at: Thu, 26 Nov 2015 04:49:20 GMT
+recorded_with: VCR 2.9.3

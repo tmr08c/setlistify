@@ -1,5 +1,5 @@
 module SetlistFm
-  class SearchApi < Api
+  class SearchApi < SetlistFm::Api
     #
     # `entity` is a string representing the type of element you are serching for
     #

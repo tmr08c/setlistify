@@ -41,7 +41,7 @@ module SetlistFm
         response.fetch('url')
       end
 
-      def to_json
+      def as_json(_options = {})
         {
           artist: artist,
           date: date,

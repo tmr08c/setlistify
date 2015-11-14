@@ -118,39 +118,39 @@ describe SetlistFm::SearchResponse::Event do
     end
   end
 
-  describe '#to_json' do
+  describe '#as_json' do
     subject { described_class.new(setlists) }
     let(:setlists) do
       {
-        "@eventDate" => "22-10-2015",
-        "artist" => { "@name" => "Hip Band Name" },
-        "venue" => {
-          "@name" => "Hip Club",
-          "city" => {
-            "@name" => "Brooklyn",
-            "@state" => "New York",
+        '@eventDate' => '22-10-2015',
+        'artist' => { '@name' => 'Hip Band Name' },
+        'venue' => {
+          '@name' => 'Hip Club',
+          'city' => {
+            '@name' => 'Brooklyn',
+            '@state' => 'New York',
           },
-          "country" => {
-            "@code" => "US",
-            "@name" => "United States"
+          'country' => {
+            '@code' => 'US',
+            '@name' => 'United States'
           }
         },
-        "sets" => {
-          "set" => [
+        'sets' => {
+          'set' => [
             {
-              "song" => [
-                { "@name" => "song1" },
-                { "@name" => "song2", },
+              'song' => [
+                { '@name' => 'song1' },
+                { '@name' => 'song2', },
               ]
             },
           ]
         },
-        "url" =>  "setlist.fm/setliests/1"
+        'url' =>  'setlist.fm/setliests/1'
       }
     end
 
     it 'should include nice versions of all the info' do
-      expect(JSON.parse(subject.to_json)).to eq(
+      expect(JSON.parse(subject.as_json)).to eq(
         'artist' =>  { 'name' =>  'Hip Band Name' },
         'date' =>  '2015-10-22',
         'setlist' => [
