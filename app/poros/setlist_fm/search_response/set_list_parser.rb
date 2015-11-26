@@ -7,8 +7,8 @@ module SetlistFm
 
       def json_songs_array
         inner_set_list_json.each_with_object([]) do |setlist_entry, songs|
-          songs.concat(setlist_entry.fetch('song'))
-        end
+          songs.concat([setlist_entry.fetch('song')])
+        end.flatten
       end
 
       private
@@ -18,7 +18,12 @@ module SetlistFm
       def inner_set_list_json
         outer_sets = response.fetch('sets')
 
-        Array[outer_sets.fetch('set')].flatten
+        # API returns an empty string if no set informatin exists
+        if outer_sets.blank?
+          []
+        else
+          Array[outer_sets.fetch('set')].flatten
+        end
       end
     end
   end

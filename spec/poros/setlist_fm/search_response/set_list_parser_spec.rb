@@ -2,6 +2,28 @@ require 'spec_helper'
 
 describe SetlistFm::SearchResponse::SetListParser do
   describe '#json_songs_array' do
+    # the setlist.fm api returns an empty string when setlist isn't available
+    context 'when there is no setlist available' do
+      subject { described_class.new('sets' => '') }
+
+      it 'should return an empty array' do
+        expect(subject.json_songs_array).to eq([])
+      end
+    end
+
+    context 'when there is only one song' do
+      # the setlist.fm api doest not return an array if there is only one song
+      subject do
+        described_class.new(
+          'sets' => { 'set' => { 'song' => { '@name' => 'song1' } } }
+        )
+      end
+
+      it 'should return an array with the single song' do
+        expect(subject.json_songs_array).to eq [{ '@name' => 'song1' }]
+      end
+    end
+
     context 'when there is no encore' do
       subject { described_class.new(response_with_setlist_with_no_encore) }
       let(:response_with_setlist_with_no_encore) do

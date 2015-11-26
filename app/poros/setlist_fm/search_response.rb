@@ -12,6 +12,13 @@ module SetlistFm
       @events ||= response.fetch('setlist').map { |setlist| Event.new(setlist) }
     end
 
+    def as_json(_options = {})
+      {
+        events: events,
+        page: page
+      }
+    end
+
     private
 
     attr_reader :response

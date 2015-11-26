@@ -41,6 +41,15 @@ module SetlistFm
         response.fetch('url')
       end
 
+      def as_json(_options = {})
+        {
+          artist: artist,
+          date: date,
+          setlist: setlist,
+          venue: venue
+        }.to_json
+      end
+
       private
 
       attr_reader :response

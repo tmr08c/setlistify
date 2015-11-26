@@ -47,6 +47,7 @@ group :development, :test do
   gem 'pry-byebug'
   gem 'pry-stack_explorer'
   gem 'rubocop'
+  gem 'json_matchers'
 end
 
 group :test do

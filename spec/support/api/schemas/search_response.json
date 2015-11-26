@@ -1,0 +1,60 @@
+{
+  "type": "object",
+  "required": ["page", "events"],
+  "properties": {
+    "page": {
+      "type": "integer"
+    },
+    "events": {
+      "type": "array",
+      "items":{
+        "required": ["artist", "venue", "date", "setlist"],
+        "properties": {
+          "artist": {
+            "type": "object",
+            "required": ["name"],
+            "properties": {
+              "name": {
+                "type": "string"
+              }
+            }
+          },
+          "venue": {
+            "type": "object",
+            "required": ["name", "city", "state"],
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "city": {
+                "type": "string"
+              },
+              "state": {
+                "type": "string"
+              }
+            }
+          },
+          "date": {
+            "type": "string"
+          },
+          "setlist": {
+           "type": "array",
+           "items": {
+             "properties": {
+               "songs": {
+                 "type": "object",
+                 "required": ["name"],
+                 "properties": {
+                   "name": {
+                     "type": "string"
+                   }
+                 }
+               }
+             }
+           }
+          }
+        }
+      }
+    }
+  }
+}
