@@ -1,0 +1,5 @@
+<%= form_tag('/api/setlists', method: "get", remote: true,  id: 'setlist_search_form') do %>
+  <%= label_tag(:query, "Search for:") %>
+  <%= text_field_tag(:query) %>
+  <%= submit_tag("Search") %>
+<% end %>
