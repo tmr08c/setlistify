@@ -54,6 +54,8 @@ Rails.application.routes.draw do
   #     resources :products
   #   end
 
+  root 'search#index'
+
   namespace :api do
     resources :setlists, only: [:index]
   end
