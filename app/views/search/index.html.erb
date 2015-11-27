@@ -1,7 +1,9 @@
-<%= form_tag('/api/setlists', method: "get", remote: true,  id: 'setlist_search_form') do %>
-  <%= label_tag(:query, "Search for:") %>
-  <%= text_field_tag(:query) %>
-  <%= submit_tag("Search", class: "waves-effect waves-light btn") %>
-<% end %>
-
-<div id='content'></div>
+<div id='content'>
+  <div id='searchBox'>
+    <%= form_tag('/api/setlists', method: "get", remote: true,  id: 'setlist_search_form') do %>
+      <%= label_tag(:query, "Search for:") %>
+      <%= text_field_tag(:query) %>
+      <%= submit_tag("Search", class: "waves-effect waves-light btn") %>
+    <% end %>
+  </div>
+</div>
