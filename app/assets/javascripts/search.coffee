@@ -4,7 +4,7 @@
 $ ->
  $('#setlist_search_form')
    .on 'ajax:success', (e, data, status, xhr) ->
-     console.log data
-    .on "ajax:error", (e, xhr, status, error) ->
+     ReactDOM.render(<SetlistList page=data.page events=data.events />,  document.getElementById('content'))
+   .on "ajax:error", (e, xhr, status, error) ->
       # TODO: Better error handling
       console.log 'ERROR'
