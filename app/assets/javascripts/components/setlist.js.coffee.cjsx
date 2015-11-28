@@ -10,6 +10,7 @@
           <div className='eventDate'>{this.props.date}</div>
           <Venue name={this.props.venue.name} city={this.props.venue.city} state={this.props.venue.state} />
         </div>
+         <CreatSetlistButton artist=this.props.artist setlist=this.props.setlist />
       </div>
       <div className="card-reveal">
         <span className="card-title grey-text text-darken-4">Setlist<i className="material-icons
