@@ -8,7 +8,12 @@
   createPlaylist: ->
     return unless this.hasSongs()
 
-    console.log 'making playlist'
+    playlistBuilder = new PlaylistBuilder(this.props.artist, this.props.setlist)
+
+    console.log 'building playlist'
+    playlistBuilder.buildPlaylist()
+    console.log 'finished?'
+
 
   render: ->
     baseButtonClass =  "waves-effect waves-light btn-large"
