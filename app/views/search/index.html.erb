@@ -1,9 +1,1 @@
-<div id='content'>
-  <div id='searchBox'>
-    <%= form_tag('/api/setlists', method: "get", remote: true,  id: 'setlist_search_form', autocomplete: :off) do %>
-      <%= label_tag(:query, "Search for:") %>
-      <%= text_field_tag(:query) %>
-      <%= submit_tag("Search", class: "waves-effect waves-light btn") %>
-    <% end %>
-  </div>
-</div>
+<%= react_router 'MyRoutes', 'HistoryLocation', location_path: '/' %>

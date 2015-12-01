@@ -24,6 +24,7 @@ gem 'sdoc', '~> 0.4.0', group: :doc
 # Use React for frontend view logic
 gem 'react-rails', '~> 1.5.0'
 gem 'sprockets-coffee-react'
+gem 'react-router-rails'
 
 # Materialze for Style
 gem 'materialize-sass'
