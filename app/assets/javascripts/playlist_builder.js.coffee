@@ -1,5 +1,6 @@
 @PlaylistBuilder = class PlaylistBuilder
   constructor: (artist, setlist) ->
+    console.log 'new playlist builder'
     @artist = artist
     @setlist = setlist
     @api = new SpotifyApi()

@@ -1,6 +1,41 @@
 @SpotifyApi = class SpotifyApi
   base_url: 'https://api.spotify.com/v1/'
-  auth_token: "Bearer BQCnqZVbaLL17Zf0zCm2Uv1287nDYjseLsuZWGLrC9bP_1OXw4PfZvVWsBr2_1-2DEdH4yLOkCHRebHQ1cpqnyuCl9iHsCeGhbcVrJDJ8sxMGRxp9wRA5L6bqLoEY2FXKkTjRSER2j6syytF8wpRNe5bL23TwnDjElXLEPbwXXklqwVMtNXjoe7eIb5bhbi4VscymH7DWG98uLqQX1rYYaFvZ4Oe_qqRzi6wMn2Ynun6zmqaftCtiureb5iPnLUWsWkRScd3-4Nko51lgJys2f2DzrRp-xBYnL94vg"
+  clientId: 'e9a442575edf498d858ad8c07396cdb2'
+  redirectUri: "http://#{location.host}/spotifycallback"
+  scopes: 'playlist-modify-public playlist-modify-private'
+
+  constructor: ->
+    console.log 'new api'
+    @fetchToken()
+
+  fetchToken: ->
+    console.log 'fetch'
+    if window.sessionStorage.getItem('accessToken') != null
+      console.log('in sessoin')
+      @accessToken = window.sessionStorage.getItem('accessToken')
+    else
+      console.log 'authorize'
+      @authorize()
+
+  authorize: ->
+    console.log 'in authorize'
+    currentSearchQuery = window.location.search.slice(1).split('=')[1]
+    window.location = 'https://accounts.spotify.com/authorize' +
+      '?response_type=token' +
+      "&client_id=#{@clientId}" +
+      "&scope=#{encodeURIComponent(@scopes)}" +
+      "&redirect_uri=#{encodeURIComponent(@redirectUri)}" +
+      "&state=#{currentSearchQuery }" +
+      "&show_dialog=true"
+
+  userInfo: ->
+    $.ajax
+      url: 'https://api.spotify.com/v1/me',
+      type: 'GET',
+      beforeSend: (xhr) =>
+        xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
+      success: (data) ->
+        console.log data.id
 
   search: (query, type, callback) ->
     $.ajax
@@ -12,6 +47,17 @@
       error: () ->
         console.log 'fail'
 
+  requestToken: (code) ->
+    $.ajax
+      url: 'https://accounts.spotify.com/api/token',
+      type: 'POST',
+      data: JSON.stringify({ grant_type: 'authorization_code', code: code, redirect_uri: @redirectUri }),
+      beforeSend: (xhr) =>
+        xhr.setRequestHeader("Authorization", "Basic ZTlhNDQyNTc1ZWRmNDk4ZDg1OGFkOGMwNzM5NmNkYjI6MGMwZGQxZGJjYWQwNDYzNmI5N2VmYTNkNzVjZWVkMzE=")
+        # xhr.setRequestHeader("Access-Control-Allow-Origin", '*')
+      success: ->
+        debugger
+
   createPlaylist: (username, playlistName, onSuccess) ->
     $.ajax
       url: "https://api.spotify.com/v1/users/#{username}/playlists",
@@ -19,7 +65,7 @@
       data: JSON.stringify({ name: playlistName, public: 'false' }),
       dataType: 'json',
       beforeSend: (xhr) =>
-        xhr.setRequestHeader("Authorization", @auth_token)
+        xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
       success: (data) ->
         onSuccess(data.id)
       # need to add better handling and handle common issues
@@ -48,7 +94,7 @@
       # data: {uris: playlist_uri},
       dataType: 'json',
       beforeSend: (xhr) =>
-        xhr.setRequestHeader("Authorization", @auth_token)
+        xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
       success: (data) ->
         console.log 'added'
       # need to add better handling and handle common issues

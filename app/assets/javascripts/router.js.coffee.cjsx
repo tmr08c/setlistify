@@ -10,5 +10,6 @@
   <Route handler={App}>
     <DefaultRoute handler={SearchPage} />
     <Route path='search' handler={SetlistList} />
+    <Route path='spotifycallback' handler={SpotifyCallback} />
   </Route>
 )
