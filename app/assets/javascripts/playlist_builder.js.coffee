@@ -8,7 +8,7 @@
   buildPlaylist: (onSuccess, onFailure) ->
     @api.createPlaylist('tmr08c', 'Playlist9', ((playlist_id) =>
       requests = []
-      for song in @setlist.sort()
+      for song in @setlist
         requests.push(@api.songSearch(@artist, song.title, ((song_uri) =>
           # songUris.push(song_uri)
           # console.log song_uri
