@@ -83,15 +83,19 @@
       # * multiple pages
       # * checking title
       # * checking artist
-      onSuccess(data.tracks.items[0].uri)
+      if data.tracks.items.length > 0
+        onSuccess(data.tracks.items[0].uri)
     )
 
-  addToPlaylist: (song_uri, playlist_uri, user_id) ->
-    console.log "Adding to playlist. Song: #{song_uri} / Playlist: #{playlist_uri}"
+  addToPlaylist: (songUris, playlist_uri, user_id) ->
+    console.log songUris
+    # console.log "Adding to playlist. Song: #{song_uri} / Playlist: #{playlist_uri}"
     $.ajax
-      url: "https://api.spotify.com/v1/users/#{user_id}/playlists/#{playlist_uri}/tracks?uris=#{song_uri}",
+      url: "https://api.spotify.com/v1/users/#{user_id}/playlists/#{playlist_uri}/tracks",
       type: 'POST',
-      # data: {uris: playlist_uri},
+      data: JSON.stringify({
+        uris: songUris
+      }),
       dataType: 'json',
       beforeSend: (xhr) =>
         xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
