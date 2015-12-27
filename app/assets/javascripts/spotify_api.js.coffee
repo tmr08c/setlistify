@@ -37,13 +37,13 @@
       success: (data) ->
         console.log data.id
 
-  search: (query, type, callback) ->
+  search: (query, type) ->
     $.ajax
       url: 'https://api.spotify.com/v1/search',
       data: "q=#{query}&type=#{type}",
       dataType: 'json'
       success: (data) ->
-        callback(data)
+        console.log data
       error: () ->
         console.log 'fail'
 
@@ -58,7 +58,7 @@
       success: ->
         debugger
 
-  createPlaylist: (username, playlistName, onSuccess) ->
+  createPlaylist: (username, playlistName) ->
     $.ajax
       url: "https://api.spotify.com/v1/users/#{username}/playlists",
       type: 'POST',
@@ -66,8 +66,8 @@
       dataType: 'json',
       beforeSend: (xhr) =>
         xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
-      success: (data) ->
-        onSuccess(data.id)
+      # success: (data) ->
+      ## onSuccess(data.id)
       # need to add better handling and handle common issues
       # * Playlist exists
       # * No access
@@ -75,17 +75,14 @@
         console.log 'Issue making playlist'
         e
 
-  songSearch: (artist, title, onSuccess) ->
+  # naievely for now we should just grab the first result's URI
+  # eventually we should handle
+  # * multiple pages
+  # * checking title
+  # * checking artist
+  songSearch: (artist, title) ->
     console.log "Song search. Artist: #{artist} / title: #{title}"
-    @search("#{title} #{artist}", 'track', (data) ->
-      # naievely for now we should just grab the first result's URI
-      # eventually we should handle
-      # * multiple pages
-      # * checking title
-      # * checking artist
-      if data.tracks.items.length > 0
-        onSuccess(data.tracks.items[0].uri)
-    )
+    @search("#{title} #{artist}", 'track')
 
   addToPlaylist: (songUris, playlist_uri, user_id) ->
     console.log songUris
