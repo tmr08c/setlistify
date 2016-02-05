@@ -36,6 +36,7 @@
         xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
       success: (data) ->
         console.log data.id
+        @userId = data.id
 
   search: (query, type) ->
     $.ajax
@@ -58,22 +59,25 @@
       success: ->
         debugger
 
-  createPlaylist: (username, playlistName) ->
-    $.ajax
-      url: "https://api.spotify.com/v1/users/#{username}/playlists",
-      type: 'POST',
-      data: JSON.stringify({ name: playlistName, public: 'false' }),
-      dataType: 'json',
-      beforeSend: (xhr) =>
-        xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
-      # success: (data) ->
-      ## onSuccess(data.id)
-      # need to add better handling and handle common issues
-      # * Playlist exists
-      # * No access
-      error: (e) ->
-        console.log 'Issue making playlist'
-        e
+  createPlaylist: (playlistName) =>
+    @userInfo().then((userInfoResponse) ->
+      sleep 1
+      $.ajax
+        url: "https://api.spotify.com/v1/users/tmr08c/playlists",
+        type: 'POST',
+        data: JSON.stringify({ name: playlistName, public: 'false' }),
+        dataType: 'json',
+        beforeSend: (xhr) =>
+          xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
+        # success: (data) ->
+        ## onSuccess(data.id)
+        # need to add better handling and handle common issues
+        # * Playlist exists
+        # * No access
+        error: (e) ->
+          console.log 'Issue making playlist'
+          e
+    )
 
   # naievely for now we should just grab the first result's URI
   # eventually we should handle
