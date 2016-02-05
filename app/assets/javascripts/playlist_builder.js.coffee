@@ -16,7 +16,7 @@
 
   _createPlaylist: () ->
     console.log "In 'createPlaylist'"
-    @api.createPlaylist('tmr08c', 'Playlist5')
+    @api.createPlaylist('Playlist5')
 
   _getSongUris: () ->
     console.log "In 'getSongUris'"

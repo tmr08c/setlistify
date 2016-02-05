@@ -1,0 +1,9 @@
+@import 'materialize/components/color';
+
+.main-green{
+  @extend .green, .accent-4;
+}
+
+.error-red{
+  @extend .red, .accent-4;
+}
