@@ -1,7 +1,8 @@
 @PlaylistBuilder = class PlaylistBuilder
-  constructor: (artist, setlist) ->
-    console.log 'new playlist builder'
-    @artist = artist
+  constructor: (artistName, venueName, date, setlist) ->
+    @artistName = artistName
+    @venueName = venueName
+    @date = date
     @setlist = setlist
     @api = new SpotifyApi()
 
@@ -16,13 +17,16 @@
 
   _createPlaylist: () ->
     console.log "In 'createPlaylist'"
-    @api.createPlaylist('Playlist5')
+    @api.createPlaylist(@_playlistName())
 
   _getSongUris: () ->
     console.log "In 'getSongUris'"
+    console.log @setlist
+
     requests = []
     for song in @setlist
-      requests.push(@api.songSearch(@artist, song.title))
+      requests.push(@api.songSearch(@artistName, song.title))
+    console.log(requests)
     requests
 
   _addTracksToPlaylist: (playlistId, songInfoResponses) ->
@@ -35,4 +39,7 @@
         songUris.push songInfoResponse[0].tracks.items[0].uri
       else
         console.log "Couldn't find song"
-    @api.addToPlaylist(songUris, playlistId, 'tmr08c')
+    @api.addToPlaylist(songUris, playlistId)
+
+  _playlistName: ->
+    "#{@artistName} - #{@venueName} (#{@date})"
