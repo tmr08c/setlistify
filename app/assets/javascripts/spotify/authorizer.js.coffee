@@ -3,8 +3,7 @@
   scopes: 'playlist-modify-public playlist-modify-private'
   redirectUri: "http://#{location.host}/spotifycallback"
 
-  constructor: (api) ->
-    @api = api
+  constructor: ->
 
   authorize: ->
     window.open(
