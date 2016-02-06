@@ -8,7 +8,7 @@
       hashArgument = hashArgument.split('=')
       hashArguments[hashArgument[0]] = hashArgument.slice(1).join('=')
 
-    if hashArguments['access_token'] == ''
+    if hashArguments['access_token'] == undefined
       window.opener.Materialize.toast('Error signing in to Spotify', 4500, 'error-red')
     else
       window.localStorage.setItem('accessToken', hashArguments['access_token'])
