@@ -19,3 +19,6 @@ vendor/ruby
 
 # Ignore application configuration
 /config/application.yml
+
+# vim thigns
+.*.sw*
