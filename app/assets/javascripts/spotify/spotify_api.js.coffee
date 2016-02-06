@@ -1,8 +1,5 @@
 @SpotifyApi = class SpotifyApi
   base_url: 'https://api.spotify.com/v1/'
-  clientId: 'e9a442575edf498d858ad8c07396cdb2'
-  redirectUri: "http://#{location.host}/spotifycallback"
-  scopes: 'playlist-modify-public playlist-modify-private'
 
   constructor: ->
     console.log 'new api'
@@ -10,23 +7,16 @@
 
   fetchToken: ->
     console.log 'fetch'
-    if window.sessionStorage.getItem('accessToken') != null
+    if window.localStorage.getItem('accessToken') != null
       console.log('in sessoin')
-      @accessToken = window.sessionStorage.getItem('accessToken')
+      @accessToken = window.localStorage.getItem('accessToken')
     else
       console.log 'authorize'
       @authorize()
 
   authorize: ->
-    console.log 'in authorize'
-    currentSearchQuery = window.location.search.slice(1).split('=')[1]
-    window.location = 'https://accounts.spotify.com/authorize' +
-      '?response_type=token' +
-      "&client_id=#{@clientId}" +
-      "&scope=#{encodeURIComponent(@scopes)}" +
-      "&redirect_uri=#{encodeURIComponent(@redirectUri)}" +
-      "&state=#{currentSearchQuery }" +
-      "&show_dialog=true"
+    authorizer = new Authorizer(this)
+    authorizer.authorize()
 
   userInfo: ->
     $.ajax
@@ -60,15 +50,15 @@
         debugger
 
   createPlaylist: (playlistName) =>
+    api = this
     @userInfo().then((userInfoResponse) ->
-      sleep 1
       $.ajax
         url: "https://api.spotify.com/v1/users/tmr08c/playlists",
         type: 'POST',
         data: JSON.stringify({ name: playlistName, public: 'false' }),
         dataType: 'json',
-        beforeSend: (xhr) =>
-          xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
+        beforeSend: (xhr) ->
+          xhr.setRequestHeader("Authorization", "Bearer #{api.accessToken}")
         # success: (data) ->
         ## onSuccess(data.id)
         # need to add better handling and handle common issues
