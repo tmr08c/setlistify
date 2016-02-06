@@ -8,7 +8,12 @@
   createPlaylist: ->
     return unless this.hasSongs()
 
-    playlistBuilder = new PlaylistBuilder(this.props.artist, this.props.setlist)
+    playlistBuilder = new PlaylistBuilder(
+      this.props.artist,
+      this.props.venue,
+      this.props.date,
+      this.props.setlist
+    )
 
     console.log 'building playlist'
     playlistBuilder.buildPlaylist()

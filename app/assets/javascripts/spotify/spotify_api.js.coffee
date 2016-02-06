@@ -19,14 +19,20 @@
     authorizer.authorize()
 
   userInfo: ->
-    $.ajax
-      url: 'https://api.spotify.com/v1/me',
-      type: 'GET',
-      beforeSend: (xhr) =>
-        xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
-      success: (data) ->
-        console.log data.id
-        @userId = data.id
+    if sessionStorage.getItem('userId') == null
+      $.ajax
+        url: 'https://api.spotify.com/v1/me',
+        type: 'GET',
+        beforeSend: (xhr) =>
+          xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
+        success: (data) ->
+          console.log data.id
+          sessionStorage.setItem('userId', data.id)
+          @userId = data.id
+    else
+      new Promise((resolve, reject) ->
+        resolve({id: sessionStorage.getItem('userId')})
+      )
 
   search: (query, type) ->
     $.ajax
@@ -45,15 +51,15 @@
       data: JSON.stringify({ grant_type: 'authorization_code', code: code, redirect_uri: @redirectUri }),
       beforeSend: (xhr) =>
         xhr.setRequestHeader("Authorization", "Basic ZTlhNDQyNTc1ZWRmNDk4ZDg1OGFkOGMwNzM5NmNkYjI6MGMwZGQxZGJjYWQwNDYzNmI5N2VmYTNkNzVjZWVkMzE=")
-        # xhr.setRequestHeader("Access-Control-Allow-Origin", '*')
       success: ->
         debugger
 
   createPlaylist: (playlistName) =>
     api = this
-    @userInfo().then((userInfoResponse) ->
+    @userInfo().then((userInfoResponse) =>
+      console.log(userInfoResponse)
       $.ajax
-        url: "https://api.spotify.com/v1/users/tmr08c/playlists",
+        url: "https://api.spotify.com/v1/users/#{userInfoResponse.id}/playlists",
         type: 'POST',
         data: JSON.stringify({ name: playlistName, public: 'false' }),
         dataType: 'json',
@@ -78,23 +84,26 @@
     console.log "Song search. Artist: #{artist} / title: #{title}"
     @search("#{title} #{artist}", 'track')
 
-  addToPlaylist: (songUris, playlist_uri, user_id) ->
+  addToPlaylist: (songUris, playlist_uri) ->
     console.log songUris
     # console.log "Adding to playlist. Song: #{song_uri} / Playlist: #{playlist_uri}"
-    $.ajax
-      url: "https://api.spotify.com/v1/users/#{user_id}/playlists/#{playlist_uri}/tracks",
-      type: 'POST',
-      data: JSON.stringify({
-        uris: songUris
-      }),
-      dataType: 'json',
-      beforeSend: (xhr) =>
-        xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
-      success: (data) ->
-        console.log 'added'
-      # need to add better handling and handle common issues
-      # * Playlist exists
-      # * No access
-      error: (e) ->
-        console.log 'issue adding to playlist'
-        e
+
+    @userInfo().then((userInfoResponse) =>
+      $.ajax
+        url: "https://api.spotify.com/v1/users/#{userInfoResponse.id}/playlists/#{playlist_uri}/tracks",
+        type: 'POST',
+        data: JSON.stringify({
+          uris: songUris
+        }),
+        dataType: 'json',
+        beforeSend: (xhr) =>
+          xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
+        success: (data) ->
+          console.log 'added'
+        # need to add better handling and handle common issues
+        # * Playlist exists
+        # * No access
+        error: (e) ->
+          console.log 'issue adding to playlist'
+          e
+    )
