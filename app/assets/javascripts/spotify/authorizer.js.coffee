@@ -1,7 +1,7 @@
 @Authorizer = class Authorizer
   clientId: 'e9a442575edf498d858ad8c07396cdb2'
   scopes: 'playlist-modify-public playlist-modify-private'
-  redirectUri: "http://#{location.host}/spotifycallback"
+  redirectUri: "#{location.protocol}//#{location.host}/spotifycallback"
 
   constructor: ->
 
