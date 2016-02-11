@@ -69,3 +69,6 @@ end
 
 gem 'figaro'
 gem 'httparty'
+
+# Ruby Version
+ruby '2.2.3'
