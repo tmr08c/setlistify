@@ -16,21 +16,15 @@
     )
 
   _createPlaylist: () ->
-    console.log "In 'createPlaylist'"
     @api.createPlaylist(@_playlistName())
 
   _getSongUris: () ->
-    console.log "In 'getSongUris'"
-    console.log @setlist
-
     requests = []
     for song in @setlist
       requests.push(@api.songSearch(@artistName, song.title))
-    console.log(requests)
     requests
 
   _addTracksToPlaylist: (playlistId, songInfoResponses) ->
-    console.log "In 'addTracksToPlaylist'. playlistId: #{playlistId} / songUris: #{songUris}"
     songUris = []
 
     songInfoResponses.forEach (songInfoResponse, _) ->

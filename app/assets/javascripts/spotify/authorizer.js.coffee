@@ -6,13 +6,19 @@
   constructor: ->
 
   authorize: ->
-    window.open(
-      'https://accounts.spotify.com/authorize' +
-        '?response_type=token' +
-        "&client_id=#{@clientId}" +
-        "&scope=#{encodeURIComponent(@scopes)}" +
-        "&redirect_uri=#{encodeURIComponent(@redirectUri)}" +
-        "&show_dialog=true",
-      '_blank',
-      'width=550, height=500'
+    new Promise((resolve, reject) =>
+      authorizeWindow = window.open(
+        'https://accounts.spotify.com/authorize' +
+          '?response_type=token' +
+          "&client_id=#{@clientId}" +
+          "&scope=#{encodeURIComponent(@scopes)}" +
+          "&redirect_uri=#{encodeURIComponent(@redirectUri)}" +
+          "&show_dialog=true",
+        '_blank',
+        'width=550, height=500'
+      )
+      authorizeWindow.onclose = (->
+        console.log 'unloaded'
+        return 'thing'
+      )
     )

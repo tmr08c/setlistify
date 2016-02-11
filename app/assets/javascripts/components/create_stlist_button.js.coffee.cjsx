@@ -14,10 +14,7 @@
       this.props.date,
       this.props.setlist
     )
-
-    console.log 'building playlist'
     playlistBuilder.buildPlaylist()
-    console.log 'finished?'
 
 
   render: ->
