@@ -59,4 +59,7 @@ Rails.application.routes.draw do
   namespace :api do
     resources :setlists, only: [:index]
   end
+
+  # Pass Routes to React
+  get "/*path" => "search#index"
 end
