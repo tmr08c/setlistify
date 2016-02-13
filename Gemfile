@@ -63,6 +63,7 @@ group :development, :test do
   gem 'pry-stack_explorer'
   gem 'rubocop'
   gem 'json_matchers'
+  gem 'git_version_bumper'
 end
 
 group :test do
