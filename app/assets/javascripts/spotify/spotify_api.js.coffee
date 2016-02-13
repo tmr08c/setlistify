@@ -31,6 +31,7 @@
           @userId = data.id
     else
       new Promise((resolve, reject) ->
+        @userId = sessionStorage.getItem('userId')
         resolve({id: sessionStorage.getItem('userId')})
       )
 

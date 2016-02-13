@@ -16,6 +16,7 @@
     )
 
     console.log 'building playlist'
+
     playlistBuilder.buildPlaylist()
     console.log 'finished?'
 
