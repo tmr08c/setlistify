@@ -9,10 +9,11 @@
       hashArguments[hashArgument[0]] = hashArgument.slice(1).join('=')
 
     if hashArguments['access_token'] == undefined
-      window.opener.Materialize.toast('Error signing in to Spotify', 4500, 'error-red')
+      new Flash('Error signing in to Spotify', { type: 'error', scope: window.opener })
     else
       window.localStorage.setItem('accessToken', hashArguments['access_token'])
-      window.opener.Materialize.toast('Signed in with Spotify', 4500, 'main-green')
+      new Flash('Signed in with Spotify', { type: 'success', scope: window.opener })
+
     window.close()
 
   render: ->
