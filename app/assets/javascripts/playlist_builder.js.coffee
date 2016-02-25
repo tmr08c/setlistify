@@ -1,4 +1,6 @@
 @PlaylistBuilder = class PlaylistBuilder
+  successfulLoginEvent: 'spotify:signin:success'
+
   constructor: (artistName, venueName, date, setlist, modalSelector) ->
     @artistName = artistName
     @venueName = venueName
@@ -6,36 +8,33 @@
     @setlist = setlist
 
   buildPlaylist: (onSuccess, onFailure) =>
-    console.log 'PlaylistBuilder#buildPlaylist'
     @api = new SpotifyApi()
     @progressModal = new ProgressModal()
+
     @api.authorized(
-      =>
-        @_build()
+      => @_build()
       ,
       =>
-        @progressModal.openModal()
-        @progressModal.updateStatus('Not Logged In')
-        @progressModal.replaceBody(
-          """
-          You need to log in to Spotify to let Setlistify make a playlist for you.
-          <br>
-          <br>
-          Click <a href="#" class='spotifySignIn'>here</a> to sign in to Spotify
-          """
-        )
-        elem = document.getElementById('progressModal')
-        event = document.createEvent('Event')
-        event.initEvent('spotify:signin:success', true, true)
-        elem.addEventListener(
-          'spotify:signin:success',
-          (_) =>
-            @progressModal.closeModal()
-            @buildPlaylist()
-          ,
-          false
-        )
-      )
+        @_promptLogIn()
+    )
+
+  _promptLogIn: () =>
+    @progressModal.openModal()
+    @progressModal.displayLogInModal()
+    @_listenForLogIn()
+
+  _listenForLogIn: =>
+    elem = document.getElementById(@progressModal.modalId)
+    event = document.createEvent('Event')
+    event.initEvent(@successfulLoginEvent, true, true)
+    elem.addEventListener(
+      @successfulLoginEvent,
+      (_) =>
+        @progressModal.closeModal()
+        @buildPlaylist()
+      ,
+      false
+    )
 
   _build: =>
       @progressModal.openModal()
