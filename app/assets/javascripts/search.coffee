@@ -8,3 +8,9 @@ $ ->
    .on "ajax:error", (e, xhr, status, error) ->
       # TODO: Better error handling
       console.log 'ERROR'
+
+  $(document).on 'click', '.spotifySignIn', (event) ->
+    event.preventDefault()
+
+    api = new SpotifyApi()
+    api.authorize()

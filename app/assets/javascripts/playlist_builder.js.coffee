@@ -4,34 +4,64 @@
     @venueName = venueName
     @date = date
     @setlist = setlist
-    @api = new SpotifyApi()
-    @progressModal = new ProgressModal()
 
   buildPlaylist: (onSuccess, onFailure) =>
-    @progressModal.openModal()
-    @progressModal.updateStatus('Creating Playlist')
-    @_createPlaylist().then(
-      (playlistResult) =>
-        @progressModal.updateProgress('Playlist Created', 15)
-        playlistId = playlistResult.id
-        $.when.apply(undefined, @_getSongUris()).then(
-          (results) =>
-            songInfoResponses = [].slice.apply(arguments)
-            @_addTracksToPlaylist(playlistId, songInfoResponses ).then(
-              (__) =>
-                @_completeWithSuccess(playlistId)
-              ,
-              (error) =>
-                @_completeWithError(error)
-            )
-          ,
-          (result) =>
-            alert 'error getting song URIs'
-        )
+    console.log 'PlaylistBuilder#buildPlaylist'
+    @api = new SpotifyApi()
+    @progressModal = new ProgressModal()
+    @api.authorized(
+      =>
+        @_build()
       ,
-    (error) =>
-      @_completeWithError(error)
-  )
+      =>
+        @progressModal.openModal()
+        @progressModal.updateStatus('Not Logged In')
+        @progressModal.replaceBody(
+          """
+          You need to log in to Spotify to let Setlistify make a playlist for you.
+          <br>
+          <br>
+          Click <a href="#" class='spotifySignIn'>here</a> to sign in to Spotify
+          """
+        )
+        elem = document.getElementById('progressModal')
+        event = document.createEvent('Event')
+        event.initEvent('spotify:signin:success', true, true)
+        elem.addEventListener(
+          'spotify:signin:success',
+          (_) =>
+            @progressModal.closeModal()
+            @buildPlaylist()
+          ,
+          false
+        )
+      )
+
+  _build: =>
+      @progressModal.openModal()
+      @progressModal.updateStatus('Creating Playlist')
+      @_createPlaylist().then(
+        (playlistResult) =>
+          @progressModal.updateProgress('Playlist Created', 15)
+          playlistId = playlistResult.id
+          $.when.apply(undefined, @_getSongUris()).then(
+            (results) =>
+              songInfoResponses = [].slice.apply(arguments)
+              @_addTracksToPlaylist(playlistId, songInfoResponses ).then(
+                (__) =>
+                  @_completeWithSuccess(playlistId)
+                ,
+                (error) =>
+                  @_completeWithError(error)
+              )
+            ,
+            (result) =>
+              alert 'error getting song URIs'
+          )
+        ,
+      (error) =>
+        @_completeWithError(error)
+      )
 
   _createPlaylist: () ->
     console.log "In 'createPlaylist'"
