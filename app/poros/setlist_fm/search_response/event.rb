@@ -29,11 +29,13 @@ module SetlistFm
 
       def venue
         venue_json = response.fetch('venue')
+        city_info = venue_json.fetch('city')
+        country_info = city_info.fetch('country')
 
         Venue.new(
           venue_json.fetch('@name'),
-          venue_json.fetch('city').fetch('@name'),
-          venue_json.fetch('city').fetch('@state')
+          city_info.fetch('@name'),
+          city_info.fetch('@state', country_info.fetch('@name'))
         )
       end
 

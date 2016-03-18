@@ -105,6 +105,33 @@ describe SetlistFm::SearchResponse::Event do
     it 'should have a state' do
       expect(subject.venue.state).to eq 'New York'
     end
+
+    context 'when the location has no state' do
+      it 'should use the country' do
+        response_with_no_state = {
+          'venue' => {
+            "@id"=>"3d619bb",
+            "@name"=>"Akti Dymaion",
+            "city"=> {
+              "@id"=>"255683",
+              "@name"=>"Patras",
+              "coords"=> {
+                "@lat"=>"38.2444444",
+                "@long"=>"21.7344444"
+              },
+              "country"=> {
+                "@code"=>"GR",
+                "@name"=>"Greece"
+              }
+            },
+            "url"=>"http://www.setlist.fm/venue/akti-dymaion-patras-greece-3d619bb.html"
+          }
+        }
+        event = described_class.new(response_with_no_state)
+
+        expect(event.venue.state).to eq 'Greece'
+      end
+    end
   end
 
   describe '#url' do
