@@ -3,7 +3,6 @@ module SetlistFm
     class Event
       Artist = Struct.new(:name)
       Song = Struct.new(:title)
-      Venue = Struct.new(:name, :city, :state)
 
       def initialize(setlist_json_response)
         @response = setlist_json_response
@@ -28,13 +27,7 @@ module SetlistFm
       end
 
       def venue
-        venue_json = response.fetch('venue')
-
-        Venue.new(
-          venue_json.fetch('@name'),
-          venue_json.fetch('city').fetch('@name'),
-          venue_json.fetch('city').fetch('@state')
-        )
+        Venue.new(response.fetch('venue'))
       end
 
       def url

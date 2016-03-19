@@ -1,4 +1,5 @@
 require 'spec_helper'
+Venue = SetlistFm::SearchResponse::Event::Venue
 
 describe SetlistFm::SearchResponse::Event do
   describe '#artist' do
@@ -70,40 +71,12 @@ describe SetlistFm::SearchResponse::Event do
   end
 
   describe '#venue' do
-    subject { described_class.new(response_with_venue) }
-    let(:response_with_venue) do
-      {
-        'venue' => {
-          '@id' => '53d483fd',
-          '@name' => 'The Space at Westbury',
-          'city' => {
-            '@id' => '5144040',
-            '@name' => 'Westbury',
-            '@state' => 'New York',
-            '@stateCode' => 'NY',
-            'coords' => {
-              '@lat' => '40.7556561',
-              '@long' => '-73.5876273'
-            },
-            'country' => {
-              '@code' => 'US',
-              '@name' => 'United States'
-            }
-          }
-        }
-      }
-    end
+    it 'create a Venue using the venue hash' do
+      response_with_venue = { 'venue' => { venue: :info } }
 
-    it 'should have a name' do
-      expect(subject.venue.name).to eq 'The Space at Westbury'
-    end
+      expect(Venue).to receive(:new).with(venue: :info)
 
-    it 'should have a city' do
-      expect(subject.venue.city).to eq 'Westbury'
-    end
-
-    it 'should have a state' do
-      expect(subject.venue.state).to eq 'New York'
+      described_class.new(response_with_venue).venue
     end
   end
 
