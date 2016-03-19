@@ -37,7 +37,7 @@ describe 'Searching setlist spec', type: :request do
         VCR.use_cassette('modern baseball search') do
           get(
             request_url,
-            request_options.merge(query: 'modern+baseball'),
+            request_options.merge(query: 'modern+baseball')
           )
 
           expect(response.status).to eq 200

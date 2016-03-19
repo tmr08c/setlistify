@@ -1,0 +1,14 @@
+sudo: false
+cache: bundler
+language: ruby
+matrix:
+  allow_failures:
+    - rvm: ruby-head
+  fast_finish: true
+install:
+  - bundle install --retry=3
+script:
+  - bundle exec rspec
+addons:
+  code_climate:
+    repo_token: 524d516292ca635ba769a2d42b97653c2d2ecfa4b855a8cd4acb484b66ff60f7

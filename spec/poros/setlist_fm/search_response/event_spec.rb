@@ -61,12 +61,12 @@ describe SetlistFm::SearchResponse::Event do
 
     it 'should have the title of each song in order' do
       expect(subject.setlist.map(&:title)).to eq([
-        'song1',
-        'song2',
-        'encore 1 song 1',
-        'encore 2 song 1',
-        'encore 2 song 2'
-      ])
+                                                   'song1',
+                                                   'song2',
+                                                   'encore 1 song 1',
+                                                   'encore 2 song 1',
+                                                   'encore 2 song 2'
+                                                 ])
     end
   end
 
@@ -101,7 +101,7 @@ describe SetlistFm::SearchResponse::Event do
           '@name' => 'Hip Club',
           'city' => {
             '@name' => 'Brooklyn',
-            '@state' => 'New York',
+            '@state' => 'New York'
           },
           'country' => {
             '@code' => 'US',
@@ -113,27 +113,27 @@ describe SetlistFm::SearchResponse::Event do
             {
               'song' => [
                 { '@name' => 'song1' },
-                { '@name' => 'song2', },
+                { '@name' => 'song2' }
               ]
-            },
+            }
           ]
         },
-        'url' =>  'setlist.fm/setliests/1'
+        'url' => 'setlist.fm/setliests/1'
       }
     end
 
     it 'should include nice versions of all the info' do
       expect(JSON.parse(subject.as_json)).to eq(
-        'artist' =>  { 'name' =>  'Hip Band Name' },
-        'date' =>  '2015-10-22',
+        'artist' => { 'name' => 'Hip Band Name' },
+        'date' => '2015-10-22',
         'setlist' => [
           { 'title' => 'song1' },
-          { 'title' => 'song2' },
+          { 'title' => 'song2' }
         ],
         'venue' => {
           'name' => 'Hip Club',
           'city' => 'Brooklyn',
-          'state' => 'New York',
+          'state' => 'New York'
         }
       )
     end
