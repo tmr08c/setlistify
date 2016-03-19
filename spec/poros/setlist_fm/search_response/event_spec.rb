@@ -1,4 +1,5 @@
 require 'spec_helper'
+Venue = SetlistFm::SearchResponse::Event::Venue
 
 describe SetlistFm::SearchResponse::Event do
   describe '#artist' do
@@ -70,67 +71,12 @@ describe SetlistFm::SearchResponse::Event do
   end
 
   describe '#venue' do
-    subject { described_class.new(response_with_venue) }
-    let(:response_with_venue) do
-      {
-        'venue' => {
-          '@id' => '53d483fd',
-          '@name' => 'The Space at Westbury',
-          'city' => {
-            '@id' => '5144040',
-            '@name' => 'Westbury',
-            '@state' => 'New York',
-            '@stateCode' => 'NY',
-            'coords' => {
-              '@lat' => '40.7556561',
-              '@long' => '-73.5876273'
-            },
-            'country' => {
-              '@code' => 'US',
-              '@name' => 'United States'
-            }
-          }
-        }
-      }
-    end
+    it 'create a Venue using the venue hash' do
+      response_with_venue = { 'venue' => { venue: :info } }
 
-    it 'should have a name' do
-      expect(subject.venue.name).to eq 'The Space at Westbury'
-    end
+      expect(Venue).to receive(:new).with(venue: :info)
 
-    it 'should have a city' do
-      expect(subject.venue.city).to eq 'Westbury'
-    end
-
-    it 'should have a state' do
-      expect(subject.venue.state).to eq 'New York'
-    end
-
-    context 'when the location has no state' do
-      it 'should use the country' do
-        response_with_no_state = {
-          'venue' => {
-            "@id"=>"3d619bb",
-            "@name"=>"Akti Dymaion",
-            "city"=> {
-              "@id"=>"255683",
-              "@name"=>"Patras",
-              "coords"=> {
-                "@lat"=>"38.2444444",
-                "@long"=>"21.7344444"
-              },
-              "country"=> {
-                "@code"=>"GR",
-                "@name"=>"Greece"
-              }
-            },
-            "url"=>"http://www.setlist.fm/venue/akti-dymaion-patras-greece-3d619bb.html"
-          }
-        }
-        event = described_class.new(response_with_no_state)
-
-        expect(event.venue.state).to eq 'Greece'
-      end
+      described_class.new(response_with_venue).venue
     end
   end
 
