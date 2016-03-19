@@ -1,5 +1,4 @@
 AllCops:
-  RunRailsCops: true
   Excludes:
     - log/**
     - vendor/**/*
@@ -11,23 +10,8 @@ AllCops:
     - spec/spec_helper.rb
     - spec/rails_helper.rb
 
+Rails:
+  Enabled: true
+
 Documentation:
-  Enabled: false
-
-NumericLiterals:
-  Enabled: false
-
-Encoding:
-  Enabled: false
-
-TrailingComma:
-  Enabled: false
-
-DoubleNegation:
-  Enabled: false
-
-AccessorMethodName:
-  Enabled: false
-
-PredicateName:
   Enabled: false

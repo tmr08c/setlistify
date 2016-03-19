@@ -77,35 +77,37 @@ describe SetlistFm::SearchResponse::SetListParser do
       end
 
       it 'should return an array with the json for all songs played' do
-        expect(subject.json_songs_array).to eq([
-          {
-            '@name' => 'I Need My Girl',
-            'with' => {
-              '@disambiguation' => '',
-              '@mbid' => 'a3de3425-e96b-4857-a35c-e949fab8d80b',
-              '@name' => 'Lauren Mayberry',
-              '@sortName' => 'Mayberry, Lauren',
-              'url' => 'www.setlist.fm/setlists/lauren-mayberry.html'
-            }
-          },
-          { '@name' => 'This Is the Last Time' },
-          {
-            '@name' => 'Peggy-O',
-            'cover' => {
-              '@disambiguation' => '',
-              '@mbid' => '6faa7ca7-0d99-4a5e-bfa6-1fd5037520c6',
-              '@name' => 'Grateful Dead',
-              '@sortName' => 'Grateful Dead',
-              '@tmid' => '735200',
-              'url' => 'www.setlist.fm/setlists/grateful-dead.html'
-            }
-          },
-          { '@name' => 'Pink Rabbits' },
-          { '@name' => 'England' },
-          { '@name' => 'Graceless' },
-          { '@name' => 'Mr. November' },
-          { '@name' => 'Terrible Love' }
-        ])
+        expect(subject.json_songs_array).to eq(
+          [
+            {
+              '@name' => 'I Need My Girl',
+              'with' => {
+                '@disambiguation' => '',
+                '@mbid' => 'a3de3425-e96b-4857-a35c-e949fab8d80b',
+                '@name' => 'Lauren Mayberry',
+                '@sortName' => 'Mayberry, Lauren',
+                'url' => 'www.setlist.fm/setlists/lauren-mayberry.html'
+              }
+            },
+            { '@name' => 'This Is the Last Time' },
+            {
+              '@name' => 'Peggy-O',
+              'cover' => {
+                '@disambiguation' => '',
+                '@mbid' => '6faa7ca7-0d99-4a5e-bfa6-1fd5037520c6',
+                '@name' => 'Grateful Dead',
+                '@sortName' => 'Grateful Dead',
+                '@tmid' => '735200',
+                'url' => 'www.setlist.fm/setlists/grateful-dead.html'
+              }
+            },
+            { '@name' => 'Pink Rabbits' },
+            { '@name' => 'England' },
+            { '@name' => 'Graceless' },
+            { '@name' => 'Mr. November' },
+            { '@name' => 'Terrible Love' }
+          ]
+        )
       end
     end
 
@@ -152,16 +154,18 @@ describe SetlistFm::SearchResponse::SetListParser do
       end
 
       it 'should return an array with the json for all songs played' do
-        expect(subject.json_songs_array).to eq([
-          { '@name' => 'song1' },
-          { '@name' => 'song2', 'info' => 'Meowed intro' },
-          {
-            '@name' => 'encore 1 song 1',
-            'info' => 'walked off stage again after'
-          },
-          { '@name' => 'encore 2 song 1' },
-          { '@name' => 'encore 2 song 2' }
-        ])
+        expect(subject.json_songs_array).to eq(
+          [
+            { '@name' => 'song1' },
+            { '@name' => 'song2', 'info' => 'Meowed intro' },
+            {
+              '@name' => 'encore 1 song 1',
+              'info' => 'walked off stage again after'
+            },
+            { '@name' => 'encore 2 song 1' },
+            { '@name' => 'encore 2 song 2' }
+          ]
+        )
       end
     end
   end
