@@ -3,11 +3,11 @@
 
   constructor: ->
     console.log 'new api'
-    @fetchToken()
+    # @fetchToken()
 
   fetchToken: ->
     console.log 'fetch'
-    if window.localStorage.getItem('accessToken') != null
+    if window.localStorage.getItem('accessToken') != null && @authorized()
       console.log('in sessoin')
       @accessToken = window.localStorage.getItem('accessToken')
     else
@@ -18,21 +18,30 @@
     authorizer = new Authorizer(this)
     authorizer.authorize()
 
+  authorized: (onSuccess, onFail) ->
+    @accessToken = window.localStorage.getItem('accessToken')
+    @userInfo().then(
+      (_) ->
+        onSuccess()
+        true
+      (errorResponse) =>
+        console.log errorResponse
+        onFail()
+    )
+
+# wrap calls in a withAuthorization?
+
   userInfo: ->
-    if sessionStorage.getItem('userId') == null
-      $.ajax
-        url: 'https://api.spotify.com/v1/me',
-        type: 'GET',
-        beforeSend: (xhr) =>
-          xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
-        success: (data) ->
-          console.log data.id
-          sessionStorage.setItem('userId', data.id)
-          @userId = data.id
-    else
-      new Promise((resolve, reject) ->
-        resolve({id: sessionStorage.getItem('userId')})
-      )
+    console.log "userInfo, accessToken: #{@accessToken}"
+    $.ajax
+      url: 'https://api.spotify.com/v1/me',
+      type: 'GET',
+      beforeSend: (xhr) =>
+        xhr.setRequestHeader("Authorization", "Bearer #{@accessToken}")
+      success: (data) ->
+        console.log data.id
+        sessionStorage.setItem('userId', data.id)
+        @userId = data.id
 
   search: (query, type) ->
     $.ajax
