@@ -17,7 +17,7 @@ defmodule SetlistifyWeb.Router do
   scope "/", SetlistifyWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", SearchLive
   end
 
   # Other scopes may use custom stacks.
