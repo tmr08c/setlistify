@@ -4,8 +4,12 @@ defmodule SetlistifyWeb.SearchLiveTest do
   import Phoenix.LiveViewTest
 
   test "searching for setlists", %{conn: conn} do
-    {:ok, _live, html} = live(conn, ~p"/")
+    {:ok, view, _} = live(conn, ~p"/")
 
-    assert html =~ "Hello"
+    assert view |> element("form") |> render_submit(%{search: %{query: ""}}) =~
+             "can&#39;t be blank"
+
+    assert view |> element("form") |> render_submit(%{search: %{query: "the band"}}) =~
+             ~r/searching for.*the band/i
   end
 end
