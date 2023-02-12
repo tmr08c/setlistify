@@ -2,17 +2,26 @@ defmodule SetlistifyWeb.SearchLive do
   use SetlistifyWeb, :live_view
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, result: "", search: %{})}
+    {:ok, assign(socket, setlists: [], search: %{})}
   end
 
   def handle_event("search", %{"search" => params}, socket) do
     search = search_changeset(params)
 
     if search.valid? do
-      {:noreply,
-       assign(socket, result: "Searching for setlists for '#{params["query"]}'.", search: search)}
+      setlists =
+        search
+        |> Ecto.Changeset.get_field(:query)
+        |> Setlistify.SetlistFm.API.search()
+        |> Map.fetch!("setlist")
+        |> Enum.map(fn setlist ->
+          %{"artist" => %{"name" => artist_name}, "venue" => %{"name" => venue_name}} = setlist
+          %{artist: artist_name, venue: venue_name}
+        end)
+
+      {:noreply, assign(socket, setlists: setlists, search: search)}
     else
-      {:noreply, assign(socket, result: "", search: search)}
+      {:noreply, assign(socket, setlists: [], search: search)}
     end
   end
 
@@ -26,7 +35,10 @@ defmodule SetlistifyWeb.SearchLive do
       </:actions>
     </.simple_form>
 
-    <%= @result %>
+    <%= for setlist <- @setlists do %>
+      Artist: <%= Map.fetch!(setlist, :artist) %>
+      Venue: <%= Map.fetch!(setlist, :venue) %>
+    <% end %>
     """
   end
 
