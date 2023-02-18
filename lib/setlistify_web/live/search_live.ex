@@ -13,11 +13,6 @@ defmodule SetlistifyWeb.SearchLive do
         search
         |> Ecto.Changeset.get_field(:query)
         |> Setlistify.SetlistFm.API.search()
-        |> Map.fetch!("setlist")
-        |> Enum.map(fn setlist ->
-          %{"artist" => %{"name" => artist_name}, "venue" => %{"name" => venue_name}} = setlist
-          %{artist: artist_name, venue: venue_name}
-        end)
 
       {:noreply, assign(socket, setlists: setlists, search: search)}
     else
@@ -35,10 +30,13 @@ defmodule SetlistifyWeb.SearchLive do
       </:actions>
     </.simple_form>
 
-    <%= for setlist <- @setlists do %>
-      Artist: <%= Map.fetch!(setlist, :artist) %>
-      Venue: <%= Map.fetch!(setlist, :venue) %>
-    <% end %>
+    <ol>
+      <%= for setlist <- @setlists do %>
+        <li>
+          <%= setlist.artist %> @ <%= setlist.venue.name %> on <%= setlist.date %>
+        </li>
+      <% end %>
+    </ol>
     """
   end
 
