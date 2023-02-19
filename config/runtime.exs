@@ -113,3 +113,22 @@ if config_env() == :prod do
   #
   # See https://hexdocs.pm/swoosh/Swoosh.html#module-installation for details.
 end
+
+# Non-prod specific configuration
+
+# For local development, use `DotenvParser` to fetch secrets from our `.env`
+# file and make them available as environmental variables.
+#
+# For test, we use the `.example` copy of our `.env` file. This should include
+# all of the keys, but with phony values, preventing us from hitting real APIs
+# in tests.
+#
+# Production (and production-like) environments are expected to set these value
+# directly (if a default cannot be provided).
+case Config.config_env() do
+  :dev -> DotenvParser.load_file(".env")
+  :test -> DotenvParser.load_file(".env.example")
+end
+
+## Setlist.fm API
+config :setlistify, setlist_fm_api_key: System.fetch_env!("SETLIST_FM_API_SECRET")

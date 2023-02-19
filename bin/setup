@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+# script/setup: Update local environment to run the application
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+echo "==> Installing languages via asdf…"
+asdf install
+
+echo "==> Running mix setup…"
+mix setup

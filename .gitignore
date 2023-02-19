@@ -32,3 +32,6 @@ setlistify-*.tar
 npm-debug.log
 /assets/node_modules/
 
+# We are using `dotenv_parser` to set secrets locally; those screts should stay
+# local
+.env
