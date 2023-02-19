@@ -9,7 +9,10 @@ defmodule Setlistify.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
       aliases: aliases(),
-      deps: deps()
+      deps: deps(),
+      dialyzer: [
+        plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+      ]
     ]
   end
 
@@ -33,7 +36,8 @@ defmodule Setlistify.MixProject do
   defp deps do
     [
       {:bypass, "~> 2.1", only: :test},
-      {:dotenv_parser, "~> 2.0", only: [:test, :dev]},
+      {:dotenv_parser, "~> 2.0", only: [:dev, :test]},
+      {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:ecto_sql, "~> 3.6"},
       {:esbuild, "~> 0.5", runtime: Mix.env() == :dev},
       {:finch, "~> 0.13"},

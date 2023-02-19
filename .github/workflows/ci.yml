@@ -50,6 +50,7 @@ jobs:
         with:
           otp-version: ${{steps.versions.outputs.erlang}}
           elixir-version: ${{steps.versions.outputs.elixir}}
+        id: beam
 
       # Step: Define how to cache deps. Restores existing cache if present.
       - name: Cache deps
@@ -97,3 +98,27 @@ jobs:
       # Step: Execute the tests.
       - name: Run tests
         run: mix test
+
+      # Step: Run Dialyzer
+      # Based on https://github.com/jeremyjh/dialyxir#github-actions
+
+      # Don't cache PLTs based on mix.lock hash, as Dialyzer can incrementally update even old ones
+      # Cache key based on Elixir & Erlang version (also useful when running in matrix)
+      - name: Restore PLT cache
+        uses: actions/cache@v2
+        id: plt_cache
+        with:
+          key: |
+            ${{ runner.os }}-${{ steps.beam.outputs.elixir-version }}-${{ steps.beam.outputs.otp-version }}-plt
+          restore-keys: |
+            ${{ runner.os }}-${{ steps.beam.outputs.elixir-version }}-${{ steps.beam.outputs.otp-version }}-plt
+          path: |
+            priv/plts
+
+      # Create PLTs if no cache was found
+      - name: Create PLTs
+        if: steps.plt_cache.outputs.cache-hit != 'true'
+        run: mix dialyzer --plt
+
+      - name: Run dialyzer
+        run: mix dialyzer --format github
