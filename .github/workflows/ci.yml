@@ -116,9 +116,15 @@ jobs:
             priv/plts
 
       # Create PLTs if no cache was found
+      # Set MIX_ENV to dev to avoid creating a PLT for test-specific code; this
+      # circumvents isues with Dialyzer not finding ExUnit callbacks.
       - name: Create PLTs
         if: steps.plt_cache.outputs.cache-hit != 'true'
         run: mix dialyzer --plt
+        env:
+          MIX_ENV: dev
 
       - name: Run dialyzer
         run: mix dialyzer --format github
+        env:
+          MIX_ENV: dev
