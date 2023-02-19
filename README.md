@@ -1,18 +1,21 @@
 # Setlistify
 
-To start your Phoenix server:
+## Development
 
-  * Run `mix setup` to install and setup dependencies
-  * Start Phoenix endpoint with `mix phx.server` or inside IEx with `iex -S mix phx.server`
+### Getting set up
 
-Now you can visit [`localhost:4000`](http://localhost:4000) from your browser.
+When setting up the application for the first time, run:
 
-Ready to run in production? Please [check our deployment guides](https://hexdocs.pm/phoenix/deployment.html).
+``` shell
+bin/setup
+```
 
-## Learn more
+This will create a local `.env` file will placeholders for any secrets the application needs. To actually use the application, you will need to fill these in with valid values.
 
-  * Official website: https://www.phoenixframework.org/
-  * Guides: https://hexdocs.pm/phoenix/overview.html
-  * Docs: https://hexdocs.pm/phoenix
-  * Forum: https://elixirforum.com/c/phoenix-forum
-  * Source: https://github.com/phoenixframework/phoenix
+### Running the sever
+
+``` shell
+bin/server
+```
+
+This will ensure you are set up with the latest dependencies and then run the server under `iex`.
