@@ -35,3 +35,7 @@ npm-debug.log
 # We are using `dotenv_parser` to set secrets locally; those screts should stay
 # local
 .env
+
+# Ignore Dialyzer's PLT files
+/priv/plts/*.plt
+/priv/plts/*.plt.hash
