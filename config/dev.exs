@@ -62,6 +62,8 @@ config :setlistify, SetlistifyWeb.Endpoint,
     ]
   ]
 
+config :setlistify, SetlistifyWeb.Endpoint, phoenix_profiler: []
+
 # Enable dev routes for dashboard and mailbox
 config :setlistify, dev_routes: true
 

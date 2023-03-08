@@ -37,7 +37,12 @@ defmodule SetlistifyWeb.Router do
     scope "/dev" do
       pipe_through :browser
 
-      live_dashboard "/dashboard", metrics: SetlistifyWeb.Telemetry
+      live_dashboard "/dashboard",
+        metrics: SetlistifyWeb.Telemetry,
+        additional_pages: [
+          _profiler: {PhoenixProfiler.Dashboard, []}
+        ]
+
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end
   end

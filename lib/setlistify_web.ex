@@ -54,6 +54,8 @@ defmodule SetlistifyWeb do
       use Phoenix.LiveView,
         layout: {SetlistifyWeb.Layouts, :app}
 
+      on_mount PhoenixProfiler
+
       unquote(html_helpers())
     end
   end
