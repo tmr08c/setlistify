@@ -1,0 +1,122 @@
+{
+  "id": "bbcf12e",
+  "versionId": "g3e33173",
+  "eventDate": "19-12-2022",
+  "lastUpdated": "2022-12-21T23:44:43.831+0000",
+  "artist": {
+    "mbid": "a96ac800-bfcb-412a-8a63-0a98df600700",
+    "name": "Modest Mouse",
+    "sortName": "Modest Mouse",
+    "disambiguation": "",
+    "url": "https://www.setlist.fm/setlists/modest-mouse-73d6ae69.html"
+  },
+  "venue": {
+    "id": "6bd6227a",
+    "name": "Terminal 5",
+    "city": {
+      "id": "5128581",
+      "name": "New York",
+      "state": "New York",
+      "stateCode": "NY",
+      "coords": {
+        "lat": 40.7142691,
+        "long": -74.0059729
+      },
+      "country": {
+        "code": "US",
+        "name": "United States"
+      }
+    },
+    "url": "https://www.setlist.fm/venue/terminal-5-new-york-ny-usa-6bd6227a.html"
+  },
+  "tour": {
+    "name": "The Lonesome Crowded West Tour (2022)"
+  },
+  "sets": {
+    "set": [
+      {
+        "name": "VIP:",
+        "song": [
+          {
+            "name": "Baby Blue Sedan"
+          },
+          {
+            "name": "Never Ending Math Equation"
+          },
+          {
+            "name": "I Came as a Rat"
+          }
+        ]
+      },
+      {
+        "name": "The Lonesome Crowded West:",
+        "song": [
+          {
+            "name": "Teeth Like God's Shoeshine"
+          },
+          {
+            "name": "Heart Cooks Brain"
+          },
+          {
+            "name": "Convenient Parking"
+          },
+          {
+            "name": "Lounge (Closing Time)"
+          },
+          {
+            "name": "Jesus Christ Was an Only Child"
+          },
+          {
+            "name": "Doin' the Cockroach"
+          },
+          {
+            "name": "Cowboy Dan"
+          },
+          {
+            "name": "Trailer Trash"
+          },
+          {
+            "name": "Out of Gas"
+          },
+          {
+            "name": "Long Distance Drunk"
+          },
+          {
+            "name": "Shit Luck"
+          },
+          {
+            "name": "Trucker's Atlas"
+          },
+          {
+            "name": "Polar Opposites"
+          },
+          {
+            "name": "Bankrupt on Selling"
+          },
+          {
+            "name": "Styrofoam Boots/It's All Nice on Ice, Alright"
+          }
+        ]
+      },
+      {
+        "encore": 1,
+        "song": [
+          {
+            "name": "3rd Planet"
+          },
+          {
+            "name": "A Life of Arctic Sounds"
+          },
+          {
+            "name": "Edit the Sad Parts"
+          },
+          {
+            "name": "Grey Ice Water"
+          }
+        ]
+      }
+    ]
+  },
+  "info": "Damon Cox from An Horse filled in for Jeremiah Green on drums.",
+  "url": "https://www.setlist.fm/setlist/modest-mouse/2022/terminal-5-new-york-ny-bbcf12e.html"
+}
