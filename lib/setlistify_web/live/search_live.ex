@@ -33,7 +33,7 @@ defmodule SetlistifyWeb.SearchLive do
     <ol>
       <%= for setlist <- @setlists do %>
         <li>
-          <.link navigate={~p"/setlists/#{setlist.id}"} {tid(["setlist", setlist.id])}>
+          <.link navigate={~p"/setlist/#{setlist.id}"} {tid(["setlist", setlist.id])}>
             <%= setlist.artist %> @ <%= setlist.venue.name %> on <%= setlist.date %>
           </.link>
         </li>

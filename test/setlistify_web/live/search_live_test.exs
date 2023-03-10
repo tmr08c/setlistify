@@ -10,9 +10,6 @@ defmodule SetlistifyWeb.SearchLiveTest do
   setup :verify_on_exit!
 
   test "searching for setlists", %{conn: conn} do
-    defmock(SetlistFm.API.MockClient, for: SetlistFm.API)
-    Application.put_env(:setlistify, :setlistfm_api_client, SetlistFm.API.MockClient)
-
     setlist_id = Ecto.UUID.generate()
 
     expect(SetlistFm.API.MockClient, :search, 1, fn "beatles" ->
@@ -38,6 +35,6 @@ defmodule SetlistifyWeb.SearchLiveTest do
     assert html =~ "2023-01-01"
 
     view |> element(tid("setlist-#{setlist_id}")) |> render_click()
-    assert_redirected(view, ~p"/setlists/#{setlist_id}")
+    assert_redirected(view, ~p"/setlist/#{setlist_id}")
   end
 end

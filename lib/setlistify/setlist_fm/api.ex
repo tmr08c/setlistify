@@ -14,7 +14,8 @@ defmodule Setlistify.SetlistFm.API do
         }
 
   @type set :: %{
-          optional(:name) => String.t(),
+          optional(:encore) => integer(),
+          name: nil | String.t(),
           songs: [String.t()]
         }
   @callback search(String.t()) :: [search_result()]
