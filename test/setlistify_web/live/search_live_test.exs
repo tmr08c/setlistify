@@ -4,15 +4,26 @@ defmodule SetlistifyWeb.SearchLiveTest do
   import Phoenix.LiveViewTest
   import Hammox
 
+  alias Setlistify.SetlistFm
+
   # Make sure mocks are verified when the test exits
   setup :verify_on_exit!
 
   test "searching for setlists", %{conn: conn} do
-    defmock(Setlistify.SetlistFm.API.MockClient, for: Setlistify.SetlistFm.API)
-    Application.put_env(:setlistify, :setlistfm_api_client, Setlistify.SetlistFm.API.MockClient)
+    defmock(SetlistFm.API.MockClient, for: SetlistFm.API)
+    Application.put_env(:setlistify, :setlistfm_api_client, SetlistFm.API.MockClient)
 
-    expect(Setlistify.SetlistFm.API.MockClient, :search, fn _ ->
-      [%{artist: "The Beatles", venue: %{name: "Compaq Center"}, date: Date.new!(2023, 01, 01)}]
+    setlist_id = Ecto.UUID.generate()
+
+    expect(SetlistFm.API.MockClient, :search, 1, fn "beatles" ->
+      [
+        %{
+          artist: "The Beatles",
+          venue: %{name: "Compaq Center"},
+          date: Date.new!(2023, 01, 01),
+          id: setlist_id
+        }
+      ]
     end)
 
     {:ok, view, _} = live(conn, ~p"/")
@@ -25,5 +36,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
     assert html =~ "The Beatles"
     assert html =~ "Compaq Center"
     assert html =~ "2023-01-01"
+
+    view |> element(tid("setlist-#{setlist_id}")) |> render_click()
+    assert_redirected(view, ~p"/setlists/#{setlist_id}")
   end
 end

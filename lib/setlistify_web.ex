@@ -92,6 +92,17 @@ defmodule SetlistifyWeb do
 
       # Routes generation with the ~p sigil
       unquote(verified_routes())
+
+      # Helpers to add test-specific identifiers
+      #
+      # WARNING: If you change the pattern, you may need to update our selector
+      # in `SetlistifyWeb.ConnCase`
+      if Mix.env() == :prod do
+        def tid(), do: []
+      else
+        def tid(list) when is_list(list), do: [{:data, ["test-#{Enum.join(list, "-")}": true]}]
+        def tid(id), do: [{:data, ["test-#{id}": true]}]
+      end
     end
   end
 
