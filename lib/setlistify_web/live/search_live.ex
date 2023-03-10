@@ -42,7 +42,7 @@ defmodule SetlistifyWeb.SearchLive do
     """
   end
 
-  def search_changeset(params) do
+  defp search_changeset(params) do
     types = %{query: :string}
 
     {%{}, types}
