@@ -5,19 +5,23 @@ defmodule SetlistifyWeb.SearchLive do
     {:ok, assign(socket, setlists: [], search: %{})}
   end
 
-  def handle_event("search", %{"search" => params}, socket) do
+  def handle_params(params, _uri, socket) when params == %{} do
+    {:noreply, socket}
+  end
+
+  def handle_params(params, _uri, socket) do
     search = search_changeset(params)
 
     if search.valid? do
-      setlists =
-        search
-        |> Ecto.Changeset.get_field(:query)
-        |> Setlistify.SetlistFm.API.search()
-
-      {:noreply, assign(socket, setlists: setlists, search: search)}
+      setlists = search |> Ecto.Changeset.get_field(:query) |> Setlistify.SetlistFm.API.search()
+      {:noreply, assign(socket, search: search, setlists: setlists)}
     else
-      {:noreply, assign(socket, setlists: [], search: search)}
+      {:noreply, assign(socket, search: search, setlists: [])}
     end
+  end
+
+  def handle_event("search", %{"search" => params}, socket) do
+    {:noreply, push_patch(socket, to: ~p"/?#{params}")}
   end
 
   def render(assigns) do
