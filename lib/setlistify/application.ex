@@ -5,6 +5,8 @@ defmodule Setlistify.Application do
 
   use Application
 
+  require Cachex.Spec
+
   @impl true
   def start(_type, _args) do
     children = [
@@ -17,7 +19,20 @@ defmodule Setlistify.Application do
       # Start Finch
       {Finch, name: Setlistify.Finch},
       # Start the Endpoint (http/https)
-      SetlistifyWeb.Endpoint
+      SetlistifyWeb.Endpoint,
+      # Start Caches
+      Supervisor.child_spec(
+        {Cachex,
+         name: :setlist_fm_search_cache,
+         expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
+        id: :setlist_fm_search_cache
+      ),
+      Supervisor.child_spec(
+        {Cachex,
+         name: :setlist_fm_setlist_cache,
+         expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
+        id: :setlist_fm_setlist_cache
+      )
       # Start a worker by calling: Setlistify.Worker.start_link(arg)
       # {Setlistify.Worker, arg}
     ]
