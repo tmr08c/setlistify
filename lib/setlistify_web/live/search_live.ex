@@ -26,21 +26,34 @@ defmodule SetlistifyWeb.SearchLive do
 
   def render(assigns) do
     ~H"""
-    <.simple_form :let={f} for={@search} as="search" phx-submit="search" id="phx-search">
-      <.input field={{f, :query}} />
+    <.simple_form :let={f} for={@search} as="search" phx-submit="search" id="phx-search" class="mb-10">
+      <.input field={{f, :query}} placeholder="Search by artist..." />
 
       <:actions>
-        <.button>Search</.button>
+        <.button class="w-full">Search</.button>
       </:actions>
     </.simple_form>
 
-    <ol>
+    <ol :if={@setlists != []} class="flex flex-col divide-y divide-slate-200">
       <%= for setlist <- @setlists do %>
-        <li>
-          <.link navigate={~p"/setlist/#{setlist.id}"} {tid(["setlist", setlist.id])}>
-            <%= setlist.artist %> @ <%= setlist.venue.name %> on <%= setlist.date %>
-          </.link>
-        </li>
+        <.link navigate={~p"/setlist/#{setlist.id}"} {tid(["setlist", setlist.id])}>
+          <li class="py-6 px-8 flex space-x-5 hover:bg-slate-100">
+            <time
+              datetime={setlist.date}
+              class="border-2 border-slate-600 text-center rounded shadow-sm font-mono"
+            >
+              <div class="uppercase font-medium bg-slate-300 p-2">
+                <%= Calendar.strftime(setlist.date, "%b '%y") %>
+              </div>
+
+              <div class="py-3"><%= setlist.date.day %></div>
+            </time>
+            <div class="self-center space-y-1">
+              <div class="text-lg"><%= setlist.artist %></div>
+              <div class="font-light text-slate-400"><%= setlist.venue.name %></div>
+            </div>
+          </li>
+        </.link>
       <% end %>
     </ol>
     """
