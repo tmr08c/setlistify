@@ -18,8 +18,9 @@ defmodule SetlistifyWeb.Router do
     pipe_through :browser
 
     live "/", SearchLive
-
     live "/setlist/:id", Setlists.ShowLive
+
+    get "/spotifyauthcallback", SpotifyCallbackController, :show
   end
 
   # Other scopes may use custom stacks.

@@ -132,3 +132,7 @@ end
 
 ## Setlist.fm API
 config :setlistify, setlist_fm_api_key: System.fetch_env!("SETLIST_FM_API_SECRET")
+
+## Spotify API
+config :setlistify, spotify_client_id: System.fetch_env!("SPOTIFY_CLIENT_ID")
+config :setlistify, spotify_client_secret: System.fetch_env!("SPOTIFY_CLIENT_SECRET")
