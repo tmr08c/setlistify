@@ -17,7 +17,9 @@ defmodule SetlistifyWeb.Router do
   scope "/", SetlistifyWeb do
     pipe_through :browser
 
-    get "/spotifyauthcallback", SpotifyCallbackController, :show
+    # TODO I may want to see if the user is already logged in and redirect
+    # accordingly
+    get "/oauth/callbacks/:provider", OAuthCallbackController, :new
 
     live_session :default, on_mount: SetlistifyWeb.UserAuth do
       live "/", SearchLive
