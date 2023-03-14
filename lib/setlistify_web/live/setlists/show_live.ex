@@ -24,7 +24,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
         URI.encode_query(%{
           client_id: Application.fetch_env!(:setlistify, :spotify_client_id),
           response_type: "code",
-          redirect_uri: url(~p"/spotifyauthcallback"),
+          redirect_uri: url(~p"/oauth/callbacks/spotify"),
           state: "TODO",
           scope: "playlist-modify-private",
           show_dialog: true

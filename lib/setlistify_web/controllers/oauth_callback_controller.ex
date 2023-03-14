@@ -1,7 +1,7 @@
-defmodule SetlistifyWeb.SpotifyCallbackController do
+defmodule SetlistifyWeb.OAuthCallbackController do
   use SetlistifyWeb, :controller
 
-  def show(conn, %{"code" => code, "state" => _todo}) do
+  def new(conn, %{"provider" => "spotify", "code" => code, "state" => _todo}) do
     auth =
       :base64.encode(
         Application.fetch_env!(:setlistify, :spotify_client_id) <>
@@ -17,7 +17,7 @@ defmodule SetlistifyWeb.SpotifyCallbackController do
         form: %{
           grant_type: :authorization_code,
           code: code,
-          redirect_uri: url(~p"/spotifyauthcallback")
+          redirect_uri: url(~p"/oauth/callbacks/spotify")
         }
       )
       |> dbg()
