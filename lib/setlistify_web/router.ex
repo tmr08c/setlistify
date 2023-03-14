@@ -17,10 +17,12 @@ defmodule SetlistifyWeb.Router do
   scope "/", SetlistifyWeb do
     pipe_through :browser
 
-    live "/", SearchLive
-    live "/setlist/:id", Setlists.ShowLive
-
     get "/spotifyauthcallback", SpotifyCallbackController, :show
+
+    live_session :default, on_mount: SetlistifyWeb.UserAuth do
+      live "/", SearchLive
+      live "/setlist/:id", Setlists.ShowLive
+    end
   end
 
   # Other scopes may use custom stacks.

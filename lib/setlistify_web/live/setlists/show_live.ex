@@ -13,7 +13,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
   # TODO Try to find a more elegant want to handle auth flow when necessary,
   # bring person back to the page. Maybe a new window?
-  def handle_event("create-playlist", _, socket) do
+  def handle_event("authenticate", _params, socket) do
     # TODO
     # - handle state
     # - probably turn off show dialog
@@ -41,7 +41,11 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     <%= if !@setlist do %>
       Fetching setlist...
     <% else %>
-      <button type="button" phx-click="create-playlist">Create Playlist</button>
+      <%= if @music_account do %>
+        <button type="button">Create Playlist</button>
+      <% else %>
+        <button type="button" phx-click="authenticate">Sign in to Spotify to Create Playlist</button>
+      <% end %>
       <hr />
       <%= @setlist.artist %> @ <%= @setlist.venue.name %> on <%= @setlist.date %>
 

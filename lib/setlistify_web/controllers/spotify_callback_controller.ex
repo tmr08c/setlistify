@@ -24,8 +24,12 @@ defmodule SetlistifyWeb.SpotifyCallbackController do
 
     %{"access_token" => token} = resp.body
 
-    conn = assign(conn, :access_token, token)
+    resp = Req.get!("https://api.spotify.com/v1/me", auth: {:bearer, token}) |> dbg()
+    spotify_username = resp.body["display_name"] || resp.body["id"]
 
-    conn |> redirect(to: "/")
+    conn
+    |> put_session(:access_token, token)
+    |> put_session(:account_name, spotify_username)
+    |> redirect(to: "/")
   end
 end
