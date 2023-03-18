@@ -19,7 +19,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
       <%= if @music_account do %>
         <button type="button">Create Playlist</button>
       <% else %>
-        <.link navigate={~p"/signin?redirect_to=#{@redirect_to}"}>
+        <.link navigate={~p"/signin/spotify?redirect_to=#{@redirect_to}"}>
           Sign in to Spotify to Create Playlist
         </.link>
       <% end %>
