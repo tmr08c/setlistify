@@ -5,8 +5,12 @@
         <Heroicons.home class="w-5 h-5" />
       </a>
     </div>
-    <div :if={@music_account}>
-      Signed in as <%=  @music_account.username %>
+    <div :if={@music_account} class="flex space-x-4">
+      <span>Signed in as <%= @music_account.username %></span>
+
+      <span>
+        <.link navigate={~p"/signout"}>Sign Out</.link>
+      </span>
     </div>
   </div>
 </header>

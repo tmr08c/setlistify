@@ -20,6 +20,8 @@ defmodule SetlistifyWeb.Router do
     # TODO I may want to see if the user is already logged in and redirect
     # accordingly
     get "/oauth/callbacks/:provider", OAuthCallbackController, :new
+    get "/signin", OAuthCallbackController, :sign_in
+    get "/signout", OAuthCallbackController, :sign_out
 
     live_session :default, on_mount: SetlistifyWeb.UserAuth do
       live "/", SearchLive
