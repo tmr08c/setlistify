@@ -11,31 +11,6 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     end
   end
 
-  # TODO Try to find a more elegant want to handle auth flow when necessary,
-  # bring person back to the page. Maybe a new window?
-  def handle_event("authenticate", _params, socket) do
-    # TODO
-    # - handle state
-    # - probably turn off show dialog
-    uri =
-      "https://accounts.spotify.com/authorize"
-      |> URI.new!()
-      |> URI.append_query(
-        URI.encode_query(%{
-          client_id: Application.fetch_env!(:setlistify, :spotify_client_id),
-          response_type: "code",
-          redirect_uri: url(~p"/oauth/callbacks/spotify"),
-          state: "TODO",
-          scope: "playlist-modify-private",
-          show_dialog: true
-        })
-      )
-      |> URI.to_string()
-      |> IO.inspect(label: "redirect URI")
-
-    {:noreply, redirect(socket, external: uri)}
-  end
-
   def render(assigns) do
     ~H"""
     <%= if !@setlist do %>
@@ -44,7 +19,9 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
       <%= if @music_account do %>
         <button type="button">Create Playlist</button>
       <% else %>
-        <button type="button" phx-click="authenticate">Sign in to Spotify to Create Playlist</button>
+        <.link navigate={~p"/signin?redirect_to=#{@redirect_to}"}>
+          Sign in to Spotify to Create Playlist
+        </.link>
       <% end %>
       <hr />
       <%= @setlist.artist %> @ <%= @setlist.venue.name %> on <%= @setlist.date %>
