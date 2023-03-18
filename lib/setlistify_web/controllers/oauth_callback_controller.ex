@@ -4,34 +4,43 @@ defmodule SetlistifyWeb.OAuthCallbackController do
 
   use SetlistifyWeb, :controller
 
-  def new(conn, %{"provider" => "spotify", "code" => code, "state" => _todo}) do
-    auth =
-      :base64.encode(
-        Application.fetch_env!(:setlistify, :spotify_client_id) <>
-          ":" <> Application.fetch_env!(:setlistify, :spotify_client_secret)
-      )
+  def new(conn, %{"provider" => "spotify", "code" => code, "state" => state}) do
+    if state == get_session(conn, :oauth_state) do
+      auth =
+        :base64.encode(
+          Application.fetch_env!(:setlistify, :spotify_client_id) <>
+            ":" <> Application.fetch_env!(:setlistify, :spotify_client_secret)
+        )
 
-    resp =
-      Req.new(
-        url: "https://accounts.spotify.com/api/token",
-        headers: %{authorization: "Basic #{auth}"}
-      )
-      |> Req.post!(
-        form: %{
-          grant_type: :authorization_code,
-          code: code,
-          redirect_uri: url(~p"/oauth/callbacks/spotify")
-        }
-      )
+      resp =
+        Req.post!(
+          "https://accounts.spotify.com/api/token",
+          headers: %{authorization: "Basic #{auth}"},
+          form: %{
+            grant_type: :authorization_code,
+            code: code,
+            redirect_uri: url(~p"/oauth/callbacks/spotify")
+          }
+        )
 
-    %{"access_token" => token} = resp.body
-    username = token |> Spotify.API.new() |> Spotify.API.username()
+      %{"access_token" => token} = resp.body
+      username = token |> Spotify.API.new() |> Spotify.API.username()
 
-    UserAuth.auth_user(conn, {username, token})
+      UserAuth.auth_user(conn, {username, token})
+    else
+      conn
+      |> put_flash(:error, "Response from Spotify did not match. Please try again.")
+      |> redirect(to: ~p"/")
+    end
   end
 
-  # TODO Move to separate controller
-  def sign_in(conn, params) do
+  @state_length 10
+  def sign_in(conn, %{"provider" => "spotify"} = params) do
+    state =
+      :crypto.strong_rand_bytes(@state_length)
+      |> Base.url_encode64()
+      |> binary_part(0, @state_length)
+
     uri =
       "https://accounts.spotify.com/authorize"
       |> URI.new!()
@@ -40,15 +49,17 @@ defmodule SetlistifyWeb.OAuthCallbackController do
           client_id: Application.fetch_env!(:setlistify, :spotify_client_id),
           response_type: "code",
           redirect_uri: url(~p"/oauth/callbacks/spotify"),
-          state: "TODO",
+          state: state,
           scope: "playlist-modify-private",
           show_dialog: true
         })
       )
       |> URI.to_string()
-      |> IO.inspect(label: "redirect URI")
 
-    conn |> maybe_put_redirect_to(params) |> redirect(external: uri)
+    conn
+    |> put_session(:oauth_state, state)
+    |> maybe_put_redirect_to(params)
+    |> redirect(external: uri)
   end
 
   defp maybe_put_redirect_to(conn, %{"redirect_to" => to}) when to != "" do
