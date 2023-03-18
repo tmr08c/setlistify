@@ -1,5 +1,7 @@
 defmodule SetlistifyWeb.OAuthCallbackController do
   alias SetlistifyWeb.UserAuth
+  alias Setlistify.Spotify
+
   use SetlistifyWeb, :controller
 
   def new(conn, %{"provider" => "spotify", "code" => code, "state" => _todo}) do
@@ -23,9 +25,7 @@ defmodule SetlistifyWeb.OAuthCallbackController do
       )
 
     %{"access_token" => token} = resp.body
-
-    resp = Req.get!("https://api.spotify.com/v1/me", auth: {:bearer, token})
-    username = resp.body["display_name"] || resp.body["id"]
+    username = token |> Spotify.API.new() |> Spotify.API.username()
 
     UserAuth.auth_user(conn, {username, token})
   end
