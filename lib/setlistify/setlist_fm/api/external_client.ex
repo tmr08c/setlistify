@@ -4,49 +4,43 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
   @root_endpoint "https://api.setlist.fm/rest/1.0"
 
   def search(query, endpoint \\ @root_endpoint) do
-    Cachex.fetch(:setlist_fm_search_cache, query, fn query ->
-      %{"setlist" => setlists} =
-        Req.get!(request(endpoint), url: "/search/setlists", params: %{"artistName" => query}).body
+    %{"setlist" => setlists} =
+      Req.get!(request(endpoint), url: "/search/setlists", params: %{"artistName" => query}).body
 
-      Enum.map(setlists, fn setlist ->
-        %{
-          "artist" => %{"name" => artist_name},
-          "eventDate" => date,
-          "id" => id,
-          "venue" => %{"name" => venue_name}
-        } = setlist
+    Enum.map(setlists, fn setlist ->
+      %{
+        "artist" => %{"name" => artist_name},
+        "eventDate" => date,
+        "id" => id,
+        "venue" => %{"name" => venue_name}
+      } = setlist
 
-        %{artist: artist_name, date: format_date(date), id: id, venue: %{name: venue_name}}
-      end)
+      %{artist: artist_name, date: format_date(date), id: id, venue: %{name: venue_name}}
     end)
-    |> elem(1)
   end
 
   def get_setlist(id, endpoint \\ @root_endpoint) do
-    Cachex.fetch(:setlist_fm_setlist_cache, id, fn id ->
-      resp = Req.get!(request(endpoint), url: "/setlist/#{id}").body
+    resp = Req.get!(request(endpoint), url: "/setlist/#{id}").body
 
-      %{
-        "artist" => %{"name" => artist_name},
-        "venue" => %{"name" => venue_name},
-        "eventDate" => date,
-        # The [docs](https://api.setlist.fm/docs/1.0/json_Setlist.html) do not
-        # indicate there is a "sets" key, but only a "set" key which is an array
-        # of set resources. For now, I am going to assume this is essentially an
-        # extraneous key and we can dig into the sub-"set" array and not miss out
-        # on anything.
-        "sets" => %{"set" => sets}
-      } = resp
+    %{
+      "artist" => %{"name" => artist_name},
+      "venue" => %{"name" => venue_name},
+      "eventDate" => date,
+      # The [docs](https://api.setlist.fm/docs/1.0/json_Setlist.html) do not
+      # indicate there is a "sets" key, but only a "set" key which is an array
+      # of set resources. For now, I am going to assume this is essentially an
+      # extraneous key and we can dig into the sub-"set" array and not miss out
+      # on anything.
+      "sets" => %{"set" => sets}
+    } = resp
 
-      sets =
-        Enum.map(sets, fn set ->
-          songs = set |> Map.get("song", []) |> Enum.map(&Map.get(&1, "name"))
-          %{name: set["name"], encore: set["encore"], songs: songs}
-        end)
+    sets =
+      Enum.map(sets, fn set ->
+        songs = set |> Map.get("song", []) |> Enum.map(&Map.get(&1, "name"))
+        %{name: set["name"], encore: set["encore"], songs: songs}
+      end)
 
-      %{artist: artist_name, venue: %{name: venue_name}, date: format_date(date), sets: sets}
-    end)
-    |> elem(1)
+    %{artist: artist_name, venue: %{name: venue_name}, date: format_date(date), sets: sets}
   end
 
   defp request(endpoint) do

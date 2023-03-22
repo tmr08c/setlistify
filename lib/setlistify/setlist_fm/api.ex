@@ -19,10 +19,14 @@ defmodule Setlistify.SetlistFm.API do
           songs: [String.t()]
         }
   @callback search(String.t()) :: [search_result()]
-  def search(query), do: impl().search(query)
+  def search(query) do
+    :setlist_fm_search_cache |> Cachex.fetch(query, &impl().search/1) |> elem(1)
+  end
 
   @callback get_setlist(String.t()) :: setlist()
-  def get_setlist(id), do: impl().get_setlist(id)
+  def get_setlist(id) do
+    :setlist_fm_setlist_cache |> Cachex.fetch(id, &impl().get_setlist/1) |> elem(1)
+  end
 
   defp impl do
     Application.get_env(
