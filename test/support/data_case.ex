@@ -55,4 +55,6 @@ defmodule Setlistify.DataCase do
       end)
     end)
   end
+
+  def fixture_dir, do: Path.join([File.cwd!(), "test", "support", "fixtures"])
 end

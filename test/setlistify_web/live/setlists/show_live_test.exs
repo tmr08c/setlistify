@@ -42,4 +42,34 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     assert html =~ "encore song1"
     assert html =~ "encore song2"
   end
+
+  test "creating a playlist", %{conn: conn} do
+    conn = init_test_session(conn, %{access_token: "token", username: "username"})
+    setlist_id = Ecto.UUID.generate()
+
+    expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
+      %{
+        artist: "The Beatles",
+        venue: %{name: "Compaq Center"},
+        date: Date.new!(2023, 01, 01),
+        sets: [
+          %{name: "Warm up", songs: ["a warm up song"]},
+          %{name: nil, songs: ["main set song1", "main set song2"]},
+          %{name: nil, encore: 1, songs: ["encore song1", "encore song2"]}
+        ]
+      }
+    end)
+
+    {:ok, _view, html} = live(conn, ~p"/setlist/#{setlist_id}")
+
+    assert html =~ ~r"create playlist"i
+
+    # assert we search for each song
+    expect(Spotify.API.MockClient, :song_search, fn ^"The Beatles", ^"a warm up song" ->
+      %{uri: "spotify:track:123"}
+    end)
+
+    # assert prompt for setlist name (with suggestion?)
+    # assert API call to create
+  end
 end

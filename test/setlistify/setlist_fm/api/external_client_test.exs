@@ -3,14 +3,12 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
 
   alias Setlistify.SetlistFm.API.ExternalClient
 
-  @fixture_dir Path.join([File.cwd!(), "test", "support", "fixtures"])
-
   setup do
     bypass = Bypass.open()
     {:ok, bypass: bypass}
   end
 
-  @search_response @fixture_dir |> Path.join("setlist_fm_search_response.json") |> File.read!()
+  @search_response fixture_dir() |> Path.join("setlist_fm_search_response.json") |> File.read!()
   test "search/1", %{bypass: bypass} do
     Bypass.expect_once(bypass, "GET", "/search/setlists", fn conn ->
       conn
@@ -27,7 +25,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     assert event.id
   end
 
-  @get_response @fixture_dir |> Path.join("setlist_fm_setlist_response.json") |> File.read!()
+  @get_response fixture_dir() |> Path.join("setlist_fm_setlist_response.json") |> File.read!()
   test "get_setlist/1", %{bypass: bypass} do
     id = Ecto.UUID.generate()
 
@@ -37,7 +35,15 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
       |> Plug.Conn.resp(200, @get_response)
     end)
 
-    result = ExternalClient.get_setlist(id, endpoint_url(bypass.port))
+    result = ExternalClient.get_setlist(id, endpoint_url(bypass.port)) |> dbg()
+
+    Enum.flat_map(result.sets, fn set ->
+      {songs, set} = Map.pop(set, :songs)
+      Enum.map(songs, &Map.merge(&1, set))
+    end)
+    |> Enum.group_by(&{&1.name, &1.encore})
+    |> Enum.reverse()
+    |> dbg()
 
     assert result.artist == "Modest Mouse"
     assert result.venue.name == "Terminal 5"
