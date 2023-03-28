@@ -4,7 +4,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
   import Phoenix.LiveViewTest
   import Hammox
 
-  alias Setlistify.SetlistFm
+  alias Setlistify.{SetlistFm, Spotify}
 
   # Cache fetching happens in another process, managed by Cachex. The process we
   # start in our application tree is a supervisor, so explictly `allow`ing with
@@ -14,7 +14,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
   setup :set_mox_from_context
   setup :verify_on_exit!
 
-  test "viewing a setlist", %{conn: conn} do
+  test "viewing a setlist when logged out shows list of songs", %{conn: conn} do
     setlist_id = Ecto.UUID.generate()
 
     expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
@@ -23,9 +23,9 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
         venue: %{name: "Compaq Center"},
         date: Date.new!(2023, 01, 01),
         sets: [
-          %{name: "Warm up", songs: ["a warm up song"]},
-          %{name: nil, songs: ["main set song1", "main set song2"]},
-          %{name: nil, encore: 1, songs: ["encore song1", "encore song2"]}
+          %{name: "Warm up", songs: [%{title: "a warm up song"}]},
+          %{name: nil, songs: [%{title: "main set song1"}, %{title: "main set song2"}]},
+          %{name: nil, encore: 1, songs: [%{title: "encore song1"}, %{title: "encore song2"}]}
         ]
       }
     end)
@@ -43,33 +43,42 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     assert html =~ "encore song2"
   end
 
-  test "creating a playlist", %{conn: conn} do
-    conn = init_test_session(conn, %{access_token: "token", username: "username"})
+  test "viewing a setlist when authenticated with Spotify searches for songs", %{conn: conn} do
+    conn = init_test_session(conn, %{access_token: "token", account_name: "username"})
     setlist_id = Ecto.UUID.generate()
+    artist = "some artist"
 
+    # Mock setlist reponse
     expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
       %{
-        artist: "The Beatles",
+        artist: artist,
         venue: %{name: "Compaq Center"},
-        date: Date.new!(2023, 01, 01),
-        sets: [
-          %{name: "Warm up", songs: ["a warm up song"]},
-          %{name: nil, songs: ["main set song1", "main set song2"]},
-          %{name: nil, encore: 1, songs: ["encore song1", "encore song2"]}
-        ]
+        date: Date.utc_today(),
+        sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
       }
+    end)
+
+    # Mock searching for songs in setlist
+    Spotify.API.MockClient
+    |> expect(:new, 2, fn "token" -> %Req.Request{} end)
+    |> expect(:search_for_track, fn _client, ^artist, "song1" ->
+      # We have a match for song
+      %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
+    end)
+    |> expect(:search_for_track, 2, fn _client, ^artist, "song2" ->
+      # We cannot find a match for the song
+      #
+      # Because we do not find a match, we will not cache it, resulting in
+      # making the call twice for both mount calls
+      nil
     end)
 
     {:ok, _view, html} = live(conn, ~p"/setlist/#{setlist_id}")
 
-    assert html =~ ~r"create playlist"i
+    assert html =~ "song1"
+    assert html =~ "song2"
 
-    # assert we search for each song
-    expect(Spotify.API.MockClient, :song_search, fn ^"The Beatles", ^"a warm up song" ->
-      %{uri: "spotify:track:123"}
-    end)
-
-    # assert prompt for setlist name (with suggestion?)
-    # assert API call to create
+    assert_has_element(html, "[aria-label='found matching song']", count: 1)
+    assert_has_element(html, "[aria-label='no matching song found']", count: 1)
   end
 end

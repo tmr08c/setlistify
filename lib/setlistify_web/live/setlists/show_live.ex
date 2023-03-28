@@ -42,15 +42,33 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
     <h2>Sets</h2>
 
-    <%= for {set, songs} <- @songs |> Enum.group_by(&{&1.name, &1.encore}) |> Enum.reverse() do %>
+    <div :if={@music_account}>
+      Matched <%= Enum.count(@songs, &(not is_nil(&1.spotify_info))) %> out of <%= length(@songs) %> songs.
+    </div>
+    <!--
+    TODO Fix ordering
+
+    See http://localhost:4000/setlist/7bbc8268 for examples
+    -->
+    <%= for {set, songs} <- @songs |> Enum.group_by(&{&1.name, &1[:encore]}) |> Enum.reverse() do %>
       <article>
         <h2><%= set_name(set) %></h2>
 
         <ol>
           <%= for song <- songs do %>
             <li class="flex space-x-1 items-center">
-              <Heroicons.check :if={@music_account && song.spotify_info != nil} mini class="h-4 w-4" />
-              <Heroicons.x_mark :if={@music_account && song.spotify_info == nil} mini class="h-4 w-4" />
+              <Heroicons.check
+                :if={@music_account && song.spotify_info != nil}
+                mini
+                class="h-4 w-4"
+                aria-label="found matching song"
+              />
+              <Heroicons.x_mark
+                :if={@music_account && song.spotify_info == nil}
+                mini
+                class="h-4 w-4"
+                aria-label="no matching song found"
+              />
               <span><%= song.title %></span>
             </li>
           <% end %>
@@ -67,30 +85,6 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
         Sign in to Spotify to Create Playlist
       </.link>
     <% end %>
-    """
-  end
-
-  defp wip_modal(assigns) do
-    ~H"""
-    <.modal id="confirm-modal" on_cancel={hide_modal("confirm-modal")}>
-      <%= if @searched? do %>
-        <ol>
-          Matched <%= Enum.count(@songs, fn {_, info} -> info != nil end) %> out of <%= length(@songs) %> songs.
-          <%= for {title, spotify_info} <- @songs do %>
-            <li class="flex content-center">
-              <Heroicons.check :if={spotify_info != nil} mini class="h-4 w-4" />
-              <Heroicons.x_mark :if={spotify_info == nil} mini class="h-4 w-4" />
-              <%= title %>
-              <div :if={spotify_info}>(<%= spotify_info.uri %>)</div>
-            </li>
-          <% end %>
-        </ol>
-      <% else %>
-        Searching for songs...
-      <% end %>
-      <:confirm :if={@searched?}>Create</:confirm>
-      <:cancel>Cancel</:cancel>
-    </.modal>
     """
   end
 

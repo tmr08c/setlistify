@@ -35,15 +35,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
       |> Plug.Conn.resp(200, @get_response)
     end)
 
-    result = ExternalClient.get_setlist(id, endpoint_url(bypass.port)) |> dbg()
-
-    Enum.flat_map(result.sets, fn set ->
-      {songs, set} = Map.pop(set, :songs)
-      Enum.map(songs, &Map.merge(&1, set))
-    end)
-    |> Enum.group_by(&{&1.name, &1.encore})
-    |> Enum.reverse()
-    |> dbg()
+    result = ExternalClient.get_setlist(id, endpoint_url(bypass.port))
 
     assert result.artist == "Modest Mouse"
     assert result.venue.name == "Terminal 5"
