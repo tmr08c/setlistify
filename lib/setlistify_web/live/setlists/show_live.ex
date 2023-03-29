@@ -3,68 +3,71 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
   alias Setlistify.{SetlistFm, Spotify}
 
-  def mount(%{"id" => id}, _session, %{assigns: %{music_account: nil}} = socket) do
-    setlist = SetlistFm.API.get_setlist(id)
-
-    songs =
-      Enum.flat_map(setlist.sets, fn set ->
-        {songs, set} = Map.pop(set, :songs)
-        Enum.map(songs, &Map.merge(&1, set))
-      end)
-
-    {:ok, assign(socket, setlist: setlist, songs: songs)}
-  end
-
   def mount(%{"id" => id}, _session, socket) do
-    client = Spotify.API.new(socket.assigns.music_account.access_token)
     setlist = SetlistFm.API.get_setlist(id)
+    access_token = get_in(socket.assigns, [:music_account, Access.key!(:access_token)])
 
-    songs =
-      setlist.sets
-      |> Enum.flat_map(fn set ->
-        {songs, set} = Map.pop(set, :songs)
-        Enum.map(songs, &Map.merge(&1, set))
-      end)
-      |> Task.async_stream(fn song ->
-        Map.merge(
-          song,
-          %{spotify_info: Spotify.API.search_for_track(client, setlist.artist, song.title)}
-        )
-      end)
-      |> Enum.map(&elem(&1, 1))
+    setlist =
+      if access_token do
+        client = Spotify.API.new(access_token)
 
-    {:ok, assign(socket, setlist: setlist, songs: songs)}
+        Map.update!(setlist, :sets, fn sets ->
+          sets
+          |> Task.async_stream(fn set ->
+            Map.update!(set, :songs, fn songs ->
+              Enum.map(songs, fn song ->
+                Map.put(
+                  song,
+                  :spotify_info,
+                  Spotify.API.search_for_track(client, setlist.artist, song.title)
+                )
+              end)
+            end)
+          end)
+          |> Enum.map(&elem(&1, 1))
+        end)
+      else
+        setlist
+      end
+
+    {:ok,
+     assign(socket,
+       sets: setlist.sets,
+       artist: setlist.artist,
+       venue_name: setlist.venue.name,
+       date: setlist.date
+     )}
   end
 
   def render(assigns) do
     ~H"""
-    <%= @setlist.artist %> @ <%= @setlist.venue.name %> on <%= @setlist.date %>
+    <%= @artist %> @ <%= @venue_name %> on <%= @date %>
 
     <h2>Sets</h2>
 
     <div :if={@music_account}>
-      Matched <%= Enum.count(@songs, &(not is_nil(&1.spotify_info))) %> out of <%= length(@songs) %> songs.
+      <!-- TODO add back match count? -->
     </div>
     <!--
     TODO Fix ordering
 
     See http://localhost:4000/setlist/7bbc8268 for examples
     -->
-    <%= for {set, songs} <- @songs |> Enum.group_by(&{&1.name, &1[:encore]}) |> Enum.reverse() do %>
+    <%= for set <- @sets do %>
       <article>
         <h2><%= set_name(set) %></h2>
 
         <ol>
-          <%= for song <- songs do %>
+          <%= for song <- set.songs do %>
             <li class="flex space-x-1 items-center">
               <Heroicons.check
-                :if={@music_account && song.spotify_info != nil}
+                :if={@music_account && song[:spotify_info] != nil}
                 mini
                 class="h-4 w-4"
                 aria-label="found matching song"
               />
               <Heroicons.x_mark
-                :if={@music_account && song.spotify_info == nil}
+                :if={@music_account && song[:spotify_info] == nil}
                 mini
                 class="h-4 w-4"
                 aria-label="no matching song found"
@@ -75,7 +78,9 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
         </ol>
       </article>
     <% end %>
+
     <hr />
+
     <%= if @music_account do %>
       <.button type="button" phx-click={show_modal("confirm-modal") |> JS.push("create-playlist")}>
         Create Playlist
@@ -88,7 +93,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     """
   end
 
-  defp set_name({_, encore}) when is_number(encore), do: "Encore #{encore}"
-  defp set_name({nil, _}), do: "Unnamed Setlist"
-  defp set_name({name, _}), do: name
+  defp set_name(%{encore: encore}) when is_number(encore), do: "Encore #{encore}"
+  defp set_name(%{name: nil}), do: "Unnamed Setlist"
+  defp set_name(%{name: name}), do: name
 end
