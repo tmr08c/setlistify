@@ -11,21 +11,24 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
       if access_token do
         client = Spotify.API.new(access_token)
 
-        Map.update!(setlist, :sets, fn sets ->
-          sets
-          |> Task.async_stream(fn set ->
-            Map.update!(set, :songs, fn songs ->
-              Enum.map(songs, fn song ->
-                Map.put(
-                  song,
-                  :spotify_info,
-                  Spotify.API.search_for_track(client, setlist.artist, song.title)
-                )
-              end)
-            end)
+        sets =
+          setlist.sets
+          |> Enum.map(fn set ->
+            %{
+              set
+              | songs:
+                  Task.async_stream(set.songs, fn song ->
+                    Map.put(
+                      song,
+                      :spotify_info,
+                      Spotify.API.search_for_track(client, setlist.artist, song.title)
+                    )
+                  end)
+            }
           end)
-          |> Enum.map(&elem(&1, 1))
-        end)
+          |> Enum.map(fn set -> %{set | songs: Enum.map(set.songs, &elem(&1, 1))} end)
+
+        %{setlist | sets: sets}
       else
         setlist
       end
