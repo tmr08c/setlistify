@@ -48,14 +48,6 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
     <h2>Sets</h2>
 
-    <div :if={@music_account}>
-      <!-- TODO add back match count? -->
-    </div>
-    <!--
-    TODO Fix ordering
-
-    See http://localhost:4000/setlist/7bbc8268 for examples
-    -->
     <%= for set <- @sets do %>
       <article>
         <h2><%= set_name(set) %></h2>
@@ -85,7 +77,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     <hr />
 
     <%= if @music_account do %>
-      <.button type="button" phx-click={show_modal("confirm-modal") |> JS.push("create-playlist")}>
+      <.button type="button" disabled>
         Create Playlist
       </.button>
     <% else %>
