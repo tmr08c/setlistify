@@ -26,6 +26,7 @@ defmodule SetlistifyWeb.Router do
     live_session :default, on_mount: SetlistifyWeb.UserAuth do
       live "/", SearchLive
       live "/setlist/:id", Setlists.ShowLive
+      live "/playlists", Playlists.ShowLive
     end
   end
 
