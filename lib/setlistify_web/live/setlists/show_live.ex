@@ -44,35 +44,37 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
   def render(assigns) do
     ~H"""
-    <%= @artist %> @ <%= @venue_name %> on <%= @date %>
+    <h1 class="mb-3 text-2xl"><%= @artist %> @ <%= @venue_name %> on <%= @date %></h1>
 
-    <h2>Sets</h2>
+    <div class="space-y-3 mb-6">
+      <%= for set <- @sets do %>
+        <article>
+          <h2 class="text-lg mb-3"><%= set_name(set) %></h2>
 
-    <%= for set <- @sets do %>
-      <article>
-        <h2><%= set_name(set) %></h2>
-
-        <ol>
-          <%= for song <- set.songs do %>
-            <li class="flex space-x-1 items-center">
-              <Heroicons.check
-                :if={@music_account && song[:spotify_info] != nil}
-                mini
-                class="h-4 w-4"
-                aria-label="found matching song"
-              />
-              <Heroicons.x_mark
-                :if={@music_account && song[:spotify_info] == nil}
-                mini
-                class="h-4 w-4"
-                aria-label="no matching song found"
-              />
-              <span><%= song.title %></span>
-            </li>
-          <% end %>
-        </ol>
-      </article>
-    <% end %>
+          <ol class="list-decimal">
+            <%= for song <- set.songs do %>
+              <li>
+                <div class="flex space-x-1 items-center">
+                  <Heroicons.check
+                    :if={@music_account && song[:spotify_info] != nil}
+                    mini
+                    class="h-4 w-4"
+                    aria-label="found matching song"
+                  />
+                  <Heroicons.x_mark
+                    :if={@music_account && song[:spotify_info] == nil}
+                    mini
+                    class="h-4 w-4"
+                    aria-label="no matching song found"
+                  />
+                  <span><%= song.title %></span>
+                </div>
+              </li>
+            <% end %>
+          </ol>
+        </article>
+      <% end %>
+    </div>
 
     <hr />
 
