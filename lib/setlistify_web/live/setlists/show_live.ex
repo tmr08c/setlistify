@@ -14,17 +14,13 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
         sets =
           setlist.sets
           |> Enum.map(fn set ->
-            %{
-              set
-              | songs:
-                  Task.async_stream(set.songs, fn song ->
-                    Map.put(
-                      song,
-                      :spotify_info,
-                      Spotify.API.search_for_track(client, setlist.artist, song.title)
-                    )
-                  end)
-            }
+            songs =
+              Task.async_stream(set.songs, fn song ->
+                spotify_info = Spotify.API.search_for_track(client, setlist.artist, song.title)
+                Map.put(song, :spotify_info, spotify_info)
+              end)
+
+            %{set | songs: songs}
           end)
           |> Enum.map(fn set -> %{set | songs: Enum.map(set.songs, &elem(&1, 1))} end)
 
