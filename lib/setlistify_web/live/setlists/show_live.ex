@@ -38,6 +38,29 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
      )}
   end
 
+  def handle_event("create_playlist", _params, socket) do
+    client = Spotify.API.new(socket.assigns.music_account.access_token)
+    name = "#{socket.assigns.artist} @ #{socket.assigns.venue_name} (#{socket.assigns.date})"
+
+    description =
+      "Created by Setlistify: #{socket.assigns.artist} at #{socket.assigns.venue_name} on #{socket.assigns.date}"
+
+    %{id: playlist_id, external_url: external_url} =
+      Spotify.API.create_playlist(client, name, description)
+
+    # Build a flatlist of track Ids from our setlist
+    track_ids =
+      Enum.flat_map(socket.assigns.sets, fn set ->
+        set.songs
+        |> Enum.filter(&(Map.has_key?(&1, :spotify_info) and not is_nil(&1.spotify_info)))
+        |> Enum.map(& &1.spotify_info.uri)
+      end)
+
+    :ok = Spotify.API.add_tracks_to_playlist(client, playlist_id, track_ids)
+
+    {:noreply, push_navigate(socket, to: ~p"/playlists?provider=spotify&url=#{external_url}")}
+  end
+
   def render(assigns) do
     ~H"""
     <h1 class="mb-3 text-2xl">{@artist} @ {@venue_name} on {@date}</h1>
@@ -75,7 +98,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     <hr />
 
     <%= if @music_account do %>
-      <.button type="button" disabled>
+      <.button type="button" phx-click="create_playlist">
         Create Playlist
       </.button>
     <% else %>

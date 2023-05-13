@@ -16,6 +16,24 @@ defmodule Setlistify.Spotify.API do
     |> elem(1)
   end
 
+  @callback create_playlist(Req.Request.t(), String.t(), String.t()) :: %{
+              id: String.t(),
+              external_url: String.t()
+            }
+  def create_playlist(client, name, description) do
+    impl().create_playlist(client, name, description)
+  end
+
+  @callback add_tracks_to_playlist(Req.Request.t(), String.t(), [String.t()]) :: :ok | :error
+  def add_tracks_to_playlist(client, playlist_id, tracks) do
+    impl().add_tracks_to_playlist(client, playlist_id, tracks)
+  end
+
+  @callback get_embed(String.t()) :: {:ok, String.t()} | {:error, atom()}
+  def get_embed(url) do
+    impl().get_embed(url)
+  end
+
   defp impl do
     Application.get_env(:setlistify, :spotify_api_client, Setlistify.Spotify.API.ExternalClient)
   end
