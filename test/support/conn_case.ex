@@ -32,6 +32,14 @@ defmodule SetlistifyWeb.ConnCase do
       # Find elements using the test-specific identifier pattern set up in
       # `UrlStordenerWeb.html_helper`
       defp tid(id), do: "[data-test-#{id}]"
+
+      def assert_has_element(html, selector, opts \\ []) do
+        expected = Keyword.get(opts, :count, 1)
+        actual = html |> Floki.find(selector) |> length()
+
+        assert expected == actual,
+               "expected #{expected} elements matching #{selector}, found #{actual}"
+      end
     end
   end
 

@@ -32,6 +32,12 @@ defmodule Setlistify.Application do
          name: :setlist_fm_setlist_cache,
          expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
         id: :setlist_fm_setlist_cache
+      ),
+      Supervisor.child_spec(
+        {Cachex,
+         name: :spotify_track_cache,
+         expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
+        id: :spotify_track_cache
       )
       # Start a worker by calling: Setlistify.Worker.start_link(arg)
       # {Setlistify.Worker, arg}

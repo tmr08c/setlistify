@@ -36,7 +36,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
 
     sets =
       Enum.map(sets, fn set ->
-        songs = set |> Map.get("song", []) |> Enum.map(&Map.get(&1, "name"))
+        songs = set |> Map.get("song", []) |> Enum.map(&%{title: Map.get(&1, "name")})
         %{name: set["name"], encore: set["encore"], songs: songs}
       end)
 
