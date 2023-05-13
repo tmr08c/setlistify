@@ -21,13 +21,13 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
     items = resp.body |> Map.get("tracks", %{}) |> Map.get("items", [])
 
-    with track_info when not is_nil(track_info) <- List.first(items) do
-      Logger.info("Found match for artist: #{artist}, track: #{track}")
-      %{uri: track_info["uri"], preview_url: track_info["preview_url"]}
+    with nil <- List.first(items) do
+      Logger.warn("No search results for artist: #{artist}, track: #{track}")
+      nil
     else
-      _ ->
-        Logger.warn("No search results for artist: #{artist}, track: #{track}")
-        nil
+      track_info ->
+        Logger.info("Found match for artist: #{artist}, track: #{track}")
+        %{uri: track_info["uri"], preview_url: track_info["preview_url"]}
     end
   end
 end

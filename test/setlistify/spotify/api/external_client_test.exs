@@ -22,15 +22,29 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
   @search_response fixture_dir()
                    |> Path.join("spotify_track_search_response.json")
                    |> File.read!()
-  test "search_for_track/3", %{bypass: bypass, client: client} do
-    Bypass.expect_once(bypass, "GET", "/search", fn conn ->
-      conn
-      |> Plug.Conn.put_resp_content_type("application/json")
-      |> Plug.Conn.resp(200, @search_response)
-    end)
+  describe "search_for_track/3" do
+    test "returns the first matching track", %{bypass: bypass, client: client} do
+      Bypass.expect_once(bypass, "GET", "/search", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.resp(200, @search_response)
+      end)
 
-    result = ExternalClient.search_for_track(client, "some artist", "some track")
+      result = ExternalClient.search_for_track(client, "some artist", "some track")
 
-    assert result.uri =~ ~r"spotify:track:\w+"
+      assert result.uri =~ ~r"spotify:track:\w+"
+    end
+
+    test "returns nil if no tracks are found", %{bypass: bypass, client: client} do
+      Bypass.expect_once(bypass, "GET", "/search", fn conn ->
+        conn
+        |> Plug.Conn.put_resp_content_type("application/json")
+        |> Plug.Conn.resp(200, Jason.encode!(%{"tracks" => %{"items" => []}}))
+      end)
+
+      ExUnit.CaptureLog.capture_log(fn ->
+        assert ExternalClient.search_for_track(client, "some artist", "some track") == nil
+      end)
+    end
   end
 end
