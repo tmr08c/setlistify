@@ -22,7 +22,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     items = resp.body |> Map.get("tracks", %{}) |> Map.get("items", [])
 
     with nil <- List.first(items) do
-      Logger.warn("No search results for artist: #{artist}, track: #{track}")
+      Logger.warning("No search results for artist: #{artist}, track: #{track}")
       nil
     else
       track_info ->
