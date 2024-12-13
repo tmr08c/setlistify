@@ -7,7 +7,7 @@
 When setting up the application for the first time, run:
 
 ``` shell
-bin/setup
+bin/init
 ```
 
 This will create a local `.env` file will placeholders for any secrets the application needs. To actually use the application, you will need to fill these in with valid values.
