@@ -30,10 +30,10 @@ defmodule SetlistifyWeb.SearchLiveTest do
 
     {:ok, view, _} = live(conn, ~p"/")
 
-    assert view |> element("form") |> render_submit(%{search: %{query: ""}}) =~
+    assert view |> form("[name='search']", %{search: %{query: ""}}) |> render_submit() =~
              "can&#39;t be blank"
 
-    html = assert view |> element("form") |> render_submit(%{search: %{query: "beatles"}})
+    html = view |> form("[name='search']", %{search: %{query: "beatles"}}) |> render_submit()
 
     assert html =~ "The Beatles"
     assert html =~ "Compaq Center"
