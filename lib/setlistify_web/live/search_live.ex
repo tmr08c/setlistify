@@ -2,7 +2,7 @@ defmodule SetlistifyWeb.SearchLive do
   use SetlistifyWeb, :live_view
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, setlists: [], search: to_form(%{}))}
+    {:ok, assign(socket, setlists: [], search: search_form(%{}))}
   end
 
   def handle_params(params, _uri, socket) when params == %{} do
@@ -10,8 +10,8 @@ defmodule SetlistifyWeb.SearchLive do
   end
 
   def handle_params(params, _uri, socket) do
-    search_changeset = search_changeset(params)
-    search_form = to_form(search_changeset, as: :search)
+    search_form = search_form(params)
+    search_changeset = search_form.source
 
     setlists =
       if search_changeset.valid? do
@@ -29,8 +29,8 @@ defmodule SetlistifyWeb.SearchLive do
 
   def render(assigns) do
     ~H"""
-    <.simple_form for={@search} as="search" phx-submit="search" class="mb-10">
-      <.input field={@search[:query]} name="search-query" placeholder="Search by artist..." />
+    <.simple_form for={@search} name="search" phx-submit="search" class="mb-10">
+      <.input field={@search[:query]} placeholder="Search by artist..." />
 
       <:actions>
         <.button class="w-full">Search</.button>
@@ -60,6 +60,10 @@ defmodule SetlistifyWeb.SearchLive do
       <% end %>
     </ol>
     """
+  end
+
+  defp search_form(params) do
+    params |> search_changeset() |> to_form(as: :search)
   end
 
   defp search_changeset(params) do
