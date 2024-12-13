@@ -40,12 +40,12 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="mb-3 text-2xl"><%= @artist %> @ <%= @venue_name %> on <%= @date %></h1>
+    <h1 class="mb-3 text-2xl">{@artist} @ {@venue_name} on {@date}</h1>
 
     <div class="space-y-3 mb-6">
       <%= for set <- @sets do %>
         <article>
-          <h2 class="text-lg mb-3"><%= set_name(set) %></h2>
+          <h2 class="text-lg mb-3">{set_name(set)}</h2>
 
           <ol class="list-decimal">
             <%= for song <- set.songs do %>
@@ -63,7 +63,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                     class="h-4 w-4"
                     aria-label="no matching song found"
                   />
-                  <span><%= song.title %></span>
+                  <span>{song.title}</span>
                 </div>
               </li>
             <% end %>
