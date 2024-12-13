@@ -2,7 +2,7 @@ defmodule SetlistifyWeb.SearchLive do
   use SetlistifyWeb, :live_view
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, setlists: [], search: %{})}
+    {:ok, assign(socket, setlists: [], search: to_form(%{}))}
   end
 
   def handle_params(params, _uri, socket) when params == %{} do
@@ -10,14 +10,17 @@ defmodule SetlistifyWeb.SearchLive do
   end
 
   def handle_params(params, _uri, socket) do
-    search = search_changeset(params)
+    search_changeset = search_changeset(params)
+    search_form = to_form(search_changeset, as: :search)
 
-    if search.valid? do
-      setlists = search |> Ecto.Changeset.get_field(:query) |> Setlistify.SetlistFm.API.search()
-      {:noreply, assign(socket, search: search, setlists: setlists)}
-    else
-      {:noreply, assign(socket, search: search, setlists: [])}
-    end
+    setlists =
+      if search_changeset.valid? do
+        search_changeset |> Ecto.Changeset.get_field(:query) |> Setlistify.SetlistFm.API.search()
+      else
+        []
+      end
+
+    {:noreply, assign(socket, search: search_form, setlists: setlists)}
   end
 
   def handle_event("search", %{"search" => params}, socket) do
@@ -26,8 +29,8 @@ defmodule SetlistifyWeb.SearchLive do
 
   def render(assigns) do
     ~H"""
-    <.simple_form :let={f} for={@search} as="search" phx-submit="search" id="phx-search" class="mb-10">
-      <.input field={{f, :query}} placeholder="Search by artist..." />
+    <.simple_form for={@search} as="search" phx-submit="search" class="mb-10">
+      <.input field={@search[:query]} name="search-query" placeholder="Search by artist..." />
 
       <:actions>
         <.button class="w-full">Search</.button>
@@ -43,14 +46,14 @@ defmodule SetlistifyWeb.SearchLive do
               class="border-2 border-slate-600 text-center rounded shadow-sm font-mono"
             >
               <div class="uppercase font-medium bg-slate-300 p-2">
-                <%= Calendar.strftime(setlist.date, "%b '%y") %>
+                {Calendar.strftime(setlist.date, "%b '%y")}
               </div>
 
-              <div class="py-3"><%= setlist.date.day %></div>
+              <div class="py-3">{setlist.date.day}</div>
             </time>
             <div class="self-center space-y-1">
-              <div class="text-lg"><%= setlist.artist %></div>
-              <div class="font-light text-slate-400"><%= setlist.venue.name %></div>
+              <div class="text-lg">{setlist.artist}</div>
+              <div class="font-light text-slate-400">{setlist.venue.name}</div>
             </div>
           </li>
         </.link>
