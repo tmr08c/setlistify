@@ -20,5 +20,5 @@ defmodule SetlistifyWeb.Gettext do
 
   See the [Gettext Docs](https://hexdocs.pm/gettext) for detailed usage.
   """
-  use Gettext, otp_app: :setlistify
+  use Gettext.Backend, otp_app: :setlistify
 end
