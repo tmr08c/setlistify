@@ -3,6 +3,10 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
   alias Setlistify.Spotify.API.ExternalClient
 
+  @user_profile_response fixture_dir()
+                         |> Path.join("spotify_user_profile_response.json")
+                         |> File.read!()
+
   setup do
     bypass = Bypass.open()
     client = ExternalClient.new("token", "http://localhost:#{bypass.port}")
@@ -13,15 +17,12 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
     Bypass.expect_once(bypass, "GET", "/me", fn conn ->
       conn
       |> Plug.Conn.put_resp_content_type("application/json")
-      |> Plug.Conn.resp(200, Jason.encode!(%{"display_name" => "my username"}))
+      |> Plug.Conn.resp(200, @user_profile_response)
     end)
 
-    assert ExternalClient.username(client) == "my username"
+    assert ExternalClient.username(client) == "myusername"
   end
 
-  @search_response fixture_dir()
-                   |> Path.join("spotify_track_search_response.json")
-                   |> File.read!()
   describe "search_for_track/3" do
     test "returns the first matching track", %{bypass: bypass, client: client} do
       Bypass.expect_once(bypass, "GET", "/search", fn conn ->
