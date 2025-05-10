@@ -4,6 +4,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
   require Logger
 
   def new(token, endpoint \\ "https://api.spotify.com/v1/") do
+    Logger.debug("Current Spotify API client token: #{token}")
     Req.new(base_url: endpoint, auth: {:bearer, token})
   end
 
