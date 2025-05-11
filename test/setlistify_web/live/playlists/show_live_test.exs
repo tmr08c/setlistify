@@ -1,5 +1,5 @@
 defmodule SetlistifyWeb.Playlists.ShowLiveTest do
-  use SetlistifyWeb.ConnCase, async: false
+  use SetlistifyWeb.ConnCase, async: true
 
   import Phoenix.LiveViewTest
   import Hammox

@@ -5,7 +5,10 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
   def new(token, endpoint \\ "https://api.spotify.com/v1/") do
     Logger.debug("Current Spotify API client token: #{token}")
-    Req.new(base_url: endpoint, auth: {:bearer, token})
+    default_opts = [base_url: endpoint, auth: {:bearer, token}]
+    config_opts = Application.get_env(:setlistify, :spotify_req_options, [])
+
+    Req.new(Keyword.merge(default_opts, config_opts))
   end
 
   def username(client) do

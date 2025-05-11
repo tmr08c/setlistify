@@ -46,10 +46,14 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
   defp request(endpoint) do
     api_key = Application.fetch_env!(:setlistify, :setlist_fm_api_key)
 
-    Req.new(
+    default_opts = [
       base_url: endpoint,
       headers: %{"x-api-key" => api_key, "Accept" => "application/json"}
-    )
+    ]
+
+    config_opts = Application.get_env(:setlistify, :setlist_fm_req_options, [])
+
+    Req.new(Keyword.merge(default_opts, config_opts))
   end
 
   @date_regex ~r/(?<day>\d{2})-(?<month>\d{2})-(?<year>\d{4})/

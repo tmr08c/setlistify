@@ -4,19 +4,22 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
   alias Setlistify.SetlistFm.API.ExternalClient
 
   setup do
-    bypass = Bypass.open()
-    {:ok, bypass: bypass}
+    Req.Test.verify_on_exit!()
+    :ok
   end
 
   @search_response fixture_dir() |> Path.join("setlist_fm_search_response.json") |> File.read!()
-  test "search/1", %{bypass: bypass} do
-    Bypass.expect_once(bypass, "GET", "/search/setlists", fn conn ->
-      conn
-      |> Plug.Conn.put_resp_content_type("application/json")
-      |> Plug.Conn.resp(200, @search_response)
+  test "search/1" do
+    Req.Test.stub(MySetlistFmStub, fn
+      %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
+        assert conn.params["artistName"] == "modest mouse"
+
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/json")
+        |> Plug.Conn.send_resp(200, Jason.encode!(Jason.decode!(@search_response)))
     end)
 
-    [event | _] = result = ExternalClient.search("modest mouse", endpoint_url(bypass.port))
+    [event | _] = result = ExternalClient.search("modest mouse")
 
     assert length(result) == 20
     assert event.artist == "Modest Mouse"
@@ -26,16 +29,19 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
   end
 
   @get_response fixture_dir() |> Path.join("setlist_fm_setlist_response.json") |> File.read!()
-  test "get_setlist/1", %{bypass: bypass} do
+  test "get_setlist/1" do
     id = Ecto.UUID.generate()
 
-    Bypass.expect_once(bypass, "GET", "/setlist/#{id}", fn conn ->
+    Req.Test.stub(MySetlistFmStub, fn %{request_path: "/rest/1.0/setlist/" <> rest, method: "GET"} =
+                                        conn ->
+      assert rest == id
+
       conn
-      |> Plug.Conn.put_resp_content_type("application/json")
-      |> Plug.Conn.resp(200, @get_response)
+      |> Plug.Conn.put_resp_header("content-type", "application/json")
+      |> Plug.Conn.send_resp(200, Jason.encode!(Jason.decode!(@get_response)))
     end)
 
-    result = ExternalClient.get_setlist(id, endpoint_url(bypass.port))
+    result = ExternalClient.get_setlist(id)
 
     assert result.artist == "Modest Mouse"
     assert result.venue.name == "Terminal 5"
@@ -47,6 +53,4 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
       assert length(songs) > 0
     end
   end
-
-  defp endpoint_url(port), do: "http://localhost:#{port}"
 end
