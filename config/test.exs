@@ -31,3 +31,14 @@ config :logger, level: :warning
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
+
+# Configure Req to use test stubs in test environment and disable retries
+config :setlistify,
+  spotify_req_options: [
+    plug: {Req.Test, MySpotifyStub},
+    retry: false
+  ],
+  setlist_fm_req_options: [
+    plug: {Req.Test, MySetlistFmStub},
+    retry: false
+  ]

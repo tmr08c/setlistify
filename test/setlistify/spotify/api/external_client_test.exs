@@ -22,27 +22,28 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
                        |> File.read!()
 
   setup do
-    bypass = Bypass.open()
-    client = ExternalClient.new("token", "http://localhost:#{bypass.port}/")
-    {:ok, bypass: bypass, client: client}
+    Req.Test.verify_on_exit!()
+    {:ok, client: ExternalClient.new("token")}
   end
 
-  test "username/1", %{bypass: bypass, client: client} do
-    Bypass.expect_once(bypass, "GET", "/me", fn conn ->
-      conn
-      |> Plug.Conn.put_resp_content_type("application/json")
-      |> Plug.Conn.resp(200, @user_profile_response)
+  test "username/1", %{client: client} do
+    Req.Test.stub(MySpotifyStub, fn
+      %{request_path: "/v1/me", method: "GET"} = conn ->
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/json")
+        |> Plug.Conn.send_resp(200, Jason.encode!(Jason.decode!(@user_profile_response)))
     end)
 
     assert ExternalClient.username(client) == @user_profile_user_id
   end
 
   describe "search_for_track/3" do
-    test "returns the first matching track", %{bypass: bypass, client: client} do
-      Bypass.expect_once(bypass, "GET", "/search", fn conn ->
-        conn
-        |> Plug.Conn.put_resp_content_type("application/json")
-        |> Plug.Conn.resp(200, @search_response)
+    test "returns the first matching track", %{client: client} do
+      Req.Test.stub(MySpotifyStub, fn
+        %{request_path: "/v1/search", method: "GET"} = conn ->
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(200, Jason.encode!(Jason.decode!(@search_response)))
       end)
 
       result = ExternalClient.search_for_track(client, "some artist", "some track")
@@ -50,11 +51,14 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       assert result.uri =~ ~r"spotify:track:\w+"
     end
 
-    test "returns nil if no tracks are found", %{bypass: bypass, client: client} do
-      Bypass.expect_once(bypass, "GET", "/search", fn conn ->
-        conn
-        |> Plug.Conn.put_resp_content_type("application/json")
-        |> Plug.Conn.resp(200, Jason.encode!(%{"tracks" => %{"items" => []}}))
+    test "returns nil if no tracks are found", %{client: client} do
+      Req.Test.stub(MySpotifyStub, fn
+        %{request_path: "/v1/search", method: "GET"} = conn ->
+          response = %{"tracks" => %{"items" => []}}
+
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(200, Jason.encode!(response))
       end)
 
       ExUnit.CaptureLog.capture_log(fn ->
@@ -64,27 +68,30 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
   end
 
   describe "create_playlist/3" do
-    test "creates a new playlist", %{bypass: bypass, client: client} do
+    test "creates a new playlist", %{client: client} do
       # TODO: Long-term I do not want to have to re-request the information and
       # instead would prefer for it to be stored in the system
-      Bypass.expect_once(bypass, "GET", "/me", fn conn ->
-        conn
-        |> Plug.Conn.put_resp_content_type("application/json")
-        |> Plug.Conn.resp(200, @user_profile_response)
-      end)
+      Req.Test.stub(MySpotifyStub, fn
+        %{request_path: "/v1/me", method: "GET"} = conn ->
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(200, Jason.encode!(Jason.decode!(@user_profile_response)))
 
-      Bypass.expect_once(bypass, "POST", "/users/#{@user_profile_user_id}/playlists", fn conn ->
-        conn = Plug.Conn.fetch_query_params(conn)
-        {:ok, body, conn} = Plug.Conn.read_body(conn)
-        payload = Jason.decode!(body)
+        %{request_path: "/v1/users/" <> rest, method: "POST"} = conn ->
+          assert rest =~ ~r"^#{@user_profile_user_id}/playlists"
 
-        assert payload["name"] == "Test Playlist"
-        assert payload["description"] == "Test Description"
-        assert payload["public"] == false
+          # Assert the request payload is correct
+          {:ok, body, _} = Plug.Conn.read_body(conn)
 
-        conn
-        |> Plug.Conn.put_resp_content_type("application/json")
-        |> Plug.Conn.resp(201, @create_playlist_response)
+          assert Jason.decode!(body) == %{
+                   "name" => "Test Playlist",
+                   "description" => "Test Description",
+                   "public" => false
+                 }
+
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(201, Jason.encode!(Jason.decode!(@create_playlist_response)))
       end)
 
       playlist_response =
@@ -96,18 +103,23 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
   end
 
   describe "add_tracks_to_playlist/3" do
-    test "adds tracks to a playlist", %{bypass: bypass, client: client} do
+    test "adds tracks to a playlist", %{client: client} do
       track_uris = ["spotify:track:123", "spotify:track:456"]
 
-      Bypass.expect_once(bypass, "POST", "/playlists/playlist123/tracks", fn conn ->
-        {:ok, body, conn} = Plug.Conn.read_body(conn)
-        payload = Jason.decode!(body)
+      Req.Test.stub(MySpotifyStub, fn
+        %{request_path: "/v1/playlists/" <> rest, method: "POST"} = conn ->
+          assert rest =~ ~r"^playlist123/tracks"
 
-        assert payload["uris"] == track_uris
+          # Assert the request payload contains the track URIs
+          {:ok, body, _} = Plug.Conn.read_body(conn)
 
-        conn
-        |> Plug.Conn.put_resp_content_type("application/json")
-        |> Plug.Conn.resp(201, @add_tracks_response)
+          assert Jason.decode!(body) == %{
+                   "uris" => track_uris
+                 }
+
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(201, Jason.encode!(Jason.decode!(@add_tracks_response)))
       end)
 
       assert ExternalClient.add_tracks_to_playlist(client, "playlist123", track_uris) == :ok

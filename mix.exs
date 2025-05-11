@@ -35,7 +35,6 @@ defmodule Setlistify.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:bypass, "~> 2.1", only: :test},
       {:dotenv_parser, "~> 2.0", only: [:dev, :test]},
       {:cachex, "~> 3.6.0"},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
