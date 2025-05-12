@@ -18,6 +18,10 @@ defmodule Setlistify.Application do
       {Finch, name: Setlistify.Finch},
       # Start the Endpoint (http/https)
       SetlistifyWeb.Endpoint,
+      # Start the Registry for user token processes
+      {Registry, keys: :unique, name: Setlistify.UserTokenRegistry},
+      # Start the DynamicSupervisor for user token processes
+      {DynamicSupervisor, name: Setlistify.UserTokenSupervisor},
       # Start Caches
       Supervisor.child_spec(
         {Cachex,

@@ -1,6 +1,7 @@
 defmodule SetlistifyWeb.OAuthCallbackController do
   alias SetlistifyWeb.UserAuth
   alias Setlistify.Spotify
+  alias Setlistify.Spotify.TokenSupervisor
 
   use SetlistifyWeb, :controller
 
@@ -23,10 +24,26 @@ defmodule SetlistifyWeb.OAuthCallbackController do
           }
         )
 
-      %{"access_token" => token} = resp.body
-      username = token |> Spotify.API.new() |> Spotify.API.username()
+      %{"access_token" => access_token, "refresh_token" => refresh_token, "expires_in" => expires_in} = resp.body
+      username = access_token |> Spotify.API.new() |> Spotify.API.username()
 
-      UserAuth.auth_user(conn, {username, token})
+      # Create encrypted token for session storage
+      encrypted_refresh_token = 
+        Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", refresh_token)
+
+      # Start token manager process
+      TokenSupervisor.start_user_token(
+        username,
+        %{
+          access_token: access_token,
+          refresh_token: refresh_token,
+          expires_in: expires_in
+        }
+      )
+
+      conn
+      |> put_session(:refresh_token, encrypted_refresh_token)
+      |> UserAuth.auth_user({username, access_token})
     else
       conn
       |> put_flash(:error, "Response from Spotify did not match. Please try again.")
@@ -71,6 +88,11 @@ defmodule SetlistifyWeb.OAuthCallbackController do
   end
 
   def sign_out(conn, _) do
+    case get_session(conn, "user") do
+      %{"username" => username} -> TokenSupervisor.stop_user_token(username)
+      _ -> :ok
+    end
+
     UserAuth.log_out_user(conn)
   end
 end

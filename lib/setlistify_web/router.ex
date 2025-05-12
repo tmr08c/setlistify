@@ -8,6 +8,7 @@ defmodule SetlistifyWeb.Router do
     plug :put_root_layout, {SetlistifyWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+    plug SetlistifyWeb.Plugs.RestoreSpotifyToken
   end
 
   pipeline :api do
