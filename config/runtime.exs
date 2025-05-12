@@ -113,6 +113,7 @@ end
 case Config.config_env() do
   :dev -> DotenvParser.load_file(".env")
   :test -> DotenvParser.load_file(".env.example")
+  _ -> :ok
 end
 
 ## Setlist.fm API
