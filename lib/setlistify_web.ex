@@ -98,7 +98,7 @@ defmodule SetlistifyWeb do
       # WARNING: If you change the pattern, you may need to update our selector
       # in `SetlistifyWeb.ConnCase`
       if Mix.env() == :prod do
-        def tid(), do: []
+        def tid(_), do: []
       else
         def tid(list) when is_list(list), do: [{:data, ["test-#{Enum.join(list, "-")}": true]}]
         def tid(id), do: [{:data, ["test-#{id}": true]}]
