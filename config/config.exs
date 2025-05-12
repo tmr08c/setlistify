@@ -7,9 +7,6 @@
 # General application configuration
 import Config
 
-config :setlistify,
-  ecto_repos: [Setlistify.Repo]
-
 # Configures the endpoint
 config :setlistify, SetlistifyWeb.Endpoint,
   url: [host: "localhost"],

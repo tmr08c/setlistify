@@ -12,8 +12,6 @@ defmodule Setlistify.Application do
     children = [
       # Start the Telemetry supervisor
       SetlistifyWeb.Telemetry,
-      # Start the Ecto repository
-      Setlistify.Repo,
       # Start the PubSub system
       {Phoenix.PubSub, name: Setlistify.PubSub},
       # Start Finch
