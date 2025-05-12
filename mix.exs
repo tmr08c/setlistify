@@ -38,7 +38,6 @@ defmodule Setlistify.MixProject do
       {:dotenv_parser, "~> 2.0", only: [:dev, :test]},
       {:cachex, "~> 3.6.0"},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
-      {:ecto_sql, "~> 3.6"},
       {:esbuild, "~> 0.5", runtime: Mix.env() == :dev},
       {:finch, "~> 0.13"},
       {:floki, ">= 0.30.0", only: :test},
@@ -53,7 +52,6 @@ defmodule Setlistify.MixProject do
       {:phoenix_live_reload, "~> 1.2", only: :dev},
       {:phoenix_live_view, "~> 1.0.0"},
       {:plug_cowboy, "~> 2.5"},
-      {:postgrex, ">= 0.0.0"},
       {:req, "~> 0.3"},
       {:swoosh, "~> 1.3"},
       {:tailwind, "~> 0.1.8", runtime: Mix.env() == :dev},
@@ -70,10 +68,7 @@ defmodule Setlistify.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "ecto.setup", "assets.setup"],
-      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-      "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"],
+      setup: ["deps.get", "assets.setup"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
       "assets.deploy": ["tailwind default --minify", "esbuild default --minify", "phx.digest"]
     ]
