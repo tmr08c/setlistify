@@ -34,6 +34,13 @@ defmodule Setlistify.Spotify.API do
     impl().get_embed(url)
   end
 
+  @callback refresh_token(String.t()) ::
+              {:ok, %{access_token: String.t(), refresh_token: String.t(), expires_in: integer()}}
+              | {:error, atom()}
+  def refresh_token(refresh_token) do
+    impl().refresh_token(refresh_token)
+  end
+
   defp impl do
     Application.get_env(:setlistify, :spotify_api_client, Setlistify.Spotify.API.ExternalClient)
   end

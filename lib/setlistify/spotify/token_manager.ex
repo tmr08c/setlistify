@@ -1,8 +1,9 @@
 defmodule Setlistify.Spotify.TokenManager do
   use GenServer
   require Logger
+  alias Setlistify.Spotify.API
 
-  # TODO: this name may not be the most clear for the goal. Does `@refresh_buffer` make it more clear?
+  # TODO: this name may not be the most clear for the goal. Does `  @refresh_buffer` make it more clear?
   # Refresh token 5 minutes before expiration
   @refresh_threshold 5 * 60
 
@@ -54,7 +55,7 @@ defmodule Setlistify.Spotify.TokenManager do
 
   @impl true
   def handle_call(:refresh_token, _from, %{refresh_token: refresh_token} = state) do
-    case do_refresh_token(refresh_token) do
+    case API.refresh_token(refresh_token) do
       {:ok, new_tokens} ->
         schedule_refresh(new_tokens.expires_in - @refresh_threshold)
 
@@ -72,7 +73,7 @@ defmodule Setlistify.Spotify.TokenManager do
 
   @impl true
   def handle_info(:refresh_token, %{refresh_token: refresh_token} = state) do
-    case do_refresh_token(refresh_token) do
+    case API.refresh_token(refresh_token) do
       {:ok, new_tokens} ->
         schedule_refresh(new_tokens.expires_in - @refresh_threshold)
 
@@ -93,10 +94,6 @@ defmodule Setlistify.Spotify.TokenManager do
     {:via, Registry, {Setlistify.UserTokenRegistry, user_id}}
   end
 
-  # TODO Let's update this to be a tuple of `{:provider, :user_iD}`. For now,
-  # provider will always be 'spotify', we can even pattern match this to avoid
-  # getting in bad data, but this will provide us with flexibility to handle
-  # other providers in the future.
   defp lookup(user_id) do
     case Registry.lookup(Setlistify.UserTokenRegistry, user_id) do
       [{pid, _}] -> {:ok, pid}
@@ -111,36 +108,4 @@ defmodule Setlistify.Spotify.TokenManager do
   defp schedule_refresh(_), do: Process.send(self(), :refresh_token, [])
 
   defp timestamp, do: System.system_time(:second)
-
-  # TODO: This should be moved into Spotify.API and Spotify.API.External
-  defp do_refresh_token(refresh_token) do
-    auth =
-      :base64.encode(
-        Application.fetch_env!(:setlistify, :spotify_client_id) <>
-          ":" <> Application.fetch_env!(:setlistify, :spotify_client_secret)
-      )
-
-    case Req.post(
-           "https://accounts.spotify.com/api/token",
-           headers: %{authorization: "Basic #{auth}"},
-           form: %{
-             grant_type: :refresh_token,
-             refresh_token: refresh_token
-           }
-         ) do
-      {:ok, %{status: 200, body: body}} ->
-        {:ok,
-         %{
-           access_token: body["access_token"],
-           refresh_token: body["refresh_token"] || refresh_token,
-           expires_in: body["expires_in"]
-         }}
-
-      {:ok, %{status: status}} when status in [400, 401] ->
-        {:error, :invalid_token}
-
-      error ->
-        {:error, error}
-    end
-  end
 end

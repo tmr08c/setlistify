@@ -1,38 +1,44 @@
 defmodule Setlistify.Spotify.TokenManagerTest do
   use ExUnit.Case, async: true
+  import Hammox
   alias Setlistify.Spotify.TokenManager
 
   @user_id "test_user"
-  @initial_tokens %{
+  @initial_token %{
     access_token: "initial_access_token",
     refresh_token: "refresh_token",
     expires_in: 3600
   }
 
+  setup :verify_on_exit!
+
   setup do
+    # TODO I'm not sure if we should do this manually, or be relying on the
+    # applicaton start up process
+    #
     # Start the Registry and DynamicSupervisor for each test
-    start_supervised!(Registry)
-    start_supervised!({Registry, keys: :unique, name: Setlistify.UserTokenRegistry})
-    start_supervised!({DynamicSupervisor, name: Setlistify.UserTokenSupervisor})
+    # start_supervised!(Registry)
+    # start_supervised!({Registry, keys: :unique, name: Setlistify.UserTokenRegistry})
+    # start_supervised!({DynamicSupervisor, name: Setlistify.UserTokenSupervisor})
 
     :ok
   end
 
   describe "start_link/1" do
     test "starts a new token manager process" do
-      assert {:ok, pid} = TokenManager.start_link({@user_id, @initial_tokens})
+      assert {:ok, pid} = TokenManager.start_link({@user_id, @initial_token})
       assert Process.alive?(pid)
     end
 
     test "registers process with Registry" do
-      {:ok, pid} = TokenManager.start_link({@user_id, @initial_tokens})
+      {:ok, pid} = TokenManager.start_link({@user_id, @initial_token})
       assert [{^pid, nil}] = Registry.lookup(Setlistify.UserTokenRegistry, @user_id)
     end
   end
 
   describe "get_token/1" do
     test "returns current access token" do
-      {:ok, _pid} = TokenManager.start_link({@user_id, @initial_tokens})
+      {:ok, _pid} = TokenManager.start_link({@user_id, @initial_token})
       assert {:ok, "initial_access_token"} = TokenManager.get_token(@user_id)
     end
 
@@ -43,33 +49,35 @@ defmodule Setlistify.Spotify.TokenManagerTest do
 
   describe "refresh_token/1" do
     test "refreshes token successfully" do
-      {:ok, _pid} = TokenManager.start_link({@user_id, @initial_tokens})
+      {:ok, pid} = TokenManager.start_link({@user_id, @initial_token})
       new_token = "new_access_token"
 
-      # TODO Update with Req.Test
-      # Mock the Spotify API response
-      expect(Req, :post, fn "https://accounts.spotify.com/api/token", _opts ->
+      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
+        assert refresh_token == @initial_token.refresh_token
+
         {:ok,
          %{
-           status: 200,
-           body: %{
-             "access_token" => new_token,
-             "expires_in" => 3600
-           }
+           access_token: new_token,
+           refresh_token: refresh_token,
+           expires_in: 3600
          }}
       end)
+
+      allow(Setlistify.Spotify.API.MockClient, self(), pid)
 
       assert {:ok, ^new_token} = TokenManager.refresh_token(@user_id)
     end
 
+    @tag :capture_log
     test "terminates process on refresh failure" do
-      {:ok, pid} = TokenManager.start_link({@user_id, @initial_tokens})
+      {:ok, pid} = TokenManager.start_link({@user_id, @initial_token})
 
-      # TODO Update with Req.Test
-      # Mock failed refresh
-      expect(Req, :post, fn "https://accounts.spotify.com/api/token", _opts ->
-        {:ok, %{status: 401}}
+      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
+        assert refresh_token == @initial_token.refresh_token
+        {:error, :invalid_token}
       end)
+
+      allow(Setlistify.Spotify.API.MockClient, self(), pid)
 
       assert {:error, :invalid_token} = TokenManager.refresh_token(@user_id)
       refute Process.alive?(pid)
@@ -77,44 +85,34 @@ defmodule Setlistify.Spotify.TokenManagerTest do
   end
 
   describe "automatic refresh" do
-    # TODO check that this works
-    @tag :capture_log
     test "schedules token refresh before expiration" do
-      # Use a short expiration time for testing
-      tokens = %{@initial_tokens | expires_in: 2}
-      {:ok, pid} = TokenManager.start_link({@user_id, tokens})
+      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
+        assert refresh_token == @initial_token.refresh_token
 
-      # TODO update to Req.Test
-      # Question: should this be before we start the link?
-      # Mock successful refresh
-      expect(Req, :post, fn "https://accounts.spotify.com/api/token", _opts ->
         {:ok,
          %{
-           status: 200,
-           body: %{
-             "access_token" => "refreshed_token",
-             "expires_in" => 3600
-           }
+           access_token: "refreshed_token",
+           refresh_token: refresh_token,
+           expires_in: 3600
          }}
       end)
 
+      allow(Setlistify.Spotify.API.MockClient, self(), fn ->
+        [{pid, _}] = Registry.lookup(Setlistify.UserTokenRegistry, @user_id)
+
+        pid
+      end)
+
+      # Set `expires_in` to short duration, something quicker than
+      # @refresh_threshold, so we will attempt to refresh right away.
+      tokens = %{@initial_token | expires_in: 2}
+      {:ok, pid} = TokenManager.start_link({@user_id, tokens})
+
       # Wait for the refresh to happen
-      Process.sleep(2_500)
       assert Process.alive?(pid)
 
       # Verify the token was refreshed
       assert {:ok, "refreshed_token"} = TokenManager.get_token(@user_id)
-
-      # IDEA: We could possibly have this test that the message is sent to itself (before the expires in?)
-      # And test the refreshing more directly?
     end
-  end
-
-  # TODO Not sure if we need this. Maybe we should be using the API client
-  # Helper function to set up mocks
-  defp expect(module, function, times, callback) do
-    :ok = Application.put_env(:setlistify, :spotify_client_id, "test_client_id")
-    :ok = Application.put_env(:setlistify, :spotify_client_secret, "test_client_secret")
-    Mox.expect(module, function, times, callback)
   end
 end

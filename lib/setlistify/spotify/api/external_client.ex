@@ -85,4 +85,40 @@ defmodule Setlistify.Spotify.API.ExternalClient do
         {:error, :failed_to_fetch}
     end
   end
+
+  def refresh_token(refresh_token) do
+    auth =
+      :base64.encode(
+        Application.fetch_env!(:setlistify, :spotify_client_id) <>
+          ":" <> Application.fetch_env!(:setlistify, :spotify_client_secret)
+      )
+
+    default_opts = [base_url: "https://accounts.spotify.com/api/token", auth: {:basic, auth}]
+    config_opts = Application.get_env(:setlistify, :spotify_req_options, [])
+
+    req = Req.new(Keyword.merge(default_opts, config_opts))
+
+    case Req.post(
+           req,
+           form: %{
+             grant_type: :refresh_token,
+             refresh_token: refresh_token
+           }
+         )
+         |> IO.inspect() do
+      {:ok, %{status: 200, body: body}} ->
+        {:ok,
+         %{
+           access_token: body["access_token"],
+           refresh_token: body["refresh_token"] || refresh_token,
+           expires_in: body["expires_in"]
+         }}
+
+      {:ok, %{status: status}} when status in [400, 401] ->
+        {:error, :invalid_token}
+
+      error ->
+        {:error, error}
+    end
+  end
 end

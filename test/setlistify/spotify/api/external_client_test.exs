@@ -164,4 +164,100 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       assert {:error, :invalid_response} = ExternalClient.get_embed(url)
     end
   end
+
+  # TODO: Pick up here: Working to make tests pass
+  # Just got the success case to work, need to clean up logging
+  # then need to find other places where manually refreshing or in diff where now
+  # using this function, but mocking Req and not the function
+  describe "refresh_token/1" do
+    test "successfully refreshes token with new refresh token" do
+      Req.Test.expect(
+        MySpotifyStub,
+        fn conn ->
+          # Verify request headers and body
+          # assert "Basic" <> _token conn.req_headers["authorization"]
+          IO.inspect(conn.req_headers)
+          assert ["Basic " <> _token] = Plug.Conn.get_req_header(conn, "authorization")
+          {:ok, body, _} = Plug.Conn.read_body(conn)
+
+          assert URI.decode_query(body) == %{
+                   "grant_type" => "refresh_token",
+                   "refresh_token" => "old_refresh_token"
+                 }
+
+          response = %{
+            "access_token" => "new_access_token",
+            "refresh_token" => "new_refresh_token",
+            "expires_in" => 3600
+          }
+
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(200, Jason.encode!(response))
+        end
+      )
+
+      assert {:ok, tokens} = ExternalClient.refresh_token("old_refresh_token")
+      assert tokens.access_token == "new_access_token"
+      assert tokens.refresh_token == "new_refresh_token"
+      assert tokens.expires_in == 3600
+    end
+
+    test "successfully refreshes token keeping existing refresh token" do
+      Req.Test.stub(MySpotifyStub, fn %{
+                                        url: "https://accounts.spotify.com/api/token",
+                                        method: "POST"
+                                      } = conn ->
+        IO.puts("USING MY STUB")
+
+        response = %{
+          "access_token" => "new_access_token",
+          "expires_in" => 3600
+        }
+
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/json")
+        |> Plug.Conn.send_resp(200, Jason.encode!(response))
+      end)
+
+      assert {:ok, tokens} = ExternalClient.refresh_token("old_refresh_token")
+      assert tokens.access_token == "new_access_token"
+      # Should keep old token when none provided
+      assert tokens.refresh_token == "old_refresh_token"
+      assert tokens.expires_in == 3600
+    end
+
+    test "returns error on invalid token" do
+      Req.Test.stub(MySpotifyStub, fn %{
+                                        url: "https://accounts.spotify.com/api/token",
+                                        method: "POST"
+                                      } = conn ->
+        Plug.Conn.send_resp(conn, 401, "Unauthorized")
+      end)
+
+      assert {:error, :invalid_token} = ExternalClient.refresh_token("invalid_token")
+    end
+
+    test "returns error on bad request" do
+      Req.Test.stub(MySpotifyStub, fn %{
+                                        url: "https://accounts.spotify.com/api/token",
+                                        method: "POST"
+                                      } = conn ->
+        Plug.Conn.send_resp(conn, 400, "Bad Request")
+      end)
+
+      assert {:error, :invalid_token} = ExternalClient.refresh_token("bad_token")
+    end
+
+    test "returns error on server error" do
+      Req.Test.stub(MySpotifyStub, fn %{
+                                        url: "https://accounts.spotify.com/api/token",
+                                        method: "POST"
+                                      } = conn ->
+        Plug.Conn.send_resp(conn, 500, "Internal Server Error")
+      end)
+
+      assert {:error, _} = ExternalClient.refresh_token("some_token")
+    end
+  end
 end
