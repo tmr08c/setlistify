@@ -74,6 +74,7 @@ Setlistify is an Elixir/Phoenix application that integrates with:
 The application uses Hammox for mocking:
 - `Setlistify.SetlistFm.API.MockClient` for setlist.fm API
 - `Setlistify.Spotify.API.MockClient` for Spotify API
+- Recommendation: use Hammox for mocks, not Mox. It has the same API as Mox.
 
 ## Environment Configuration
 
@@ -83,3 +84,7 @@ Required environment variables:
 - `SPOTIFY_CLIENT_SECRET` - OAuth client secret for Spotify
 
 These values are automatically loaded from `.env` in development. You can copy `.env.example` to `.env` and fill in the values.
+
+## Development Reminders
+
+- run mix format after making changes
