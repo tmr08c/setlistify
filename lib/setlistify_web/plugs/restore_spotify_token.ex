@@ -10,14 +10,22 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    with %{"username" => username} <- get_session(conn, "user"),
-         {:error, :not_found} <- TokenManager.get_token(username),
-         encrypted_token when not is_nil(encrypted_token) <- get_session(conn, :refresh_token),
+    user_session = get_session(conn, "user")
+    refresh_token = get_session(conn, :refresh_token)
+
+    with %{"username" => username} <- user_session,
+         {:error, :not_found} <-
+           (
+             result = TokenManager.get_token(username)
+             result
+           ),
+         encrypted_token when not is_nil(encrypted_token) <- refresh_token,
          {:ok, refresh_token} <-
            Phoenix.Token.verify(SetlistifyWeb.Endpoint, "user auth", encrypted_token,
              max_age: 86400 * 30
            ) do
       # Attempt to refresh the token and start a new process
+
       case API.refresh_token(refresh_token) do
         {:ok, tokens} ->
           {:ok, _pid} = TokenSupervisor.start_user_token(username, tokens)
@@ -35,9 +43,14 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
           |> halt()
       end
     else
-      nil -> conn
-      {:error, _} -> conn
-      _ -> conn
+      nil ->
+        conn
+
+      {:error, _reason} ->
+        conn
+
+      _other ->
+        conn
     end
   end
 end

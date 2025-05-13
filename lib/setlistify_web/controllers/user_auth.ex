@@ -75,10 +75,16 @@ defmodule SetlistifyWeb.UserAuth do
   It clears all session data for safety. See renew_session.
   """
   def log_out_user(conn) do
+    IO.puts("UserAuth.log_out_user called")
+    
     if live_socket_id = get_session(conn, :live_socket_id) do
       SetlistifyWeb.Endpoint.broadcast(live_socket_id, "disconnect", %{})
     end
 
-    conn |> renew_session() |> redirect(to: ~p"/")
+    # Clear entire session
+    new_conn = conn |> renew_session()
+    
+    # Return both the new conn and redirect
+    new_conn |> redirect(to: ~p"/")
   end
 end

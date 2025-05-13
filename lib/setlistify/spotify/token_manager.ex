@@ -10,14 +10,25 @@ defmodule Setlistify.Spotify.TokenManager do
   # Client API
 
   def start_link({user_id, initial_tokens}) do
+    IO.puts("TokenManager.start_link called for user: #{user_id}")
+    IO.puts("Stack trace: #{inspect(Process.info(self(), :current_stacktrace))}")
     name = via_tuple(user_id)
     GenServer.start_link(__MODULE__, initial_tokens, name: name)
   end
 
   def get_token(user_id) do
+    IO.puts("TokenManager.get_token called for user: #{user_id}")
+
     case lookup(user_id) do
-      {:ok, pid} -> GenServer.call(pid, :get_token)
-      :error -> {:error, :not_found}
+      {:ok, pid} ->
+        IO.puts("Found process for user #{user_id}, PID: #{inspect(pid)}")
+        result = GenServer.call(pid, :get_token)
+        IO.puts("Result from get_token: #{inspect(result)}")
+        result
+
+      :error ->
+        IO.puts("No process found for user #{user_id}")
+        {:error, :not_found}
     end
   end
 
@@ -29,9 +40,16 @@ defmodule Setlistify.Spotify.TokenManager do
   end
 
   def stop(user_id) do
+    IO.puts("TokenManager.stop called for user: #{user_id}")
+
     case lookup(user_id) do
-      {:ok, pid} -> GenServer.stop(pid)
-      :error -> {:error, :not_found}
+      {:ok, pid} ->
+        IO.puts("Found process for user #{user_id}, stopping PID: #{inspect(pid)}")
+        GenServer.stop(pid, :normal)
+
+      :error ->
+        IO.puts("No process found for user #{user_id}")
+        {:error, :not_found}
     end
   end
 
@@ -94,7 +112,11 @@ defmodule Setlistify.Spotify.TokenManager do
     {:via, Registry, {Setlistify.UserTokenRegistry, user_id}}
   end
 
-  defp lookup(user_id) do
+  @doc """
+  Looks up a token manager process by user ID.
+  Returns {:ok, pid} if found, :error otherwise.
+  """
+  def lookup(user_id) do
     case Registry.lookup(Setlistify.UserTokenRegistry, user_id) do
       [{pid, _}] -> {:ok, pid}
       [] -> :error

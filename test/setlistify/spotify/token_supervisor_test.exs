@@ -55,6 +55,40 @@ defmodule Setlistify.Spotify.TokenSupervisorTest do
       nonexistent_user = uniq_user_id()
       assert {:error, :not_found} = TokenSupervisor.stop_user_token(nonexistent_user)
     end
+
+    test "doesn't automatically start a new token process after stopping", %{user_id: user_id} do
+      # Start a token process
+      {:ok, pid} = TokenSupervisor.start_user_token(user_id, @initial_tokens)
+      assert Process.alive?(pid)
+
+      # Verify we can get the token
+      assert {:ok, _token} = TokenSupervisor.get_token(user_id)
+
+      # Stop the process
+      assert :ok = TokenSupervisor.stop_user_token(user_id)
+
+      # Verify the process is stopped
+      refute Process.alive?(pid)
+
+      # Verify there are *no* token registry processes for the user
+      #
+      # When we tell the process to stop, we don't want another one to be
+      # started.
+      #
+      # We need to need to add some process sleep time to give the registry time
+      # to update to remove the process.
+      #
+      # If we have a regression and the supervisor starts processes
+      # again, this test can end up being flaky because the process may not
+      # start in time for the registry to find it. If this test starts flaking,
+      # adding a sleep before the lookup may help make the error more
+      # reproduible. We also have a simlar test in OAuthCallbackControllerTest
+      # when we check the sign out, that test may help reproduce the error case
+      # as well.
+      Process.sleep(1)
+
+      assert [] == Registry.lookup(Setlistify.UserTokenRegistry, user_id)
+    end
   end
 
   describe "get_token/1" do

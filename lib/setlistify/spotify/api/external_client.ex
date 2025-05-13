@@ -120,4 +120,40 @@ defmodule Setlistify.Spotify.API.ExternalClient do
         {:error, error}
     end
   end
+  
+  def exchange_code(code, redirect_uri) do
+    auth =
+      :base64.encode(
+        Application.fetch_env!(:setlistify, :spotify_client_id) <>
+          ":" <> Application.fetch_env!(:setlistify, :spotify_client_secret)
+      )
+
+    default_opts = [base_url: "https://accounts.spotify.com/api/token", auth: {:basic, auth}]
+    config_opts = Application.get_env(:setlistify, :spotify_req_options, [])
+
+    req = Req.new(Keyword.merge(default_opts, config_opts))
+
+    case Req.post(
+           req,
+           form: %{
+             grant_type: :authorization_code,
+             code: code,
+             redirect_uri: redirect_uri
+           }
+         ) do
+      {:ok, %{status: 200, body: body}} ->
+        {:ok,
+         %{
+           access_token: body["access_token"],
+           refresh_token: body["refresh_token"],
+           expires_in: body["expires_in"]
+         }}
+
+      {:ok, %{status: status}} when status in [400, 401] ->
+        {:error, :invalid_code}
+
+      error ->
+        {:error, error}
+    end
+  end
 end

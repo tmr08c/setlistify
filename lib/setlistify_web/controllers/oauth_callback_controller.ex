@@ -1,55 +1,43 @@
 defmodule SetlistifyWeb.OAuthCallbackController do
   alias SetlistifyWeb.UserAuth
-  alias Setlistify.Spotify
   alias Setlistify.Spotify.TokenSupervisor
+  alias Setlistify.Spotify.API
 
   use SetlistifyWeb, :controller
 
   def new(conn, %{"provider" => "spotify", "code" => code, "state" => state}) do
     if state == get_session(conn, :oauth_state) do
-      auth =
-        :base64.encode(
-          Application.fetch_env!(:setlistify, :spotify_client_id) <>
-            ":" <> Application.fetch_env!(:setlistify, :spotify_client_secret)
-        )
+      # Exchange authorization code for access and refresh tokens
+      redirect_uri = url(~p"/oauth/callbacks/spotify")
 
-      resp =
-        Req.post!(
-          "https://accounts.spotify.com/api/token",
-          headers: %{authorization: "Basic #{auth}"},
-          form: %{
-            grant_type: :authorization_code,
-            code: code,
-            redirect_uri: url(~p"/oauth/callbacks/spotify")
-          }
-        )
+      case API.exchange_code(code, redirect_uri) do
+        {:ok, %{access_token: access_token, refresh_token: refresh_token, expires_in: expires_in}} ->
+          username = access_token |> API.new() |> API.username()
 
-      %{
-        "access_token" => access_token,
-        "refresh_token" => refresh_token,
-        "expires_in" => expires_in
-      } = resp.body
+          # Create encrypted token for session storage
+          encrypted_refresh_token =
+            Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", refresh_token)
 
-      username = access_token |> Spotify.API.new() |> Spotify.API.username()
+          # Start token manager process
+          TokenSupervisor.start_user_token(
+            username,
+            %{
+              access_token: access_token,
+              refresh_token: refresh_token,
+              expires_in: expires_in
+            }
+          )
 
-      # Create encrypted token for session storage
-      encrypted_refresh_token =
-        Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", refresh_token)
+          # TODO should we be putting the "user" key on the session
+          conn
+          |> put_session(:refresh_token, encrypted_refresh_token)
+          |> UserAuth.auth_user({username, access_token})
 
-      # Start token manager process
-      TokenSupervisor.start_user_token(
-        username,
-        %{
-          access_token: access_token,
-          refresh_token: refresh_token,
-          expires_in: expires_in
-        }
-      )
-
-      # TODO should we be putting the "user" key on the sesion
-      conn
-      |> put_session(:refresh_token, encrypted_refresh_token)
-      |> UserAuth.auth_user({username, access_token})
+        {:error, _reason} ->
+          conn
+          |> put_flash(:error, "Failed to authenticate with Spotify. Please try again.")
+          |> redirect(to: ~p"/")
+      end
     else
       conn
       |> put_flash(:error, "Response from Spotify did not match. Please try again.")
@@ -94,13 +82,36 @@ defmodule SetlistifyWeb.OAuthCallbackController do
   end
 
   def sign_out(conn, _) do
-    # TODO: Are we putting the "user" key on the session somewhere?
-    # TODO: Would it make sense for a helper function to be on UserAuth, so we could have `auth_user` and `sign_out_user` logic close together?
-    case get_session(conn, "user") do
-      %{"username" => username} -> TokenSupervisor.stop_user_token(username)
-      _ -> :ok
+    # Stop the token manager process if a user is logged in
+    IO.puts("OAuthCallbackController.sign_out called")
+    
+    user_session = get_session(conn, "user")
+    IO.inspect(user_session, label: "User session in sign_out")
+    
+    # Extract username before clearing session
+    username = case user_session do
+      %{"username" => username} -> username
+      _ -> nil
     end
-
-    UserAuth.log_out_user(conn)
+    
+    # First, clear refresh token explicitly before clearing the session
+    # This ensures that even if RestoreSpotifyToken is called, it won't find a token
+    conn = delete_session(conn, :refresh_token)
+    
+    # Log out user (which clears the entire session)
+    conn = UserAuth.log_out_user(conn)
+    
+    # Now stop the token process AFTER clearing the session
+    # This ensures that if any autorestart mechanism exists, it won't have the refresh token anymore
+    if username do
+      IO.puts("Found username in session: #{username}")
+      result = TokenSupervisor.stop_user_token(username)
+      IO.inspect(result, label: "Result of TokenSupervisor.stop_user_token")
+    else
+      IO.puts("No username found in session")
+    end
+    
+    # Return the updated conn
+    conn
   end
 end
