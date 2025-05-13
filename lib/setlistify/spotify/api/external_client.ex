@@ -104,8 +104,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
              grant_type: :refresh_token,
              refresh_token: refresh_token
            }
-         )
-         |> IO.inspect() do
+         ) do
       {:ok, %{status: 200, body: body}} ->
         {:ok,
          %{

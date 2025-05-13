@@ -174,9 +174,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       Req.Test.expect(
         MySpotifyStub,
         fn conn ->
-          # Verify request headers and body
-          # assert "Basic" <> _token conn.req_headers["authorization"]
-          IO.inspect(conn.req_headers)
+          # Verify auth header format
           assert ["Basic " <> _token] = Plug.Conn.get_req_header(conn, "authorization")
           {:ok, body, _} = Plug.Conn.read_body(conn)
 
@@ -204,21 +202,28 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
     end
 
     test "successfully refreshes token keeping existing refresh token" do
-      Req.Test.stub(MySpotifyStub, fn %{
-                                        url: "https://accounts.spotify.com/api/token",
-                                        method: "POST"
-                                      } = conn ->
-        IO.puts("USING MY STUB")
+      Req.Test.expect(
+        MySpotifyStub,
+        fn conn ->
+          {:ok, body, _} = Plug.Conn.read_body(conn)
 
-        response = %{
-          "access_token" => "new_access_token",
-          "expires_in" => 3600
-        }
+          assert URI.decode_query(body) == %{
+                   "grant_type" => "refresh_token",
+                   "refresh_token" => "old_refresh_token"
+                 }
 
-        conn
-        |> Plug.Conn.put_resp_header("content-type", "application/json")
-        |> Plug.Conn.send_resp(200, Jason.encode!(response))
-      end)
+          # This does **not** include the refresh token, so we expect to keep
+          # using our old refresh token
+          response = %{
+            "access_token" => "new_access_token",
+            "expires_in" => 3600
+          }
+
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(200, Jason.encode!(response))
+        end
+      )
 
       assert {:ok, tokens} = ExternalClient.refresh_token("old_refresh_token")
       assert tokens.access_token == "new_access_token"
@@ -228,32 +233,19 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
     end
 
     test "returns error on invalid token" do
-      Req.Test.stub(MySpotifyStub, fn %{
-                                        url: "https://accounts.spotify.com/api/token",
-                                        method: "POST"
-                                      } = conn ->
-        Plug.Conn.send_resp(conn, 401, "Unauthorized")
-      end)
+      Req.Test.expect(MySpotifyStub, fn conn -> Plug.Conn.send_resp(conn, 401, "Unauthorized") end)
 
       assert {:error, :invalid_token} = ExternalClient.refresh_token("invalid_token")
     end
 
     test "returns error on bad request" do
-      Req.Test.stub(MySpotifyStub, fn %{
-                                        url: "https://accounts.spotify.com/api/token",
-                                        method: "POST"
-                                      } = conn ->
-        Plug.Conn.send_resp(conn, 400, "Bad Request")
-      end)
+      Req.Test.expect(MySpotifyStub, fn conn -> Plug.Conn.send_resp(conn, 400, "Bad Request") end)
 
       assert {:error, :invalid_token} = ExternalClient.refresh_token("bad_token")
     end
 
     test "returns error on server error" do
-      Req.Test.stub(MySpotifyStub, fn %{
-                                        url: "https://accounts.spotify.com/api/token",
-                                        method: "POST"
-                                      } = conn ->
+      Req.Test.expect(MySpotifyStub, fn conn ->
         Plug.Conn.send_resp(conn, 500, "Internal Server Error")
       end)
 
