@@ -8,6 +8,8 @@ defmodule SetlistifyWeb.Router do
     plug :put_root_layout, {SetlistifyWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+
+    # TODO Does this need to be a separate plug? Could we only check it if we try to auth the user and find we can't find them in the Registry look up
     plug SetlistifyWeb.Plugs.RestoreSpotifyToken
   end
 

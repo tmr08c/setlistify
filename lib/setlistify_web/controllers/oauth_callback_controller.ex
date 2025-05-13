@@ -24,11 +24,16 @@ defmodule SetlistifyWeb.OAuthCallbackController do
           }
         )
 
-      %{"access_token" => access_token, "refresh_token" => refresh_token, "expires_in" => expires_in} = resp.body
+      %{
+        "access_token" => access_token,
+        "refresh_token" => refresh_token,
+        "expires_in" => expires_in
+      } = resp.body
+
       username = access_token |> Spotify.API.new() |> Spotify.API.username()
 
       # Create encrypted token for session storage
-      encrypted_refresh_token = 
+      encrypted_refresh_token =
         Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", refresh_token)
 
       # Start token manager process
@@ -41,6 +46,7 @@ defmodule SetlistifyWeb.OAuthCallbackController do
         }
       )
 
+      # TODO should we be putting the "user" key on the sesion
       conn
       |> put_session(:refresh_token, encrypted_refresh_token)
       |> UserAuth.auth_user({username, access_token})
@@ -88,6 +94,8 @@ defmodule SetlistifyWeb.OAuthCallbackController do
   end
 
   def sign_out(conn, _) do
+    # TODO: Are we putting the "user" key on the session somewhere?
+    # TODO: Would it make sense for a helper function to be on UserAuth, so we could have `auth_user` and `sign_out_user` logic close together?
     case get_session(conn, "user") do
       %{"username" => username} -> TokenSupervisor.stop_user_token(username)
       _ -> :ok

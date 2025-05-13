@@ -34,6 +34,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
     test "restores token process from valid refresh token", %{conn: conn} do
       encrypted_token = Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", @refresh_token)
 
+      # TODO Change to be a mock of Spotify.ExternalClient
       # Mock successful token refresh
       expect(Req, :post, fn "https://accounts.spotify.com/api/token", _opts ->
         {:ok,
