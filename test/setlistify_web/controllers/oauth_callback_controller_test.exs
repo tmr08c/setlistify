@@ -110,12 +110,13 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       refute Process.alive?(original_pid)
 
       # Check that refresh token was removed from the session
-      assert get_session(sign_out_conn, :refresh_token) == nil
+      refute get_session(sign_out_conn, :refresh_token)
 
       # Check that user was removed from the session
-      assert get_session(sign_out_conn, "user") == nil
+      refute get_session(sign_out_conn, "user")
 
-      assert [] == Registry.lookup(Setlistify.UserTokenRegistry, test_user)
+      # Check that process was removed from registry
+      refute_in_registry(test_user)
     end
 
     test "invalid state parameter returns error", %{conn: conn} do

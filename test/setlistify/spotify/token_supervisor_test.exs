@@ -1,6 +1,7 @@
 defmodule Setlistify.Spotify.TokenSupervisorTest do
   use ExUnit.Case, async: true
   alias Setlistify.Spotify.TokenSupervisor
+  import Setlistify.Test.RegistryHelpers
 
   # Generate unique user IDs for each test to prevent test pollution
   def uniq_user_id(), do: "user_#{System.unique_integer([:positive])}"
@@ -87,7 +88,7 @@ defmodule Setlistify.Spotify.TokenSupervisorTest do
       # as well.
       Process.sleep(1)
 
-      assert [] == Registry.lookup(Setlistify.UserTokenRegistry, user_id)
+      refute_in_registry(user_id)
     end
   end
 

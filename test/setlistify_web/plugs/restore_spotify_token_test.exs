@@ -115,7 +115,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
       end)
 
       # Ensure there is no existing token process
-      assert [] == Registry.lookup(Setlistify.UserTokenRegistry, username)
+      refute_in_registry(username)
 
       conn =
         conn
