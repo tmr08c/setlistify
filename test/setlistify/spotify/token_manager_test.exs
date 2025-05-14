@@ -2,37 +2,9 @@ defmodule Setlistify.Spotify.TokenManagerTest do
   use ExUnit.Case, async: true
 
   import Hammox
+  import Setlistify.Test.RegistryHelpers
 
   alias Setlistify.Spotify.TokenManager
-
-  # Generate unique user IDs for each test to prevent test pollution
-  def uniq_user_id(), do: "user_#{System.unique_integer([:positive])}"
-
-  # Helper function to wait for a process to be registered with the Registry
-  # This helps prevent flakiness in tests due to timing issues
-  def wait_for_registry(user_id, max_attempts \\ 10, sleep_ms \\ 50, fail_on_timeout \\ true) do
-    # Import ExUnit.Assertions for flunk
-    import ExUnit.Assertions, only: [flunk: 1]
-    
-    Enum.reduce_while(1..max_attempts, nil, fn attempt, _ ->
-      case Registry.lookup(Setlistify.UserTokenRegistry, user_id) do
-        [{pid, _}] ->
-          {:halt, pid}
-
-        [] ->
-          if attempt < max_attempts do
-            Process.sleep(sleep_ms)
-            {:cont, nil}
-          else
-            if fail_on_timeout do
-              flunk("Timed out waiting for process to be registered for user_id: #{user_id} after #{max_attempts} attempts")
-            else
-              {:halt, nil}
-            end
-          end
-      end
-    end)
-  end
 
   @refresh_token "test_refresh_token"
 
@@ -40,7 +12,7 @@ defmodule Setlistify.Spotify.TokenManagerTest do
 
   setup do
     # Generate a unique user_id for each test
-    user_id = uniq_user_id()
+    user_id = unique_user_id()
 
     # Create tokens structure with the user's refresh token
     initial_token = %{
@@ -60,7 +32,7 @@ defmodule Setlistify.Spotify.TokenManagerTest do
 
     test "registers process with Registry", %{user_id: user_id, initial_token: initial_token} do
       {:ok, pid} = TokenManager.start_link({user_id, initial_token})
-      registry_pid = wait_for_registry(user_id)
+      registry_pid = assert_in_registry(user_id)
       assert registry_pid == pid
     end
   end
@@ -72,7 +44,7 @@ defmodule Setlistify.Spotify.TokenManagerTest do
     end
 
     test "returns error when process not found", %{user_id: _user_id} do
-      nonexistent_user = uniq_user_id()
+      nonexistent_user = unique_user_id()
       assert {:error, :not_found} = TokenManager.get_token(nonexistent_user)
     end
   end
@@ -144,7 +116,7 @@ defmodule Setlistify.Spotify.TokenManagerTest do
         # before the process is registered
         # In this test, we're starting the process after setting up the mock,
         # so we don't want to fail if the process isn't registered yet
-        pid = wait_for_registry(user_id, 10, 50, false)
+        pid = assert_in_registry(user_id, fail_on_timeout: false)
         if is_nil(pid), do: self(), else: pid
       end)
 

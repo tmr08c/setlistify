@@ -2,38 +2,10 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
   use SetlistifyWeb.ConnCase, async: true
 
   import Hammox
+  import Setlistify.Test.RegistryHelpers
 
   alias SetlistifyWeb.Plugs.RestoreSpotifyToken
   alias Setlistify.Spotify.TokenManager
-
-  # Use unique user IDs to prevent registering the same TokenManager process
-  # across parallel tests
-  def uniq_user_id(), do: "user_#{System.unique_integer([:positive])}"
-  
-  # Helper function to wait for a process to be registered with the Registry
-  # This helps prevent flakiness in tests due to timing issues
-  def wait_for_registry(user_id, max_attempts \\ 10, sleep_ms \\ 50, fail_on_timeout \\ true) do
-    # Import ExUnit.Assertions for flunk
-    import ExUnit.Assertions, only: [flunk: 1]
-    
-    Enum.reduce_while(1..max_attempts, nil, fn attempt, _ ->
-      case Registry.lookup(Setlistify.UserTokenRegistry, user_id) do
-        [{pid, _}] -> 
-          {:halt, pid}
-        [] -> 
-          if attempt < max_attempts do
-            Process.sleep(sleep_ms)
-            {:cont, nil}
-          else
-            if fail_on_timeout do
-              flunk("Timed out waiting for process to be registered for user_id: #{user_id} after #{max_attempts} attempts")
-            else
-              {:halt, nil}
-            end
-          end
-      end
-    end)
-  end
 
   @refresh_token "test_refresh_token"
 
@@ -42,7 +14,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
 
   setup do
     # Generate a unique user ID for this test
-    {:ok, %{username: uniq_user_id()}}
+    {:ok, %{username: unique_user_id()}}
   end
 
   describe "call/2" do
@@ -104,7 +76,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
         # before the process is registered
         # In these tests, we're creating the process after setting up the mock,
         # so we don't want to fail if the process isn't registered yet
-        pid = wait_for_registry(username, 10, 50, false)
+        pid = assert_in_registry(username, fail_on_timeout: false)
         if is_nil(pid), do: self(), else: pid
       end)
 
@@ -139,7 +111,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
         # before the process is registered
         # In these tests, we're creating the process after setting up the mock,
         # so we don't want to fail if the process isn't registered yet
-        pid = wait_for_registry(username, 10, 50, false)
+        pid = assert_in_registry(username, fail_on_timeout: false)
         if is_nil(pid), do: self(), else: pid
       end)
 
