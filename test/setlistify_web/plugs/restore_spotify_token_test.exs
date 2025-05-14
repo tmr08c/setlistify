@@ -12,7 +12,10 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
   
   # Helper function to wait for a process to be registered with the Registry
   # This helps prevent flakiness in tests due to timing issues
-  def wait_for_registry(user_id, max_attempts \\ 10, sleep_ms \\ 50) do
+  def wait_for_registry(user_id, max_attempts \\ 10, sleep_ms \\ 50, fail_on_timeout \\ true) do
+    # Import ExUnit.Assertions for flunk
+    import ExUnit.Assertions, only: [flunk: 1]
+    
     Enum.reduce_while(1..max_attempts, nil, fn attempt, _ ->
       case Registry.lookup(Setlistify.UserTokenRegistry, user_id) do
         [{pid, _}] -> 
@@ -22,7 +25,11 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
             Process.sleep(sleep_ms)
             {:cont, nil}
           else
-            {:halt, nil}
+            if fail_on_timeout do
+              flunk("Timed out waiting for process to be registered for user_id: #{user_id} after #{max_attempts} attempts")
+            else
+              {:halt, nil}
+            end
           end
       end
     end)
@@ -92,10 +99,12 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
       
       # Allow the mock to be called from the token process
       allow(Setlistify.Spotify.API.MockClient, self(), fn ->
-        # Wait for the process to be registered, and return it
+        # Wait for the process to be registered and return it
         # This avoids flakiness issues where the Registry lookup might happen
         # before the process is registered
-        pid = wait_for_registry(username)
+        # In these tests, we're creating the process after setting up the mock,
+        # so we don't want to fail if the process isn't registered yet
+        pid = wait_for_registry(username, 10, 50, false)
         if is_nil(pid), do: self(), else: pid
       end)
 
@@ -125,10 +134,12 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
       
       # Allow the mock to be called from the token process
       allow(Setlistify.Spotify.API.MockClient, self(), fn ->
-        # Wait for the process to be registered, and return it
+        # Wait for the process to be registered and return it
         # This avoids flakiness issues where the Registry lookup might happen
         # before the process is registered
-        pid = wait_for_registry(username)
+        # In these tests, we're creating the process after setting up the mock,
+        # so we don't want to fail if the process isn't registered yet
+        pid = wait_for_registry(username, 10, 50, false)
         if is_nil(pid), do: self(), else: pid
       end)
 
@@ -143,7 +154,6 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
         |> put_session(:refresh_token, encrypted_token)
         |> RestoreSpotifyToken.call([])
 
-      # These assertions are failing
       assert conn.halted
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "session has expired"
       assert redirected_to(conn) == "/"

@@ -7,20 +7,28 @@ defmodule Setlistify.Spotify.TokenManagerTest do
 
   # Generate unique user IDs for each test to prevent test pollution
   def uniq_user_id(), do: "user_#{System.unique_integer([:positive])}"
-  
+
   # Helper function to wait for a process to be registered with the Registry
   # This helps prevent flakiness in tests due to timing issues
-  def wait_for_registry(user_id, max_attempts \\ 10, sleep_ms \\ 50) do
+  def wait_for_registry(user_id, max_attempts \\ 10, sleep_ms \\ 50, fail_on_timeout \\ true) do
+    # Import ExUnit.Assertions for flunk
+    import ExUnit.Assertions, only: [flunk: 1]
+    
     Enum.reduce_while(1..max_attempts, nil, fn attempt, _ ->
       case Registry.lookup(Setlistify.UserTokenRegistry, user_id) do
-        [{pid, _}] -> 
+        [{pid, _}] ->
           {:halt, pid}
-        [] -> 
+
+        [] ->
           if attempt < max_attempts do
             Process.sleep(sleep_ms)
             {:cont, nil}
           else
-            {:halt, nil}
+            if fail_on_timeout do
+              flunk("Timed out waiting for process to be registered for user_id: #{user_id} after #{max_attempts} attempts")
+            else
+              {:halt, nil}
+            end
           end
       end
     end)
@@ -52,7 +60,8 @@ defmodule Setlistify.Spotify.TokenManagerTest do
 
     test "registers process with Registry", %{user_id: user_id, initial_token: initial_token} do
       {:ok, pid} = TokenManager.start_link({user_id, initial_token})
-      assert [{^pid, nil}] = Registry.lookup(Setlistify.UserTokenRegistry, user_id)
+      registry_pid = wait_for_registry(user_id)
+      assert registry_pid == pid
     end
   end
 
@@ -130,24 +139,23 @@ defmodule Setlistify.Spotify.TokenManagerTest do
       # Allow refresh_token message using global mode
       # Allow the mock to be called from the token process
       allow(Setlistify.Spotify.API.MockClient, self(), fn ->
-        # Wait for the process to be registered, and return it
+        # Wait for the process to be registered and return it
         # This avoids flakiness issues where the Registry lookup might happen
         # before the process is registered
-        pid = wait_for_registry(user_id)
+        # In this test, we're starting the process after setting up the mock,
+        # so we don't want to fail if the process isn't registered yet
+        pid = wait_for_registry(user_id, 10, 50, false)
         if is_nil(pid), do: self(), else: pid
       end)
 
       # Set `expires_in` to short duration, something quicker than
       # @refresh_threshold, so we will attempt to refresh right away.
-      # token = %{initial_token | expires_in: 60 * 5 + 1}
       token = %{initial_token | expires_in: 1}
 
       # Start the token process which should trigger a refresh immediately
       {:ok, pid} = TokenManager.start_link({user_id, token})
 
       assert Process.alive?(pid)
-
-      # Process.sleep(1000)
 
       # Verify the token was refreshed
       assert {:ok, "refreshed_token"} = TokenManager.get_token(user_id)
