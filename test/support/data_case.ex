@@ -18,12 +18,9 @@ defmodule Setlistify.DataCase do
 
   using do
     quote do
-      alias Setlistify.Repo
-
-      import Ecto
       import Ecto.Changeset
       import Setlistify.DataCase
-      
+
       # Import test helpers
       import Setlistify.Test.RegistryHelpers
     end
