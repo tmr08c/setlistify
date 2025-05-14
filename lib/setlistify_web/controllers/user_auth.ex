@@ -81,7 +81,7 @@ defmodule SetlistifyWeb.UserAuth do
       SetlistifyWeb.Endpoint.broadcast(live_socket_id, "disconnect", %{})
     end
 
-    # Clear entire session
+    # Clear entire session (including refresh token)
     new_conn = conn |> renew_session()
     
     # Return both the new conn and redirect
