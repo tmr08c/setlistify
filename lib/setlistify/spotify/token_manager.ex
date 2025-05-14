@@ -10,24 +10,16 @@ defmodule Setlistify.Spotify.TokenManager do
   # Client API
 
   def start_link({user_id, initial_tokens}) do
-    IO.puts("TokenManager.start_link called for user: #{user_id}")
-    IO.puts("Stack trace: #{inspect(Process.info(self(), :current_stacktrace))}")
     name = via_tuple(user_id)
     GenServer.start_link(__MODULE__, initial_tokens, name: name)
   end
 
   def get_token(user_id) do
-    IO.puts("TokenManager.get_token called for user: #{user_id}")
-
     case lookup(user_id) do
       {:ok, pid} ->
-        IO.puts("Found process for user #{user_id}, PID: #{inspect(pid)}")
-        result = GenServer.call(pid, :get_token)
-        IO.puts("Result from get_token: #{inspect(result)}")
-        result
+        GenServer.call(pid, :get_token)
 
       :error ->
-        IO.puts("No process found for user #{user_id}")
         {:error, :not_found}
     end
   end
@@ -40,15 +32,11 @@ defmodule Setlistify.Spotify.TokenManager do
   end
 
   def stop(user_id) do
-    IO.puts("TokenManager.stop called for user: #{user_id}")
-
     case lookup(user_id) do
       {:ok, pid} ->
-        IO.puts("Found process for user #{user_id}, stopping PID: #{inspect(pid)}")
         GenServer.stop(pid, :normal)
 
       :error ->
-        IO.puts("No process found for user #{user_id}")
         {:error, :not_found}
     end
   end

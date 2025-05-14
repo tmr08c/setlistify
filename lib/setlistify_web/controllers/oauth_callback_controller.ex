@@ -82,35 +82,22 @@ defmodule SetlistifyWeb.OAuthCallbackController do
   end
 
   def sign_out(conn, _) do
-    # Stop the token manager process if a user is logged in
-    IO.puts("OAuthCallbackController.sign_out called")
-    
     user_session = get_session(conn, "user")
-    IO.inspect(user_session, label: "User session in sign_out")
-    
+
     # Extract username before clearing session
-    username = case user_session do
-      %{"username" => username} -> username
-      _ -> nil
-    end
-    
-    # First, clear refresh token explicitly before clearing the session
-    # This ensures that even if RestoreSpotifyToken is called, it won't find a token
-    conn = delete_session(conn, :refresh_token)
-    
-    # Log out user (which clears the entire session)
+    username =
+      case user_session do
+        %{"username" => username} -> username
+        _ -> nil
+      end
+
+    # Log out user (which now handles clearing refresh token and the entire session)
     conn = UserAuth.log_out_user(conn)
-    
+
     # Now stop the token process AFTER clearing the session
     # This ensures that if any autorestart mechanism exists, it won't have the refresh token anymore
-    if username do
-      IO.puts("Found username in session: #{username}")
-      result = TokenSupervisor.stop_user_token(username)
-      IO.inspect(result, label: "Result of TokenSupervisor.stop_user_token")
-    else
-      IO.puts("No username found in session")
-    end
-    
+    if username, do: TokenSupervisor.stop_user_token(username)
+
     # Return the updated conn
     conn
   end
