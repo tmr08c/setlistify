@@ -2,7 +2,6 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
   use SetlistifyWeb.ConnCase, async: true
 
   import Hammox
-  import Setlistify.Test.RegistryHelpers
 
   alias SetlistifyWeb.Plugs.RestoreSpotifyToken
   alias Setlistify.Spotify.TokenManager

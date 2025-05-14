@@ -23,6 +23,9 @@ defmodule Setlistify.DataCase do
       import Ecto
       import Ecto.Changeset
       import Setlistify.DataCase
+      
+      # Import test helpers
+      import Setlistify.Test.RegistryHelpers
     end
   end
 

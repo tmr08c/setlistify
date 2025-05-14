@@ -28,6 +28,9 @@ defmodule SetlistifyWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import SetlistifyWeb.ConnCase
+      
+      # Import test helpers
+      import Setlistify.Test.RegistryHelpers
 
       # Find elements using the test-specific identifier pattern set up in
       # `UrlStordenerWeb.html_helper`
