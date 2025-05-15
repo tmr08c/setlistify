@@ -28,6 +28,34 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
     {:ok, %{test_user: test_user}}
   end
 
+  describe "sign_in" do
+    test "redirects to Spotify authorization with state", %{conn: conn} do
+      conn = get(conn, ~p"/signin/spotify")
+      
+      # The controller should set the oauth_state in the session
+      assert get_session(conn, :oauth_state) != nil
+      
+      # The controller should redirect to Spotify's authorization endpoint
+      assert conn.status == 302
+      redirect_url = redirected_to(conn)
+      assert redirect_url =~ "https://accounts.spotify.com/authorize"
+      assert redirect_url =~ "client_id=test_client_id"
+      assert redirect_url =~ "state=#{get_session(conn, :oauth_state)}"
+    end
+    
+    test "stores redirect_to in session when provided", %{conn: conn} do
+      redirect_path = "/setlist/12345"
+      conn = get(conn, ~p"/signin/spotify?redirect_to=#{redirect_path}")
+      
+      # The controller should store the redirect_to in the session
+      assert get_session(conn, :redirect_to) == redirect_path
+      
+      # Should still redirect to Spotify
+      assert conn.status == 302
+      assert redirected_to(conn) =~ "https://accounts.spotify.com/authorize"
+    end
+  end
+
   describe "OAuth callback handling" do
     test "successful callback starts token process and stores refresh token", %{
       conn: conn,
@@ -69,11 +97,11 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       # Verify token process was started
       assert {:ok, "test_access_token"} = TokenManager.get_token(test_user)
 
-      # Instead of checking the session directly, we'll simply check that:
-      # 1. The controller redirected us (indicating a successful flow)
-      # 2. The token manager process was started correctly
+      # The controller redirected us (indicating a successful flow)
+      # and the token manager process was started correctly
       assert conn.status == 302
-      assert redirected_to(conn) != nil
+      redirect_url = redirected_to(conn)
+      assert redirect_url =~ "/"
 
       # No need to verify the refresh token in the session since we can't access it easily
       # from our test. The fact that the token process got started is enough to verify 
@@ -117,6 +145,61 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
 
       # Check that process was removed from registry
       refute_in_registry(test_user)
+    end
+
+    test "successful callback with redirect_to redirects to provided path", %{
+      conn: conn,
+      test_user: test_user
+    } do
+      # Set up initial state
+      oauth_state = "test_state"
+      redirect_to = "/setlist/12345"
+
+      conn =
+        conn 
+        |> init_test_session(%{}) 
+        |> put_session(:oauth_state, oauth_state) 
+        |> put_session(:redirect_to, redirect_to)
+        |> fetch_flash()
+
+      # Mock the exchange_code call
+      expect(Setlistify.Spotify.API.MockClient, :exchange_code, fn code, redirect_uri ->
+        assert code == "test_code"
+        assert redirect_uri =~ "/oauth/callbacks/spotify"
+
+        {:ok,
+         %{
+           access_token: "test_access_token",
+           refresh_token: "test_refresh_token",
+           expires_in: 3600
+         }}
+      end)
+
+      # Mock the username call
+      expect(Setlistify.Spotify.API.MockClient, :username, fn _client ->
+        test_user
+      end)
+
+      # Mock the new call
+      expect(Setlistify.Spotify.API.MockClient, :new, fn token ->
+        assert token == "test_access_token"
+        Req.new(base_url: "https://api.spotify.com/v1/", auth: {:bearer, token})
+      end)
+
+      # Run the code under test
+      conn = get(conn, ~p"/oauth/callbacks/spotify?code=test_code&state=#{oauth_state}")
+
+      # Verify token process was started
+      assert {:ok, "test_access_token"} = TokenManager.get_token(test_user)
+
+      # The controller should redirect to the provided redirect_to path
+      assert conn.status == 302
+      redirect_url = redirected_to(conn)
+      assert redirect_url =~ redirect_to
+
+      # No need to verify the refresh token in the session since we can't access it easily
+      # from our test. The fact that the token process got started is enough to verify 
+      # this part of the flow works.
     end
 
     test "invalid state parameter returns error", %{conn: conn} do

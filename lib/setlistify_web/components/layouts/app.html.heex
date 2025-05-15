@@ -12,6 +12,11 @@
         <.link navigate={~p"/signout"}>Sign Out</.link>
       </span>
     </div>
+    <div :if={!@music_account} class="flex space-x-4">
+      <span>
+        <.link navigate={~p"/signin/spotify?redirect_to=#{@redirect_to}"}>Sign in with Spotify</.link>
+      </span>
+    </div>
   </div>
 </header>
 <main class="px-4 py-20 sm:px-6 lg:px-8">

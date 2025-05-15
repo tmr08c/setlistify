@@ -174,14 +174,19 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       Req.Test.expect(
         MySpotifyStub,
         fn conn ->
-          # Verify auth header format
-          assert ["Basic " <> _token] = Plug.Conn.get_req_header(conn, "authorization")
+          # Verify content-type and form params
+          assert "application/x-www-form-urlencoded" in Plug.Conn.get_req_header(
+                   conn,
+                   "content-type"
+                 )
+
           {:ok, body, _} = Plug.Conn.read_body(conn)
 
-          assert URI.decode_query(body) == %{
-                   "grant_type" => "refresh_token",
-                   "refresh_token" => "old_refresh_token"
-                 }
+          params = URI.decode_query(body)
+          assert params["grant_type"] == "refresh_token"
+          assert params["refresh_token"] == "old_refresh_token"
+          assert params["client_id"] != nil
+          assert params["client_secret"] != nil
 
           response = %{
             "access_token" => "new_access_token",
@@ -205,12 +210,14 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       Req.Test.expect(
         MySpotifyStub,
         fn conn ->
+          # Verify form params
           {:ok, body, _} = Plug.Conn.read_body(conn)
 
-          assert URI.decode_query(body) == %{
-                   "grant_type" => "refresh_token",
-                   "refresh_token" => "old_refresh_token"
-                 }
+          params = URI.decode_query(body)
+          assert params["grant_type"] == "refresh_token"
+          assert params["refresh_token"] == "old_refresh_token"
+          assert params["client_id"] != nil
+          assert params["client_secret"] != nil
 
           # This does **not** include the refresh token, so we expect to keep
           # using our old refresh token
@@ -250,6 +257,112 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       end)
 
       assert {:error, _} = ExternalClient.refresh_token("some_token")
+    end
+  end
+
+  describe "exchange_code/2" do
+    test "successfully exchanges code for tokens" do
+      Req.Test.expect(
+        MySpotifyStub,
+        fn conn ->
+          # Verify correct content-type and body params
+          assert "application/x-www-form-urlencoded" in Plug.Conn.get_req_header(
+                   conn,
+                   "content-type"
+                 )
+
+          {:ok, body, _} = Plug.Conn.read_body(conn)
+
+          params = URI.decode_query(body)
+          assert params["grant_type"] == "authorization_code"
+          assert params["code"] == "valid_code"
+          assert params["redirect_uri"] == "http://localhost:4000/oauth/callbacks/spotify"
+          assert params["client_id"] != nil
+          assert params["client_secret"] != nil
+
+          response = %{
+            "access_token" => "new_access_token",
+            "refresh_token" => "new_refresh_token",
+            "expires_in" => 3600
+          }
+
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(200, Jason.encode!(response))
+        end
+      )
+
+      assert {:ok, tokens} =
+               ExternalClient.exchange_code(
+                 "valid_code",
+                 "http://localhost:4000/oauth/callbacks/spotify"
+               )
+
+      assert tokens.access_token == "new_access_token"
+      assert tokens.refresh_token == "new_refresh_token"
+      assert tokens.expires_in == 3600
+    end
+
+    @tag :capture_log
+    test "returns error with invalid code" do
+      Req.Test.expect(
+        MySpotifyStub,
+        fn conn ->
+          # Simulate Spotify's response for invalid code
+          response = %{
+            "error" => "invalid_grant",
+            "error_description" => "Authorization code expired"
+          }
+
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(400, Jason.encode!(response))
+        end
+      )
+
+      assert {:error, :invalid_code} =
+               ExternalClient.exchange_code(
+                 "expired_code",
+                 "http://localhost:4000/oauth/callbacks/spotify"
+               )
+    end
+
+    @tag :capture_log
+    test "returns error with invalid client" do
+      Req.Test.expect(
+        MySpotifyStub,
+        fn conn ->
+          # Simulate Spotify's response for invalid client credentials
+          response = %{
+            "error" => "invalid_client",
+            "error_description" => "Invalid client secret"
+          }
+
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(401, Jason.encode!(response))
+        end
+      )
+
+      assert {:error, :invalid_code} =
+               ExternalClient.exchange_code(
+                 "valid_code",
+                 "http://localhost:4000/oauth/callbacks/spotify"
+               )
+    end
+
+    @tag :capture_log
+    test "returns error on server error" do
+      Req.Test.expect(
+        MySpotifyStub,
+        fn conn -> Plug.Conn.send_resp(conn, 500, "Internal Server Error") end
+      )
+
+      assert {:error, {:unexpected_status, 500, _}} =
+               ExternalClient.exchange_code(
+                 "valid_code",
+                 "http://localhost:4000/oauth/callbacks/spotify"
+               )
     end
   end
 end
