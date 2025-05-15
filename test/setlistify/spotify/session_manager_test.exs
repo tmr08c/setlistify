@@ -5,6 +5,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
   import Setlistify.Test.RegistryHelpers
 
   alias Setlistify.Spotify.SessionManager
+  alias Setlistify.Spotify.UserSession
 
   @refresh_token "test_refresh_token"
 
@@ -35,6 +36,20 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       registry_pid = assert_in_registry(user_id)
       assert registry_pid == pid
     end
+
+    test "handles UserSession struct", %{user_id: user_id} do
+      user_session = %UserSession{
+        access_token: "test_access_token",
+        refresh_token: @refresh_token,
+        expires_at: System.system_time(:second) + 3600,
+        user_id: user_id,
+        username: "test_user"
+      }
+
+      assert {:ok, pid} = SessionManager.start_link({user_id, user_session})
+      assert Process.alive?(pid)
+      assert {:ok, "test_access_token"} = SessionManager.get_token(user_id)
+    end
   end
 
   describe "get_token/1" do
@@ -46,6 +61,38 @@ defmodule Setlistify.Spotify.SessionManagerTest do
     test "returns error when process not found", %{user_id: _user_id} do
       nonexistent_user = unique_user_id()
       assert {:error, :not_found} = SessionManager.get_token(nonexistent_user)
+    end
+  end
+
+  describe "get_session/1" do
+    test "returns UserSession struct", %{user_id: user_id, initial_token: initial_token} do
+      {:ok, _pid} = SessionManager.start_link({user_id, initial_token})
+      assert {:ok, session} = SessionManager.get_session(user_id)
+      assert %UserSession{} = session
+      assert session.access_token == "initial_access_token"
+      assert session.refresh_token == @refresh_token
+      assert session.user_id == user_id
+    end
+
+    test "returns UserSession struct when initialized with UserSession", %{user_id: user_id} do
+      user_session = %UserSession{
+        access_token: "test_access_token",
+        refresh_token: @refresh_token,
+        expires_at: System.system_time(:second) + 3600,
+        user_id: user_id,
+        username: "test_user"
+      }
+
+      {:ok, _pid} = SessionManager.start_link({user_id, user_session})
+      assert {:ok, returned_session} = SessionManager.get_session(user_id)
+      assert %UserSession{} = returned_session
+      assert returned_session.access_token == "test_access_token"
+      assert returned_session.username == "test_user"
+    end
+
+    test "returns error when process not found", %{user_id: _user_id} do
+      nonexistent_user = unique_user_id()
+      assert {:error, :not_found} = SessionManager.get_session(nonexistent_user)
     end
   end
 

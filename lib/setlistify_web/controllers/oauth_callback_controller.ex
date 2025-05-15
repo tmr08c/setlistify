@@ -11,27 +11,21 @@ defmodule SetlistifyWeb.OAuthCallbackController do
       redirect_uri = url(~p"/oauth/callbacks/spotify")
 
       case API.exchange_code(code, redirect_uri) do
-        {:ok, %{access_token: access_token, refresh_token: refresh_token, expires_in: expires_in}} ->
-          username = access_token |> API.new() |> API.username()
-
+        {:ok, user_session} ->
           # Create encrypted token for session storage
           encrypted_refresh_token =
-            Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", refresh_token)
+            Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", user_session.refresh_token)
 
-          # Start session manager process
-          SessionSupervisor.start_user_token(
-            username,
-            %{
-              access_token: access_token,
-              refresh_token: refresh_token,
-              expires_in: expires_in
-            }
-          )
+          # Start session manager process with UserSession
+          # TODO Consider if this should be called in `exchange_code`
+          SessionSupervisor.start_user_token(user_session.user_id, user_session)
 
           # TODO should we be putting the "user" key on the session
           conn
           |> put_session(:refresh_token, encrypted_refresh_token)
-          |> UserAuth.auth_user({username, access_token})
+          |> put_session(:user_id, user_session.user_id)
+          # TODO: Stop passing in access_token
+          |> UserAuth.auth_user({user_session.username, user_session.access_token})
 
         {:error, _reason} ->
           conn
@@ -83,8 +77,9 @@ defmodule SetlistifyWeb.OAuthCallbackController do
 
   def sign_out(conn, _) do
     user_session = get_session(conn, "user")
+    user_id = get_session(conn, :user_id)
 
-    # Extract username before clearing session
+    # Extract username for legacy compatibility
     username =
       case user_session do
         %{"username" => username} -> username
@@ -94,9 +89,12 @@ defmodule SetlistifyWeb.OAuthCallbackController do
     # Log out user (which now handles clearing refresh token and the entire session)
     conn = UserAuth.log_out_user(conn)
 
-    # Now stop the token process AFTER clearing the session
-    # This ensures that if any autorestart mechanism exists, it won't have the refresh token anymore
-    if username, do: SessionSupervisor.stop_user_token(username)
+    # Stop the session process using user_id or fallback to username
+    cond do
+      user_id -> SessionSupervisor.stop_user_token(user_id)
+      username -> SessionSupervisor.stop_user_token(username)
+      true -> nil
+    end
 
     # Return the updated conn
     conn

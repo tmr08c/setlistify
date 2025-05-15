@@ -53,16 +53,13 @@ defmodule SetlistifyWeb.OAuthFlowTest do
         assert redirect_uri =~ "/oauth/callbacks/spotify"
 
         {:ok,
-         %{
+         %Setlistify.Spotify.UserSession{
            access_token: "test_access_token",
            refresh_token: "test_refresh_token",
-           expires_in: 3600
+           expires_at: System.system_time(:second) + 3600,
+           user_id: test_user,
+           username: test_user
          }}
-      end)
-
-      # Set up mock for username call
-      expect(Setlistify.Spotify.API.MockClient, :username, fn _client ->
-        test_user
       end)
 
       # Process the callback
@@ -81,6 +78,7 @@ defmodule SetlistifyWeb.OAuthFlowTest do
         callback_conn
         |> put_session("user", %{"username" => test_user})
         |> put_session(:refresh_token, "test_refresh_token")
+        |> put_session(:user_id, test_user)
 
       # Process signout
       signout_response = get(signout_conn, ~p"/signout")

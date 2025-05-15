@@ -42,7 +42,7 @@ defmodule Setlistify.Spotify.API do
   end
 
   @callback exchange_code(String.t(), String.t()) ::
-              {:ok, %{access_token: String.t(), refresh_token: String.t(), expires_in: integer()}}
+              {:ok, Setlistify.Spotify.UserSession.t()}
               | {:error, atom()}
   def exchange_code(code, redirect_uri) do
     impl().exchange_code(code, redirect_uri)

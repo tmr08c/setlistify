@@ -105,9 +105,9 @@ end
 
 ### 8. Migration Path
 
-1. Create UserSession struct
-2. Rename TokenManager to SessionManager
-3. Update OAuth callback to fetch and store user profile
+1. Create UserSession struct ✅  
+2. Rename TokenManager to SessionManager ✅  
+3. Update OAuth callback to fetch and store user profile ✅  
 4. Modify RestoreSpotifyToken plug to use new structure
 5. Gradually migrate components to use SessionManager
 6. Remove redundant session data once all components updated

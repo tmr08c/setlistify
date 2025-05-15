@@ -263,6 +263,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
   describe "exchange_code/2" do
     test "successfully exchanges code for tokens" do
+      # Expect token exchange request
       Req.Test.expect(
         MySpotifyStub,
         fn conn ->
@@ -293,15 +294,76 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
         end
       )
 
-      assert {:ok, tokens} =
+      # Expect user profile request
+      Req.Test.expect(
+        MySpotifyStub,
+        fn conn ->
+          assert conn.request_path == "/v1/me"
+
+          # Mock user profile response
+          profile = %{
+            "id" => "test_user_id",
+            "display_name" => "Test User",
+            "email" => "test@example.com"
+          }
+
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(200, Jason.encode!(profile))
+        end
+      )
+
+      assert {:ok, user_session} =
                ExternalClient.exchange_code(
                  "valid_code",
                  "http://localhost:4000/oauth/callbacks/spotify"
                )
 
-      assert tokens.access_token == "new_access_token"
-      assert tokens.refresh_token == "new_refresh_token"
-      assert tokens.expires_in == 3600
+      assert %Setlistify.Spotify.UserSession{} = user_session
+      assert user_session.access_token == "new_access_token"
+      assert user_session.refresh_token == "new_refresh_token"
+      assert user_session.expires_at > System.system_time(:second)
+      assert user_session.user_id == "test_user_id"
+      assert user_session.username == "Test User"
+    end
+
+    # Note: This is decision is assuming this will generally just work &tm;. If
+    # we run into a lot of issues fetching the profile, we may wnt to consider
+    # storing the token only and trying to refetch the profile in the
+    # background.
+    @tag :capture_log
+    test "returns an error if user profile cannot be fetched" do
+      # Expect token exchange request
+      Req.Test.expect(
+        MySpotifyStub,
+        fn conn ->
+          response = %{
+            "access_token" => "new_access_token",
+            "refresh_token" => "new_refresh_token",
+            "expires_in" => 3600
+          }
+
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(200, Jason.encode!(response))
+        end
+      )
+
+      # Expect user profile request to fail
+      Req.Test.expect(
+        MySpotifyStub,
+        fn conn ->
+          assert conn.request_path == "/v1/me"
+
+          Plug.Conn.send_resp(conn, 500, "Internal Server Error")
+        end
+      )
+
+      assert {:error, :failed_to_fetch_profile} =
+               ExternalClient.exchange_code(
+                 "valid_code",
+                 "http://localhost:4000/oauth/callbacks/spotify"
+               )
     end
 
     @tag :capture_log

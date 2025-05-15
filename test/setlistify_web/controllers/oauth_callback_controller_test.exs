@@ -67,28 +67,19 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       conn =
         conn |> init_test_session(%{}) |> put_session(:oauth_state, oauth_state) |> fetch_flash()
 
-      # Mock the exchange_code call
+      # Mock the exchange_code call to return UserSession
       expect(Setlistify.Spotify.API.MockClient, :exchange_code, fn code, redirect_uri ->
         assert code == "test_code"
         assert redirect_uri =~ "/oauth/callbacks/spotify"
 
         {:ok,
-         %{
+         %Setlistify.Spotify.UserSession{
            access_token: "test_access_token",
            refresh_token: "test_refresh_token",
-           expires_in: 3600
+           expires_at: System.system_time(:second) + 3600,
+           user_id: test_user,
+           username: test_user
          }}
-      end)
-
-      # Mock the username call
-      expect(Setlistify.Spotify.API.MockClient, :username, fn _client ->
-        test_user
-      end)
-
-      # Mock the new call
-      expect(Setlistify.Spotify.API.MockClient, :new, fn token ->
-        assert token == "test_access_token"
-        Req.new(base_url: "https://api.spotify.com/v1/", auth: {:bearer, token})
       end)
 
       # Run the code under test
@@ -118,6 +109,7 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
         |> fetch_flash()
         |> put_session("user", %{"username" => test_user})
         |> put_session(:refresh_token, "some_token")
+        |> put_session(:user_id, test_user)
 
       # Verify refresh token is in the session before sign out
       assert get_session(conn, :refresh_token) == "some_token"
@@ -168,22 +160,13 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
         assert redirect_uri =~ "/oauth/callbacks/spotify"
 
         {:ok,
-         %{
+         %Setlistify.Spotify.UserSession{
            access_token: "test_access_token",
            refresh_token: "test_refresh_token",
-           expires_in: 3600
+           expires_at: System.system_time(:second) + 3600,
+           user_id: test_user,
+           username: test_user
          }}
-      end)
-
-      # Mock the username call
-      expect(Setlistify.Spotify.API.MockClient, :username, fn _client ->
-        test_user
-      end)
-
-      # Mock the new call
-      expect(Setlistify.Spotify.API.MockClient, :new, fn token ->
-        assert token == "test_access_token"
-        Req.new(base_url: "https://api.spotify.com/v1/", auth: {:bearer, token})
       end)
 
       # Run the code under test

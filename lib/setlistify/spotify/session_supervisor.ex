@@ -5,10 +5,10 @@ defmodule Setlistify.Spotify.SessionSupervisor do
 
   alias Setlistify.Spotify.SessionManager
 
-  def start_user_token(user_id, tokens) do
+  def start_user_token(user_id, tokens_or_session) do
     DynamicSupervisor.start_child(
       Setlistify.UserSessionSupervisor,
-      {SessionManager, {user_id, tokens}}
+      {SessionManager, {user_id, tokens_or_session}}
     )
   end
 

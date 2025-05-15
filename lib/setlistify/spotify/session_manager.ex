@@ -2,6 +2,7 @@ defmodule Setlistify.Spotify.SessionManager do
   use GenServer
   require Logger
   alias Setlistify.Spotify.API
+  alias Setlistify.Spotify.UserSession
 
   # TODO: this name may not be the most clear for the goal. Does `  @refresh_buffer` make it more clear?
   # Refresh token 5 minutes before expiration
@@ -9,9 +10,9 @@ defmodule Setlistify.Spotify.SessionManager do
 
   # Client API
 
-  def start_link({user_id, initial_tokens}) do
+  def start_link({user_id, initial_tokens_or_session}) do
     name = via_tuple(user_id)
-    GenServer.start_link(__MODULE__, initial_tokens, name: name)
+    GenServer.start_link(__MODULE__, {user_id, initial_tokens_or_session}, name: name)
   end
 
   def get_token(user_id) do
@@ -31,6 +32,13 @@ defmodule Setlistify.Spotify.SessionManager do
     end
   end
 
+  def get_session(user_id) do
+    case lookup(user_id) do
+      {:ok, pid} -> GenServer.call(pid, :get_session)
+      :error -> {:error, :not_found}
+    end
+  end
+
   def stop(user_id) do
     case lookup(user_id) do
       {:ok, pid} ->
@@ -44,19 +52,46 @@ defmodule Setlistify.Spotify.SessionManager do
   # Server Callbacks
 
   @impl true
-  def init(
-        %{access_token: _access_token, refresh_token: _refresh_token, expires_in: expires_in} =
+  def init({user_id, initial_data}) do
+    state =
+      case initial_data do
+        %UserSession{} = session ->
+          # UserSession already has expires_at
+          schedule_refresh(session.expires_at - timestamp() - @refresh_threshold)
+
+          Map.from_struct(session)
+          |> Map.put(:user_id, user_id)
+
+        # TODO this should be removed when we have fully migrated to UserSession
+        %{access_token: _, refresh_token: _, expires_in: expires_in} = tokens ->
+          # Legacy token map format - convert to proper state
+          schedule_refresh(expires_in - @refresh_threshold)
+
           tokens
-      ) do
-    # Schedule token refresh
-    # TODO: This can be put into a `handle_continue` call. It's not necessary, but feels like a good fit
-    schedule_refresh(expires_in - @refresh_threshold)
-    {:ok, Map.put(tokens, :expires_at, timestamp() + expires_in)}
+          |> Map.put(:expires_at, timestamp() + expires_in)
+          |> Map.put(:user_id, user_id)
+      end
+
+    {:ok, state}
   end
 
   @impl true
   def handle_call(:get_token, _from, %{access_token: token} = state) do
     {:reply, {:ok, token}, state}
+  end
+
+  @impl true
+  def handle_call(:get_session, _from, state) do
+    # Convert state back to UserSession struct
+    session = %UserSession{
+      access_token: state.access_token,
+      refresh_token: state.refresh_token,
+      expires_at: state.expires_at,
+      user_id: state.user_id,
+      username: Map.get(state, :username, state.user_id)
+    }
+
+    {:reply, {:ok, session}, state}
   end
 
   @impl true

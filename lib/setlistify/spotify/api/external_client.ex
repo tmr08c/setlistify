@@ -2,6 +2,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
   @behaviour Setlistify.Spotify.API
 
   require Logger
+  alias Setlistify.Spotify.UserSession
 
   def new(token, endpoint \\ "https://api.spotify.com/v1/") do
     Logger.debug("Current Spotify API client token: #{token}")
@@ -12,33 +13,17 @@ defmodule Setlistify.Spotify.API.ExternalClient do
   end
 
   def username(client) do
-    # Use try/rescue to handle potential transport errors
-    result =
-      try do
-        Req.get(client, url: "/me")
-      rescue
-        error in Req.TransportError ->
-          Logger.error("Transport error during Spotify API call to /me: #{inspect(error)}")
-          {:error, error}
-      end
+    result = Req.get(client, url: "/me")
 
     case result do
       {:ok, %{status: 200, body: body}} ->
         Logger.info("Successfully retrieved user profile from Spotify")
         body["display_name"] || body["id"]
 
-      {:ok, %{status: status, body: body}} ->
-        Logger.error(
-          "Failed to get Spotify user profile. Status: #{status}, Body: #{inspect(body)}"
-        )
-
-        # Return a fallback username to prevent authentication failure
-        "spotify_user_#{:rand.uniform(100_000)}"
-
       {:error, error} ->
         Logger.error("Error retrieving Spotify user profile: #{inspect(error)}")
         # Return a fallback username to prevent authentication failure
-        "spotify_user_#{:rand.uniform(100_000)}"
+        {:error, error}
     end
   end
 
@@ -232,13 +217,35 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     case result do
       {:ok, %{status: 200, body: body}} ->
         Logger.info("Successfully exchanged code for Spotify tokens")
+        auth_token_response = Spotify.API.Types.TokenResponse.from_json!(body)
 
-        {:ok,
-         %{
-           access_token: body["access_token"],
-           refresh_token: body["refresh_token"],
-           expires_in: body["expires_in"]
-         }}
+        # Fetch user profile using the /me endpoint
+        profile_result = auth_token_response.access_token |> new() |> Req.get(url: "/me")
+
+        case profile_result do
+          {:ok, %{status: 200, body: profile}} ->
+            # Create and return UserSession struct
+            user_session = %UserSession{
+              access_token: auth_token_response.access_token,
+              refresh_token: auth_token_response.refresh_token,
+              expires_at: System.system_time(:second) + auth_token_response.expires_in,
+              user_id: profile["id"],
+              username: profile["display_name"]
+            }
+
+            {:ok, user_session}
+
+          {:ok, %{status: status, body: body}} ->
+            Logger.error(
+              "Error fetching user profile. Received code #{status}. Response: #{inspect(body)}"
+            )
+
+            {:error, :failed_to_fetch_profile}
+
+          {:error, error} ->
+            Logger.error("Error fetching user profile: #{inspect(error)}")
+            {:error, :failed_to_fetch_profile}
+        end
 
       {:ok, %{status: status, body: body}} when status in [400, 401] ->
         Logger.error(
