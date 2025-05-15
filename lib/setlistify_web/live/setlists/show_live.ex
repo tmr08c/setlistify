@@ -10,13 +10,16 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     setlist =
       if access_token do
         client = Spotify.API.new(access_token)
+        user_id = socket.assigns.music_account.username
 
         sets =
           setlist.sets
           |> Enum.map(fn set ->
             songs =
               Task.async_stream(set.songs, fn song ->
-                spotify_info = Spotify.API.search_for_track(client, setlist.artist, song.title)
+                spotify_info =
+                  Spotify.API.search_for_track(client, setlist.artist, song.title, user_id)
+
                 Map.put(song, :spotify_info, spotify_info)
               end)
 

@@ -67,11 +67,11 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     # Mock searching for songs in setlist
     Spotify.API.MockClient
     |> expect(:new, 2, fn "token" -> %Req.Request{} end)
-    |> expect(:search_for_track, fn _client, ^artist, "song1" ->
+    |> expect(:search_for_track, fn _client, ^artist, "song1", "username" ->
       # We have a match for song
       %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
     end)
-    |> expect(:search_for_track, 2, fn _client, ^artist, "song2" ->
+    |> expect(:search_for_track, 2, fn _client, ^artist, "song2", "username" ->
       # We cannot find a match for the song
       #
       # Because we do not find a match, we will not cache it, resulting in
@@ -108,11 +108,11 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     # Mock searching for songs in setlist
     Spotify.API.MockClient
     |> expect(:new, 2, fn "token" -> %Req.Request{} end)
-    |> expect(:search_for_track, fn _client, ^artist, "song1" ->
+    |> expect(:search_for_track, fn _client, ^artist, "song1", "username" ->
       # We have a match for song
       %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
     end)
-    |> expect(:search_for_track, 2, fn _client, ^artist, "song2" ->
+    |> expect(:search_for_track, 2, fn _client, ^artist, "song2", "username" ->
       # We cannot find a match for the song
       #
       # Because we do not find a match, we will not cache it, resulting in

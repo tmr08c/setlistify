@@ -42,22 +42,77 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     end
   end
 
-  def search_for_track(client, artist, track) do
-    resp =
-      Req.get!(client,
-        url: "/search",
-        params: %{q: "artist:#{artist} track:#{track}", type: "track"}
-      )
+  def search_for_track(client, artist, track, user_id \\ nil) do
+    try do
+      resp =
+        Req.get(client,
+          url: "/search",
+          params: %{q: "artist:#{artist} track:#{track}", type: "track"}
+        )
 
-    items = resp.body |> Map.get("tracks", %{}) |> Map.get("items", [])
+      case resp do
+        {:ok, %{status: 401} = response} ->
+          # Check if this is a token expiration issue
+          [authenticate_header] =
+            Enum.find_value(response.headers, fn {header, value} ->
+              if String.downcase(header) == "www-authenticate", do: value
+            end)
 
-    with nil <- List.first(items) do
-      Logger.warning("No search results for artist: #{artist}, track: #{track}")
-      nil
-    else
-      track_info ->
-        Logger.info("Found match for artist: #{artist}, track: #{track}")
-        %{uri: track_info["uri"], preview_url: track_info["preview_url"]}
+          if authenticate_header && String.contains?(authenticate_header, "invalid_token") do
+            Logger.info(
+              "Token expired during search, attempting to refresh for user_id: #{user_id}"
+            )
+
+            # Attempt to refresh the token using the provided user_id
+            case Setlistify.Spotify.TokenManager.refresh_token(user_id) do
+              {:ok, new_token} ->
+                Logger.info("Successfully refreshed token, retrying search")
+                # Create a new client with the refreshed token
+                new_client = new(new_token)
+
+                # Retry the search with the new client, passing the user_id again in case we need another refresh
+                search_for_track(new_client, artist, track, user_id)
+
+              {:error, reason} ->
+                Logger.error("Failed to refresh token for user_id #{user_id}: #{inspect(reason)}")
+                nil
+            end
+          else
+            if user_id do
+              Logger.error(
+                "Unauthorized search request with user_id #{user_id}: #{inspect(response)}"
+              )
+            else
+              Logger.error("Unauthorized search request without user_id: #{inspect(response)}")
+            end
+
+            nil
+          end
+
+        {:ok, %{status: 200} = resp} ->
+          items = resp.body |> Map.get("tracks", %{}) |> Map.get("items", [])
+
+          with nil <- List.first(items) do
+            Logger.warning("No search results for artist: #{artist}, track: #{track}")
+            nil
+          else
+            track_info ->
+              Logger.info("Found match for artist: #{artist}, track: #{track}")
+              %{uri: track_info["uri"], preview_url: track_info["preview_url"]}
+          end
+
+        {:ok, response} ->
+          Logger.error("Unexpected response from Spotify search: #{inspect(response)}")
+          nil
+
+        {:error, error} ->
+          Logger.error("Error during Spotify search: #{inspect(error)}")
+          nil
+      end
+    rescue
+      error ->
+        Logger.error("Exception during Spotify search: #{inspect(error)}")
+        nil
     end
   end
 

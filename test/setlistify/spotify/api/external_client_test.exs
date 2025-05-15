@@ -1,5 +1,6 @@
 defmodule Setlistify.Spotify.Api.ExternalClientTest do
   use Setlistify.DataCase, async: true
+  import Hammox
 
   alias Setlistify.Spotify.API.ExternalClient
 
@@ -363,6 +364,83 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
                  "valid_code",
                  "http://localhost:4000/oauth/callbacks/spotify"
                )
+    end
+  end
+
+  describe "search_for_track/4 with expired token" do
+    # @tag :capture_log
+    test "should handle 401 responses by refreshing token and retrying", %{client: client} do
+      {:ok, pid} =
+        Setlistify.Spotify.TokenSupervisor.start_user_token(
+          @user_profile_user_id,
+          %{
+            access_token: "expired_access_token",
+            refresh_token: "refresh_token",
+            expires_in: 10000
+          }
+        )
+
+      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn _refresh_token ->
+        {:ok,
+         %{
+           access_token: "new_access_token",
+           refresh_token: "refresh_token",
+           expires_in: 10000
+         }}
+      end)
+
+      # Refreshing happens in the TokenManager process, so we need to explicity
+      # tell it to use the mock we have above
+      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+
+      # First request returns 401 for expired token
+      Req.Test.expect(
+        MySpotifyStub,
+        1,
+        fn %{request_path: "/v1/search", method: "GET"} = conn ->
+          # Simulate expired token response from Spotify
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.put_resp_header(
+            "www-authenticate",
+            "Bearer realm=\"spotify\", error=\"invalid_token\", error_description=\"The access token expired\""
+          )
+          |> Plug.Conn.send_resp(
+            401,
+            Jason.encode!(%{
+              "error" => %{"message" => "The access token expired", "status" => 401}
+            })
+          )
+        end
+      )
+
+      # Second request (after token refresh) returns success
+      Req.Test.expect(
+        MySpotifyStub,
+        1,
+        fn %{request_path: "/v1/search", method: "GET"} = conn ->
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(200, Jason.encode!(Jason.decode!(@search_response)))
+        end
+      )
+
+      # Run the search with user_id - this should handle the 401 by refreshing the token and retrying
+      result =
+        ExternalClient.search_for_track(
+          client,
+          "some artist",
+          "some track",
+          @user_profile_user_id
+        )
+
+      # The implementation should:
+      # 1. Detect the 401 response
+      # 2. Refresh the token using the provided user_id
+      # 3. Retry with the new token
+      # 4. Successfully complete the search
+      assert result
+      assert result.uri =~ ~r"spotify:track:\w+"
     end
   end
 end

@@ -77,3 +77,11 @@ Please design this solution with the existing codebase in mind, which you can ex
 - Update the login indicator in the layout to show when a user is logged in
 - Store `user_id` instead of `username` for working with the client
 - Investigate if we can store the `username` in the session as a way to avoid having to make extra calls to `/me`
+- Enhance Spotify.API.ExternalClient to track the user_id with the client:
+  - Create a client struct that includes both the Req client and user_id
+  - Options to consider:
+    - Wrap the Req client in a struct: `%Setlistify.Spotify.Client{req: req_client, user_id: user_id}`
+    - Use process dictionary (less preferred, but simpler short-term)
+    - Add metadata to Req client options (would need to check if Req retains this)
+  - Update all API functions to extract user_id from the enhanced client
+  - This will eliminate the need for extra API calls to `/me` when refreshing tokens on 401 responses
