@@ -1,24 +1,24 @@
-defmodule Setlistify.Spotify.TokenSupervisor do
+defmodule Setlistify.Spotify.SessionSupervisor do
   @moduledoc """
   Supervisor for managing Spotify user token processes.
   """
 
-  alias Setlistify.Spotify.TokenManager
+  alias Setlistify.Spotify.SessionManager
 
   def start_user_token(user_id, tokens) do
     DynamicSupervisor.start_child(
-      Setlistify.UserTokenSupervisor,
-      {TokenManager, {user_id, tokens}}
+      Setlistify.UserSessionSupervisor,
+      {SessionManager, {user_id, tokens}}
     )
   end
 
   def stop_user_token(user_id) do
     # Find the pid using the registry and terminate the child
-    case TokenManager.lookup(user_id) do
+    case SessionManager.lookup(user_id) do
       {:ok, pid} ->
         # Use DynamicSupervisor.terminate_child to remove it from supervision
         # This will return :ok on success or {:error, :not_found} if the process isn't found
-        :ok = DynamicSupervisor.terminate_child(Setlistify.UserTokenSupervisor, pid)
+        :ok = DynamicSupervisor.terminate_child(Setlistify.UserSessionSupervisor, pid)
 
       :error ->
         # No process found in the registry, just return the same error as DynamicSupervisor would
@@ -27,10 +27,10 @@ defmodule Setlistify.Spotify.TokenSupervisor do
   end
 
   def get_token(user_id) do
-    TokenManager.get_token(user_id)
+    SessionManager.get_token(user_id)
   end
 
   def refresh_token(user_id) do
-    TokenManager.refresh_token(user_id)
+    SessionManager.refresh_token(user_id)
   end
 end

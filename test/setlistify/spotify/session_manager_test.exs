@@ -1,10 +1,10 @@
-defmodule Setlistify.Spotify.TokenManagerTest do
+defmodule Setlistify.Spotify.SessionManagerTest do
   use ExUnit.Case, async: true
 
   import Hammox
   import Setlistify.Test.RegistryHelpers
 
-  alias Setlistify.Spotify.TokenManager
+  alias Setlistify.Spotify.SessionManager
 
   @refresh_token "test_refresh_token"
 
@@ -25,13 +25,13 @@ defmodule Setlistify.Spotify.TokenManagerTest do
   end
 
   describe "start_link/1" do
-    test "starts a new token manager process", %{user_id: user_id, initial_token: initial_token} do
-      assert {:ok, pid} = TokenManager.start_link({user_id, initial_token})
+    test "starts a new session manager process", %{user_id: user_id, initial_token: initial_token} do
+      assert {:ok, pid} = SessionManager.start_link({user_id, initial_token})
       assert Process.alive?(pid)
     end
 
     test "registers process with Registry", %{user_id: user_id, initial_token: initial_token} do
-      {:ok, pid} = TokenManager.start_link({user_id, initial_token})
+      {:ok, pid} = SessionManager.start_link({user_id, initial_token})
       registry_pid = assert_in_registry(user_id)
       assert registry_pid == pid
     end
@@ -39,19 +39,19 @@ defmodule Setlistify.Spotify.TokenManagerTest do
 
   describe "get_token/1" do
     test "returns current access token", %{user_id: user_id, initial_token: initial_token} do
-      {:ok, _pid} = TokenManager.start_link({user_id, initial_token})
-      assert {:ok, "initial_access_token"} = TokenManager.get_token(user_id)
+      {:ok, _pid} = SessionManager.start_link({user_id, initial_token})
+      assert {:ok, "initial_access_token"} = SessionManager.get_token(user_id)
     end
 
     test "returns error when process not found", %{user_id: _user_id} do
       nonexistent_user = unique_user_id()
-      assert {:error, :not_found} = TokenManager.get_token(nonexistent_user)
+      assert {:error, :not_found} = SessionManager.get_token(nonexistent_user)
     end
   end
 
   describe "refresh_token/1" do
     test "refreshes token successfully", %{user_id: user_id, initial_token: initial_token} do
-      {:ok, pid} = TokenManager.start_link({user_id, initial_token})
+      {:ok, pid} = SessionManager.start_link({user_id, initial_token})
       new_token = "new_access_token"
 
       expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
@@ -67,7 +67,7 @@ defmodule Setlistify.Spotify.TokenManagerTest do
 
       allow(Setlistify.Spotify.API.MockClient, self(), pid)
 
-      assert {:ok, ^new_token} = TokenManager.refresh_token(user_id)
+      assert {:ok, ^new_token} = SessionManager.refresh_token(user_id)
     end
 
     @tag :capture_log
@@ -75,7 +75,7 @@ defmodule Setlistify.Spotify.TokenManagerTest do
       user_id: user_id,
       initial_token: initial_token
     } do
-      {:ok, pid} = TokenManager.start_link({user_id, initial_token})
+      {:ok, pid} = SessionManager.start_link({user_id, initial_token})
 
       expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
         assert refresh_token == initial_token.refresh_token
@@ -84,7 +84,7 @@ defmodule Setlistify.Spotify.TokenManagerTest do
 
       allow(Setlistify.Spotify.API.MockClient, self(), pid)
 
-      assert {:error, :invalid_token} = TokenManager.refresh_token(user_id)
+      assert {:error, :invalid_token} = SessionManager.refresh_token(user_id)
       refute Process.alive?(pid)
     end
   end
@@ -109,7 +109,7 @@ defmodule Setlistify.Spotify.TokenManagerTest do
       end)
 
       # Allow refresh_token message using global mode
-      # Allow the mock to be called from the token process
+      # Allow the mock to be called from the session process
       allow(Setlistify.Spotify.API.MockClient, self(), fn ->
         # Wait for the process to be registered and return it
         # This avoids flakiness issues where the Registry lookup might happen
@@ -124,13 +124,13 @@ defmodule Setlistify.Spotify.TokenManagerTest do
       # @refresh_threshold, so we will attempt to refresh right away.
       token = %{initial_token | expires_in: 1}
 
-      # Start the token process which should trigger a refresh immediately
-      {:ok, pid} = TokenManager.start_link({user_id, token})
+      # Start the session process which should trigger a refresh immediately
+      {:ok, pid} = SessionManager.start_link({user_id, token})
 
       assert Process.alive?(pid)
 
       # Verify the token was refreshed
-      assert {:ok, "refreshed_token"} = TokenManager.get_token(user_id)
+      assert {:ok, "refreshed_token"} = SessionManager.get_token(user_id)
     end
   end
 end

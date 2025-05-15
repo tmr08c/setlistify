@@ -5,7 +5,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
   import Plug.Conn
   require Logger
 
-  alias Setlistify.Spotify.{TokenSupervisor, TokenManager, API}
+  alias Setlistify.Spotify.{SessionSupervisor, SessionManager, API}
 
   def init(opts), do: opts
 
@@ -16,7 +16,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
     with %{"username" => username} <- user_session,
          {:error, :not_found} <-
            (
-             result = TokenManager.get_token(username)
+             result = SessionManager.get_token(username)
              result
            ),
          encrypted_token when not is_nil(encrypted_token) <- refresh_token,
@@ -28,7 +28,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
 
       case API.refresh_token(refresh_token) do
         {:ok, tokens} ->
-          {:ok, _pid} = TokenSupervisor.start_user_token(username, tokens)
+          {:ok, _pid} = SessionSupervisor.start_user_token(username, tokens)
           conn
 
         {:error, _reason} ->

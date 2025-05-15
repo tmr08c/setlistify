@@ -1,6 +1,6 @@
-defmodule Setlistify.Spotify.TokenSupervisorTest do
+defmodule Setlistify.Spotify.SessionSupervisorTest do
   use ExUnit.Case, async: true
-  alias Setlistify.Spotify.TokenSupervisor
+  alias Setlistify.Spotify.SessionSupervisor
   import Setlistify.Test.RegistryHelpers
 
   # Generate unique user IDs for each test to prevent test pollution
@@ -22,22 +22,22 @@ defmodule Setlistify.Spotify.TokenSupervisorTest do
   describe "start_user_token/2" do
     test "starts a new token process", %{user_id: user_id} do
       # Verify the process doesn't exist before starting
-      assert {:error, :not_found} = TokenSupervisor.get_token(user_id)
+      assert {:error, :not_found} = SessionSupervisor.get_token(user_id)
 
       # Now start a fresh process
-      assert {:ok, pid} = TokenSupervisor.start_user_token(user_id, @initial_tokens)
+      assert {:ok, pid} = SessionSupervisor.start_user_token(user_id, @initial_tokens)
       assert Process.alive?(pid)
 
       # Verify we can get the token
-      assert {:ok, "initial_access_token"} = TokenSupervisor.get_token(user_id)
+      assert {:ok, "initial_access_token"} = SessionSupervisor.get_token(user_id)
     end
 
     test "can start multiple user token processes", %{user_id: _user_id} do
       user1 = uniq_user_id()
       user2 = uniq_user_id()
 
-      assert {:ok, pid1} = TokenSupervisor.start_user_token(user1, @initial_tokens)
-      assert {:ok, pid2} = TokenSupervisor.start_user_token(user2, @initial_tokens)
+      assert {:ok, pid1} = SessionSupervisor.start_user_token(user1, @initial_tokens)
+      assert {:ok, pid2} = SessionSupervisor.start_user_token(user2, @initial_tokens)
 
       assert Process.alive?(pid1)
       assert Process.alive?(pid2)
@@ -47,26 +47,26 @@ defmodule Setlistify.Spotify.TokenSupervisorTest do
 
   describe "stop_user_token/1" do
     test "stops the token process", %{user_id: user_id} do
-      {:ok, pid} = TokenSupervisor.start_user_token(user_id, @initial_tokens)
-      assert :ok = TokenSupervisor.stop_user_token(user_id)
+      {:ok, pid} = SessionSupervisor.start_user_token(user_id, @initial_tokens)
+      assert :ok = SessionSupervisor.stop_user_token(user_id)
       refute Process.alive?(pid)
     end
 
     test "returns error when process not found", %{user_id: _user_id} do
       nonexistent_user = uniq_user_id()
-      assert {:error, :not_found} = TokenSupervisor.stop_user_token(nonexistent_user)
+      assert {:error, :not_found} = SessionSupervisor.stop_user_token(nonexistent_user)
     end
 
     test "doesn't automatically start a new token process after stopping", %{user_id: user_id} do
       # Start a token process
-      {:ok, pid} = TokenSupervisor.start_user_token(user_id, @initial_tokens)
+      {:ok, pid} = SessionSupervisor.start_user_token(user_id, @initial_tokens)
       assert Process.alive?(pid)
 
       # Verify we can get the token
-      assert {:ok, _token} = TokenSupervisor.get_token(user_id)
+      assert {:ok, _token} = SessionSupervisor.get_token(user_id)
 
       # Stop the process
-      assert :ok = TokenSupervisor.stop_user_token(user_id)
+      assert :ok = SessionSupervisor.stop_user_token(user_id)
 
       # Verify the process is stopped
       refute Process.alive?(pid)
@@ -94,13 +94,13 @@ defmodule Setlistify.Spotify.TokenSupervisorTest do
 
   describe "get_token/1" do
     test "retrieves token from running process", %{user_id: user_id} do
-      {:ok, _pid} = TokenSupervisor.start_user_token(user_id, @initial_tokens)
-      assert {:ok, "initial_access_token"} = TokenSupervisor.get_token(user_id)
+      {:ok, _pid} = SessionSupervisor.start_user_token(user_id, @initial_tokens)
+      assert {:ok, "initial_access_token"} = SessionSupervisor.get_token(user_id)
     end
 
     test "returns error when process not found for get_token", %{user_id: _user_id} do
       nonexistent_user = uniq_user_id()
-      assert {:error, :not_found} = TokenSupervisor.get_token(nonexistent_user)
+      assert {:error, :not_found} = SessionSupervisor.get_token(nonexistent_user)
     end
   end
 end

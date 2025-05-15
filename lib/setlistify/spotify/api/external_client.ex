@@ -64,7 +64,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
             )
 
             # Attempt to refresh the token using the provided user_id
-            case Setlistify.Spotify.TokenManager.refresh_token(user_id) do
+            case Setlistify.Spotify.SessionManager.refresh_token(user_id) do
               {:ok, new_token} ->
                 Logger.info("Successfully refreshed token, retrying search")
                 # Create a new client with the refreshed token

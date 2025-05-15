@@ -50,8 +50,8 @@ Setlistify is an Elixir/Phoenix application that integrates with:
 #### Spotify Integration
 - `Setlistify.Spotify.API` - Interface for Spotify API operations (search tracks, create playlists)
 - `Setlistify.Spotify.API.ExternalClient` - Implementation for actual HTTP requests
-- `Setlistify.Spotify.TokenManager` - GenServer for managing user Spotify tokens
-- `Setlistify.Spotify.TokenSupervisor` - Supervisor for token management processes
+- `Setlistify.Spotify.SessionManager` - GenServer for managing user Spotify sessions (tokens)
+- `Setlistify.Spotify.SessionSupervisor` - Supervisor for session management processes
 
 #### Token Management
 - Each user has a separate token manager process identified by user ID

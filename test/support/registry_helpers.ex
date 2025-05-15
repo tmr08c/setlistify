@@ -42,7 +42,7 @@ defmodule Setlistify.Test.RegistryHelpers do
     import ExUnit.Assertions, only: [flunk: 1]
 
     Enum.reduce_while(1..max_attempts, nil, fn attempt, _ ->
-      case Registry.lookup(Setlistify.UserTokenRegistry, user_id) do
+      case Registry.lookup(Setlistify.UserSessionRegistry, user_id) do
         [{pid, _}] ->
           {:halt, pid}
 
@@ -102,7 +102,7 @@ defmodule Setlistify.Test.RegistryHelpers do
     import ExUnit.Assertions, only: [flunk: 1]
 
     Enum.reduce_while(1..max_attempts, nil, fn attempt, _ ->
-      case Registry.lookup(Setlistify.UserTokenRegistry, user_id) do
+      case Registry.lookup(Setlistify.UserSessionRegistry, user_id) do
         [] ->
           {:halt, true}
 

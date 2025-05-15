@@ -11,7 +11,7 @@ This document outlines the plan to extend the TokenManager GenServer to store an
 
 ## Proposed Changes
 
-### 1. Create UserSession Struct
+### 1. Create UserSession Struct ✅ COMPLETED
 ```elixir
 defmodule Setlistify.Spotify.UserSession do
   @moduledoc """
@@ -31,7 +31,7 @@ defmodule Setlistify.Spotify.UserSession do
 end
 ```
 
-### 2. Rename TokenManager to SessionManager
+### 2. Rename TokenManager to SessionManager ✅ COMPLETED
 - Better reflects expanded responsibilities
 - Manages complete user session, not just tokens
 - Update all references throughout codebase
@@ -159,8 +159,8 @@ end
 
 ## Implementation Timeline
 
-1. Phase 1: Create UserSession struct (0.5 day)
-2. Phase 2: Rename and update SessionManager (1 day)
+1. Phase 1: Create UserSession struct (0.5 day) ✅ COMPLETED
+2. Phase 2: Rename and update SessionManager (1 day) ✅ COMPLETED
 3. Phase 3: Modify OAuth flow (1 day)
 4. Phase 4: Update session restoration (1 day)
 5. Phase 5: Migrate UI components (2 days)

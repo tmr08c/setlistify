@@ -2,7 +2,7 @@ defmodule SetlistifyWeb.OAuthFlowTest do
   use SetlistifyWeb.ConnCase, async: false
   import Hammox
 
-  alias Setlistify.Spotify.TokenManager
+  alias Setlistify.Spotify.SessionManager
 
   setup do
     # Generate a unique user ID for each test to prevent test pollution
@@ -69,8 +69,8 @@ defmodule SetlistifyWeb.OAuthFlowTest do
       callback_response =
         get(callback_conn, ~p"/oauth/callbacks/spotify?code=test_code&state=#{oauth_state}")
 
-      # Should have created a token process
-      assert {:ok, "test_access_token"} = TokenManager.get_token(test_user)
+      # Should have created a session process
+      assert {:ok, "test_access_token"} = SessionManager.get_token(test_user)
 
       # Should redirect to the original page
       assert callback_response.status == 302
@@ -85,7 +85,7 @@ defmodule SetlistifyWeb.OAuthFlowTest do
       # Process signout
       signout_response = get(signout_conn, ~p"/signout")
 
-      # Token process should be stopped
+      # Session process should be stopped
       refute_in_registry(test_user)
 
       # Session should be cleared

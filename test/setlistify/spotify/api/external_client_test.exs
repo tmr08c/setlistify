@@ -371,7 +371,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
     # @tag :capture_log
     test "should handle 401 responses by refreshing token and retrying", %{client: client} do
       {:ok, pid} =
-        Setlistify.Spotify.TokenSupervisor.start_user_token(
+        Setlistify.Spotify.SessionSupervisor.start_user_token(
           @user_profile_user_id,
           %{
             access_token: "expired_access_token",
@@ -389,7 +389,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
          }}
       end)
 
-      # Refreshing happens in the TokenManager process, so we need to explicity
+      # Refreshing happens in the SessionManager process, so we need to explicity
       # tell it to use the mock we have above
       allow(Setlistify.Spotify.API.MockClient, self(), pid)
 

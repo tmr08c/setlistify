@@ -1,8 +1,8 @@
 defmodule SetlistifyWeb.OAuthCallbackControllerTest do
   use SetlistifyWeb.ConnCase, async: false
   import Hammox
-  alias Setlistify.Spotify.TokenManager
-  alias Setlistify.Spotify.TokenSupervisor
+  alias Setlistify.Spotify.SessionManager
+  alias Setlistify.Spotify.SessionSupervisor
 
   # We don't need to set up the registry and supervisor here as they're already started with the application
 
@@ -10,8 +10,8 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
     # Generate a unique user ID for each test to prevent test pollution
     test_user = "user_#{System.unique_integer([:positive])}"
 
-    # Clean up token manager for the test user to avoid interference between tests
-    case Registry.lookup(Setlistify.UserTokenRegistry, test_user) do
+    # Clean up session manager for the test user to avoid interference between tests
+    case Registry.lookup(Setlistify.UserSessionRegistry, test_user) do
       [{pid, _}] -> GenServer.stop(pid)
       [] -> :ok
     end
@@ -94,21 +94,21 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       # Run the code under test
       conn = get(conn, ~p"/oauth/callbacks/spotify?code=test_code&state=#{oauth_state}")
 
-      # Verify token process was started
-      assert {:ok, "test_access_token"} = TokenManager.get_token(test_user)
+      # Verify session process was started
+      assert {:ok, "test_access_token"} = SessionManager.get_token(test_user)
 
       # The controller redirected us (indicating a successful flow)
-      # and the token manager process was started correctly
+      # and the session manager process was started correctly
       assert conn.status == 302
       redirect_url = redirected_to(conn)
       assert redirect_url =~ "/"
 
       # No need to verify the refresh token in the session since we can't access it easily
-      # from our test. The fact that the token process got started is enough to verify 
+      # from our test. The fact that the session process got started is enough to verify 
       # this part of the flow works.
     end
 
-    test "sign out stops token process and clears refresh token from session", %{
+    test "sign out stops session process and clears refresh token from session", %{
       conn: conn,
       test_user: test_user
     } do
@@ -122,14 +122,14 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       # Verify refresh token is in the session before sign out
       assert get_session(conn, :refresh_token) == "some_token"
 
-      # Start a token process using the supervisor to properly register it
-      assert Registry.lookup(Setlistify.UserTokenRegistry, test_user) == []
+      # Start a session process using the supervisor to properly register it
+      assert Registry.lookup(Setlistify.UserSessionRegistry, test_user) == []
       tokens = %{access_token: "test", refresh_token: "test", expires_in: 3600}
-      {:ok, original_pid} = TokenSupervisor.start_user_token(test_user, tokens)
+      {:ok, original_pid} = SessionSupervisor.start_user_token(test_user, tokens)
       assert Process.alive?(original_pid)
 
       # Verify process is registered with the Registry
-      assert [{^original_pid, _}] = Registry.lookup(Setlistify.UserTokenRegistry, test_user)
+      assert [{^original_pid, _}] = Registry.lookup(Setlistify.UserSessionRegistry, test_user)
 
       # Do the sign-out
       sign_out_conn = get(conn, "/signout")
@@ -189,8 +189,8 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       # Run the code under test
       conn = get(conn, ~p"/oauth/callbacks/spotify?code=test_code&state=#{oauth_state}")
 
-      # Verify token process was started
-      assert {:ok, "test_access_token"} = TokenManager.get_token(test_user)
+      # Verify session process was started
+      assert {:ok, "test_access_token"} = SessionManager.get_token(test_user)
 
       # The controller should redirect to the provided redirect_to path
       assert conn.status == 302
@@ -198,7 +198,7 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       assert redirect_url =~ redirect_to
 
       # No need to verify the refresh token in the session since we can't access it easily
-      # from our test. The fact that the token process got started is enough to verify 
+      # from our test. The fact that the session process got started is enough to verify 
       # this part of the flow works.
     end
 

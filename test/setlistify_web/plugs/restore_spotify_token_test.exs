@@ -4,7 +4,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
   import Hammox
 
   alias SetlistifyWeb.Plugs.RestoreSpotifyToken
-  alias Setlistify.Spotify.TokenManager
+  alias Setlistify.Spotify.SessionManager
 
   @refresh_token "test_refresh_token"
 
@@ -30,9 +30,9 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
     test "does nothing when token process exists", %{conn: conn, username: username} do
       tokens = %{access_token: "test_token", refresh_token: @refresh_token, expires_in: 3600}
 
-      # Start the token manager or get the pid if it already exists
+      # Start the session manager or get the pid if it already exists
       _pid =
-        case TokenManager.start_link({username, tokens}) do
+        case SessionManager.start_link({username, tokens}) do
           {:ok, pid} -> pid
           {:error, {:already_started, pid}} -> pid
         end
@@ -48,8 +48,8 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
     end
 
     test "restores token process from valid refresh token", %{conn: conn, username: username} do
-      # Ensure there is no existing token process
-      case Registry.lookup(Setlistify.UserTokenRegistry, username) do
+      # Ensure there is no existing session process
+      case Registry.lookup(Setlistify.UserSessionRegistry, username) do
         [{pid, _}] -> GenServer.stop(pid)
         [] -> :ok
       end
@@ -89,8 +89,8 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
 
       refute conn.halted
 
-      # Verify the token process was created with the expected token
-      {:ok, token} = TokenManager.get_token(username)
+      # Verify the session process was created with the expected token
+      {:ok, token} = SessionManager.get_token(username)
       assert token == "new_token"
     end
 
@@ -129,8 +129,8 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "session has expired"
       assert redirected_to(conn) == "/"
 
-      # After a refresh failure, the token should not exist
-      assert {:error, :not_found} = TokenManager.get_token(username)
+      # After a refresh failure, the session should not exist
+      assert {:error, :not_found} = SessionManager.get_token(username)
     end
   end
 end

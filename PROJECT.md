@@ -74,14 +74,34 @@ Please design this solution with the existing codebase in mind, which you can ex
 
 ## Next Steps
 
-- Update the login indicator in the layout to show when a user is logged in
-- Store `user_id` instead of `username` for working with the client
-- Investigate if we can store the `username` in the session as a way to avoid having to make extra calls to `/me`
-- Enhance Spotify.API.ExternalClient to track the user_id with the client:
-  - Create a client struct that includes both the Req client and user_id
-  - Options to consider:
-    - Wrap the Req client in a struct: `%Setlistify.Spotify.Client{req: req_client, user_id: user_id}`
-    - Use process dictionary (less preferred, but simpler short-term)
-    - Add metadata to Req client options (would need to check if Req retains this)
+### Upcoming Work
+- **Priority: Clean up Spotify.API interface for user identification**
+  - Update MusicAccount to better track user_id consistently across all areas of the application
+  - Eliminate repeated calls to `username/1` which are vulnerable to token expiration
+  - Store more user identification data in the session to reduce API calls
+  - Implement a more elegant solution for passing user context to API functions
+
+- **Refactor ExternalClient for better token refresh**
+  - Create a client struct that includes both the Req client and user_id: `%Setlistify.Spotify.Client{req: req_client, user_id: user_id}`
   - Update all API functions to extract user_id from the enhanced client
-  - This will eliminate the need for extra API calls to `/me` when refreshing tokens on 401 responses
+  - Improve error handling for token refresh scenarios
+  - Refactor the token refresh mechanism to be more automated and transparent
+
+- **Additional Improvements**
+  - Update the login indicator in the layout to show when a user is logged in
+  - Investigate if we can store the `username` in the session as a way to avoid having to make extra calls to `/me`
+  - Consider options for client metadata:
+    - Process dictionary (less preferred, but simpler short-term)
+    - Add metadata to Req client options (would need to check if Req retains this)
+
+### Recently Completed
+- Implemented token refresh handling in ExternalClient for 401 responses
+- Added user_id parameter to search_for_track to enable token refresh
+- Created test verifying token refresh behavior on 401 responses
+- Updated all callers to pass user_id for token refresh
+- **Created UserSession struct** to encapsulate user authentication data
+- **Renamed TokenManager to SessionManager** throughout the codebase
+- **Renamed TokenSupervisor to SessionSupervisor** for consistency
+- **Renamed UserTokenRegistry to UserSessionRegistry** for registry management
+- Updated all module references and test files accordingly
+- Maintained backward compatibility during the refactoring

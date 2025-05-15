@@ -1,6 +1,6 @@
 defmodule SetlistifyWeb.OAuthCallbackController do
   alias SetlistifyWeb.UserAuth
-  alias Setlistify.Spotify.TokenSupervisor
+  alias Setlistify.Spotify.SessionSupervisor
   alias Setlistify.Spotify.API
 
   use SetlistifyWeb, :controller
@@ -18,8 +18,8 @@ defmodule SetlistifyWeb.OAuthCallbackController do
           encrypted_refresh_token =
             Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", refresh_token)
 
-          # Start token manager process
-          TokenSupervisor.start_user_token(
+          # Start session manager process
+          SessionSupervisor.start_user_token(
             username,
             %{
               access_token: access_token,
@@ -96,7 +96,7 @@ defmodule SetlistifyWeb.OAuthCallbackController do
 
     # Now stop the token process AFTER clearing the session
     # This ensures that if any autorestart mechanism exists, it won't have the refresh token anymore
-    if username, do: TokenSupervisor.stop_user_token(username)
+    if username, do: SessionSupervisor.stop_user_token(username)
 
     # Return the updated conn
     conn

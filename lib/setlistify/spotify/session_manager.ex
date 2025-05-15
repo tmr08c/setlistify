@@ -1,4 +1,4 @@
-defmodule Setlistify.Spotify.TokenManager do
+defmodule Setlistify.Spotify.SessionManager do
   use GenServer
   require Logger
   alias Setlistify.Spotify.API
@@ -97,7 +97,7 @@ defmodule Setlistify.Spotify.TokenManager do
   # Helper functions
 
   defp via_tuple(user_id) do
-    {:via, Registry, {Setlistify.UserTokenRegistry, user_id}}
+    {:via, Registry, {Setlistify.UserSessionRegistry, user_id}}
   end
 
   @doc """
@@ -105,7 +105,7 @@ defmodule Setlistify.Spotify.TokenManager do
   Returns {:ok, pid} if found, :error otherwise.
   """
   def lookup(user_id) do
-    case Registry.lookup(Setlistify.UserTokenRegistry, user_id) do
+    case Registry.lookup(Setlistify.UserSessionRegistry, user_id) do
       [{pid, _}] -> {:ok, pid}
       [] -> :error
     end
