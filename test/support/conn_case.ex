@@ -28,7 +28,7 @@ defmodule SetlistifyWeb.ConnCase do
       import Plug.Conn
       import Phoenix.ConnTest
       import SetlistifyWeb.ConnCase
-      
+
       # Import test helpers
       import Setlistify.Test.RegistryHelpers
 

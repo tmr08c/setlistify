@@ -40,7 +40,7 @@ defmodule Setlistify.Spotify.API do
   def refresh_token(refresh_token) do
     impl().refresh_token(refresh_token)
   end
-  
+
   @callback exchange_code(String.t(), String.t()) ::
               {:ok, %{access_token: String.t(), refresh_token: String.t(), expires_in: integer()}}
               | {:error, atom()}

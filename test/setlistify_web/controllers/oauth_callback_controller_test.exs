@@ -31,10 +31,10 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
   describe "sign_in" do
     test "redirects to Spotify authorization with state", %{conn: conn} do
       conn = get(conn, ~p"/signin/spotify")
-      
+
       # The controller should set the oauth_state in the session
       assert get_session(conn, :oauth_state) != nil
-      
+
       # The controller should redirect to Spotify's authorization endpoint
       assert conn.status == 302
       redirect_url = redirected_to(conn)
@@ -42,14 +42,14 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       assert redirect_url =~ "client_id=test_client_id"
       assert redirect_url =~ "state=#{get_session(conn, :oauth_state)}"
     end
-    
+
     test "stores redirect_to in session when provided", %{conn: conn} do
       redirect_path = "/setlist/12345"
       conn = get(conn, ~p"/signin/spotify?redirect_to=#{redirect_path}")
-      
+
       # The controller should store the redirect_to in the session
       assert get_session(conn, :redirect_to) == redirect_path
-      
+
       # Should still redirect to Spotify
       assert conn.status == 302
       assert redirected_to(conn) =~ "https://accounts.spotify.com/authorize"
@@ -156,9 +156,9 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       redirect_to = "/setlist/12345"
 
       conn =
-        conn 
-        |> init_test_session(%{}) 
-        |> put_session(:oauth_state, oauth_state) 
+        conn
+        |> init_test_session(%{})
+        |> put_session(:oauth_state, oauth_state)
         |> put_session(:redirect_to, redirect_to)
         |> fetch_flash()
 

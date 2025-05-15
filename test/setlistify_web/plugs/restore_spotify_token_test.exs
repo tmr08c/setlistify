@@ -67,7 +67,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
            expires_in: 3600
          }}
       end)
-      
+
       # Allow the mock to be called from the token process
       allow(Setlistify.Spotify.API.MockClient, self(), fn ->
         # Wait for the process to be registered and return it
@@ -102,7 +102,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
         assert token == @refresh_token
         {:error, :invalid_token}
       end)
-      
+
       # Allow the mock to be called from the token process
       allow(Setlistify.Spotify.API.MockClient, self(), fn ->
         # Wait for the process to be registered and return it
