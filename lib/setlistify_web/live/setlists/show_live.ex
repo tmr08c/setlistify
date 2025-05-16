@@ -5,12 +5,12 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
   def mount(%{"id" => id}, _session, socket) do
     setlist = SetlistFm.API.get_setlist(id)
-    access_token = get_in(socket.assigns, [:music_account, Access.key!(:access_token)])
+    user_session = socket.assigns[:user_session]
 
     setlist =
-      if access_token do
-        client = Spotify.API.new(access_token)
-        user_id = socket.assigns.music_account.username
+      if user_session do
+        client = Spotify.API.new(user_session.access_token)
+        user_id = user_session.user_id
 
         sets =
           setlist.sets
@@ -42,26 +42,33 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   end
 
   def handle_event("create_playlist", _params, socket) do
-    client = Spotify.API.new(socket.assigns.music_account.access_token)
-    name = "#{socket.assigns.artist} @ #{socket.assigns.venue_name} (#{socket.assigns.date})"
+    user_session = socket.assigns.user_session
 
-    description =
-      "Created by Setlistify: #{socket.assigns.artist} at #{socket.assigns.venue_name} on #{socket.assigns.date}"
+    if user_session do
+      client = Spotify.API.new(user_session.access_token)
+      name = "#{socket.assigns.artist} @ #{socket.assigns.venue_name} (#{socket.assigns.date})"
 
-    %{id: playlist_id, external_url: external_url} =
-      Spotify.API.create_playlist(client, name, description)
+      description =
+        "Created by Setlistify: #{socket.assigns.artist} at #{socket.assigns.venue_name} on #{socket.assigns.date}"
 
-    # Build a flatlist of track Ids from our setlist
-    track_ids =
-      Enum.flat_map(socket.assigns.sets, fn set ->
-        set.songs
-        |> Enum.filter(&(Map.has_key?(&1, :spotify_info) and not is_nil(&1.spotify_info)))
-        |> Enum.map(& &1.spotify_info.uri)
-      end)
+      %{id: playlist_id, external_url: external_url} =
+        Spotify.API.create_playlist(client, name, description)
 
-    :ok = Spotify.API.add_tracks_to_playlist(client, playlist_id, track_ids)
+      # Build a flatlist of track Ids from our setlist
+      track_ids =
+        Enum.flat_map(socket.assigns.sets, fn set ->
+          set.songs
+          |> Enum.filter(&(Map.has_key?(&1, :spotify_info) and not is_nil(&1.spotify_info)))
+          |> Enum.map(& &1.spotify_info.uri)
+        end)
 
-    {:noreply, push_navigate(socket, to: ~p"/playlists?provider=spotify&url=#{external_url}")}
+      :ok = Spotify.API.add_tracks_to_playlist(client, playlist_id, track_ids)
+
+      {:noreply, push_navigate(socket, to: ~p"/playlists?provider=spotify&url=#{external_url}")}
+    else
+      {:noreply,
+       put_flash(socket, :error, "Unable to access Spotify session. Please log in again.")}
+    end
   end
 
   def render(assigns) do
@@ -78,13 +85,13 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
               <li>
                 <div class="flex space-x-1 items-center">
                   <Heroicons.check
-                    :if={@music_account && song[:spotify_info] != nil}
+                    :if={@user_session && song[:spotify_info] != nil}
                     mini
                     class="h-4 w-4"
                     aria-label="found matching song"
                   />
                   <Heroicons.x_mark
-                    :if={@music_account && song[:spotify_info] == nil}
+                    :if={@user_session && song[:spotify_info] == nil}
                     mini
                     class="h-4 w-4"
                     aria-label="no matching song found"
@@ -100,7 +107,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
     <hr />
 
-    <%= if @music_account do %>
+    <%= if @user_session do %>
       <.button type="button" phx-click="create_playlist">
         Create Playlist
       </.button>

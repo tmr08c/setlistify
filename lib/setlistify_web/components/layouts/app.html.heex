@@ -5,18 +5,24 @@
         <Heroicons.home class="w-5 h-5" />
       </a>
     </div>
-    <div :if={@music_account} class="flex space-x-4">
-      <span>Signed in as {@music_account.username}</span>
+    <div :if={@user_session} class="flex space-x-4">
+      <span>Signed in as {@user_session.username}</span>
 
       <span>
         <.link navigate={~p"/signout"}>Sign Out</.link>
       </span>
     </div>
-    <div :if={!@music_account} class="flex space-x-4">
+    <div :if={!@user_session} class="flex space-x-4">
       <span>
-        <.link navigate={~p"/signin/spotify?redirect_to=#{@redirect_to}"}>
-          Sign in with Spotify
-        </.link>
+        <%= if @redirect_to do %>
+          <.link navigate={~p"/signin/spotify?redirect_to=#{@redirect_to}"}>
+            Sign in with Spotify
+          </.link>
+        <% else %>
+          <.link navigate={~p"/signin/spotify"}>
+            Sign in with Spotify
+          </.link>
+        <% end %>
       </span>
     </div>
   </div>

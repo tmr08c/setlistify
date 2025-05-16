@@ -3,8 +3,12 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
 
   import Phoenix.LiveViewTest
   import Hammox
+  import SetlistifyWeb.AuthHelpers
 
   alias Setlistify.{SetlistFm, Spotify}
+  alias Setlistify.Spotify.{SessionManager, UserSession}
+
+  import Setlistify.Test.RegistryHelpers
 
   # Cache fetching happens in another process, managed by Cachex. The process we
   # start in our application tree is a supervisor, so explictly `allow`ing with
@@ -50,9 +54,24 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
   end
 
   test "viewing a setlist when authenticated with Spotify searches for songs", %{conn: conn} do
-    conn = init_test_session(conn, %{access_token: "token", account_name: "username"})
+    user_id = unique_user_id()
     setlist_id = Ecto.UUID.generate()
     artist = "some artist"
+
+    # Create a UserSession for the test
+    user_session = %UserSession{
+      access_token: "token",
+      refresh_token: "refresh_token",
+      expires_at: System.system_time(:second) + 3600,
+      user_id: user_id,
+      username: "username"
+    }
+
+    # Start a SessionManager for the test user
+    {:ok, _pid} = SessionManager.start_link({user_id, user_session})
+
+    # Log in the user
+    conn = conn |> log_in_user(%{id: user_id})
 
     # Mock setlist reponse
     expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
@@ -67,11 +86,11 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     # Mock searching for songs in setlist
     Spotify.API.MockClient
     |> expect(:new, 2, fn "token" -> %Req.Request{} end)
-    |> expect(:search_for_track, fn _client, ^artist, "song1", "username" ->
+    |> expect(:search_for_track, fn _client, ^artist, "song1", ^user_id ->
       # We have a match for song
       %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
     end)
-    |> expect(:search_for_track, 2, fn _client, ^artist, "song2", "username" ->
+    |> expect(:search_for_track, 2, fn _client, ^artist, "song2", ^user_id ->
       # We cannot find a match for the song
       #
       # Because we do not find a match, we will not cache it, resulting in
@@ -89,11 +108,26 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
   end
 
   test "creating a playlist redirects to playlist page", %{conn: conn} do
-    conn = init_test_session(conn, %{access_token: "token", account_name: "username"})
+    user_id = unique_user_id()
     setlist_id = Ecto.UUID.generate()
     artist = "some artist"
     venue = "some venue"
     external_url = "https://www.open.spotify.com/playlist/playlist_123"
+
+    # Create a UserSession for the test
+    user_session = %UserSession{
+      access_token: "token",
+      refresh_token: "refresh_token",
+      expires_at: System.system_time(:second) + 3600,
+      user_id: user_id,
+      username: "username"
+    }
+
+    # Start a SessionManager for the test user
+    {:ok, _pid} = SessionManager.start_link({user_id, user_session})
+
+    # Log in the user
+    conn = conn |> log_in_user(%{id: user_id})
 
     # Mock setlist reponse
     expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
@@ -108,11 +142,11 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     # Mock searching for songs in setlist
     Spotify.API.MockClient
     |> expect(:new, 2, fn "token" -> %Req.Request{} end)
-    |> expect(:search_for_track, fn _client, ^artist, "song1", "username" ->
+    |> expect(:search_for_track, fn _client, ^artist, "song1", ^user_id ->
       # We have a match for song
       %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
     end)
-    |> expect(:search_for_track, 2, fn _client, ^artist, "song2", "username" ->
+    |> expect(:search_for_track, 2, fn _client, ^artist, "song2", ^user_id ->
       # We cannot find a match for the song
       #
       # Because we do not find a match, we will not cache it, resulting in

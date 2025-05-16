@@ -4,22 +4,31 @@ defmodule SetlistifyWeb.UserAuth do
   import Plug.Conn
   import Phoenix.Controller
 
-  def on_mount(:default, _params, session, socket) do
-    case session do
-      %{"access_token" => access_token, "account_name" => account_name} ->
-        account = %Setlistify.MusicAccount{access_token: access_token, username: account_name}
-        {:cont, Phoenix.Component.assign_new(socket, :music_account, fn -> account end)}
+  alias Setlistify.Spotify.SessionManager
 
-      %{} ->
+  def on_mount(:default, _params, session, socket) do
+    with {:ok, user_id} <- Map.fetch(session, "user_id"),
+         {:ok, user_session} <- SessionManager.get_session(user_id) do
+      socket =
+        socket
+        |> Phoenix.Component.assign_new(:user_id, fn -> user_id end)
+        |> Phoenix.Component.assign_new(:user_session, fn -> user_session end)
+        |> Phoenix.Component.assign(:redirect_to, nil)
+
+      {:cont, socket}
+    else
+      _ ->
         socket =
-          Phoenix.LiveView.attach_hook(
-            socket,
+          socket
+          |> Phoenix.LiveView.attach_hook(
             :track_redirect_to,
             :handle_params,
             &track_redirect_to/3
           )
+          |> Phoenix.Component.assign(:user_id, nil)
+          |> Phoenix.Component.assign(:user_session, nil)
 
-        {:cont, Phoenix.Component.assign(socket, :music_account, nil)}
+        {:cont, socket}
     end
   end
 
@@ -41,13 +50,18 @@ defmodule SetlistifyWeb.UserAuth do
   disconnected on log out. The line can be safely removed
   if you are not using LiveView.
   """
-  def auth_user(conn, {username, token}) do
+  def auth_user(conn, {_username, token}) do
+    # Get values we need to preserve before clearing session
+    user_id = get_session(conn, :user_id)
+    encrypted_refresh_token = get_session(conn, :refresh_token)
+    redirect_to = get_session(conn, :redirect_to)
+
     conn
     |> renew_session()
-    |> put_session(:access_token, token)
-    |> put_session(:account_name, username)
+    |> put_session(:user_id, user_id)
+    |> put_session(:refresh_token, encrypted_refresh_token)
     |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
-    |> redirect(external: get_session(conn, :redirect_to) || url(~p"/"))
+    |> redirect(external: redirect_to || url(~p"/"))
   end
 
   # This function renews the session ID and erases the whole
