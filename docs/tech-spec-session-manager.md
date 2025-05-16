@@ -207,8 +207,101 @@ end
 
 ## Remaining Work
 
-1. **Protected Routes** - Add auth requirement hook/plug for pages that require authentication, as some pages may need to redirect when user_session is nil instead of rendering without auth
-2. **Documentation** - Update README with new authentication flow
+1. **Extract Token Refresh Helper** - Refactor token refresh and retry logic into a reusable helper function
+2. **Protected Routes** - Add auth requirement hook/plug for pages that require authentication, as some pages may need to redirect when user_session is nil instead of rendering without auth
+3. **Documentation** - Update README with new authentication flow
+
+### Token Refresh Helper Specification
+
+#### Problem
+The `search_for_track` function contains token refresh and retry logic that should be available to other API functions. Currently, functions like `create_playlist` and `add_tracks_to_playlist` don't handle token expiration gracefully.
+
+#### Solution
+Extract a helper function `with_token_refresh/2` that:
+- Accepts a `UserSession` and a request function
+- Handles 401 responses with "invalid_token" in the www-authenticate header
+- Refreshes the token through SessionManager
+- Retries the request once with the new session
+- Returns consistent error tuples
+
+#### Implementation Details
+
+```elixir
+defp with_token_refresh(user_session, request_fn) do
+  req = client(user_session)
+  
+  case request_fn.(req) do
+    {:ok, %{status: 401} = response} ->
+      # Check if this is a token expiration issue
+      authenticate_header =
+        Enum.find_value(response.headers, fn {header, value} ->
+          if String.downcase(header) == "www-authenticate", do: value
+        end)
+
+      if authenticate_header && String.contains?(authenticate_header, "invalid_token") do
+        Logger.info(
+          "Token expired, attempting to refresh for user_id: #{user_session.user_id}"
+        )
+
+        # Attempt to refresh the token
+        case Setlistify.Spotify.SessionManager.refresh_token(user_session.user_id) do
+          {:ok, _new_token} ->
+            Logger.info("Successfully refreshed token, retrying request")
+            # Get the new session and retry ONCE
+            case Setlistify.Spotify.SessionManager.get_session(user_session.user_id) do
+              {:ok, new_session} -> 
+                # Create new client and retry the request
+                new_req = client(new_session)
+                request_fn.(new_req)
+              
+              _ -> 
+                {:error, :session_refresh_failed}
+            end
+
+          {:error, reason} ->
+            Logger.error(
+              "Failed to refresh token for user_id #{user_session.user_id}: #{inspect(reason)}"
+            )
+            {:error, :token_refresh_failed}
+        end
+      else
+        # Non-token 401 error, just pass it through
+        {:ok, response}
+      end
+    
+    # Any other response passes through unchanged
+    other -> other
+  end
+end
+```
+
+#### Functions to Update
+
+1. **`search_for_track`** - Refactor to use the helper
+2. **`create_playlist`** - Convert from `Req.post!` to `Req.post` and use the helper
+3. **`add_tracks_to_playlist`** - Convert from `Req.post!` to `Req.post` and use the helper
+
+#### API Changes
+
+- Replace bang functions (`!`) with regular functions that return error tuples
+- Maintain backward compatibility by updating callers to handle the new return values
+- Consistent error types: `{:error, :token_refresh_failed}`, `{:error, :session_refresh_failed}`
+
+#### Benefits
+
+1. **DRY Principle** - Single implementation of token refresh logic
+2. **Consistent Error Handling** - All API functions handle 401s the same way
+3. **Improved Reliability** - All functions can recover from expired tokens
+4. **No Recursion Risk** - Helper only retries once after refresh
+5. **Better Error Types** - Move away from exceptions to explicit error tuples
+
+#### Testing Requirements
+
+- Test successful token refresh and retry
+- Test failed token refresh
+- Test non-token 401 responses
+- Test preservation of original response for non-401 errors
+- Update existing tests for functions converting from bang to regular
 
 ## Completed Work
 
