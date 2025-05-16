@@ -189,6 +189,17 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     end
   end
 
+  def refresh_to_user_session(refresh_token) do
+    case refresh_token(refresh_token) do
+      {:ok, tokens} ->
+        build_user_session_from_tokens(tokens)
+
+      {:error, reason} ->
+        Logger.error("Failed to refresh token: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
   def exchange_code(code, redirect_uri) do
     client_id = Application.fetch_env!(:setlistify, :spotify_client_id)
     client_secret = Application.fetch_env!(:setlistify, :spotify_client_secret)
@@ -219,33 +230,14 @@ defmodule Setlistify.Spotify.API.ExternalClient do
         Logger.info("Successfully exchanged code for Spotify tokens")
         auth_token_response = Spotify.API.Types.TokenResponse.from_json!(body)
 
-        # Fetch user profile using the /me endpoint
-        profile_result = auth_token_response.access_token |> new() |> Req.get(url: "/me")
+        # Convert the token response to our internal format
+        tokens = %{
+          access_token: auth_token_response.access_token,
+          refresh_token: auth_token_response.refresh_token,
+          expires_in: auth_token_response.expires_in
+        }
 
-        case profile_result do
-          {:ok, %{status: 200, body: profile}} ->
-            # Create and return UserSession struct
-            user_session = %UserSession{
-              access_token: auth_token_response.access_token,
-              refresh_token: auth_token_response.refresh_token,
-              expires_at: System.system_time(:second) + auth_token_response.expires_in,
-              user_id: profile["id"],
-              username: profile["display_name"]
-            }
-
-            {:ok, user_session}
-
-          {:ok, %{status: status, body: body}} ->
-            Logger.error(
-              "Error fetching user profile. Received code #{status}. Response: #{inspect(body)}"
-            )
-
-            {:error, :failed_to_fetch_profile}
-
-          {:error, error} ->
-            Logger.error("Error fetching user profile: #{inspect(error)}")
-            {:error, :failed_to_fetch_profile}
-        end
+        build_user_session_from_tokens(tokens)
 
       {:ok, %{status: status, body: body}} when status in [400, 401] ->
         Logger.error(
@@ -261,6 +253,36 @@ defmodule Setlistify.Spotify.API.ExternalClient do
       {:error, error} ->
         Logger.error("Error exchanging code: #{inspect(error)}")
         {:error, error}
+    end
+  end
+
+  # Helper function to fetch user profile and create UserSession from tokens
+  defp build_user_session_from_tokens(tokens) do
+    profile_result = new(tokens.access_token) |> Req.get(url: "/me")
+
+    case profile_result do
+      {:ok, %{status: 200, body: profile}} ->
+        # Create and return UserSession struct
+        user_session = %UserSession{
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          expires_at: System.system_time(:second) + tokens.expires_in,
+          user_id: profile["id"],
+          username: profile["display_name"]
+        }
+
+        {:ok, user_session}
+
+      {:ok, %{status: status, body: body}} ->
+        Logger.error(
+          "Error fetching user profile. Received code #{status}. Response: #{inspect(body)}"
+        )
+
+        {:error, :failed_to_fetch_profile}
+
+      {:error, error} ->
+        Logger.error("Error fetching user profile: #{inspect(error)}")
+        {:error, :failed_to_fetch_profile}
     end
   end
 end

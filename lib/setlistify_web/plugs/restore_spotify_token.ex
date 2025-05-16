@@ -1,6 +1,9 @@
 defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
   @moduledoc """
   A plug that restores Spotify token processes from encrypted session tokens.
+
+  This plug checks if a session process exists for the user_id stored in the session.
+  If not, it attempts to use the stored refresh token to create a new session process.
   """
   import Plug.Conn
   require Logger
@@ -10,25 +13,19 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
   def init(opts), do: opts
 
   def call(conn, _opts) do
-    user_session = get_session(conn, "user")
+    user_id = get_session(conn, :user_id)
     refresh_token = get_session(conn, :refresh_token)
 
-    with %{"username" => username} <- user_session,
-         {:error, :not_found} <-
-           (
-             result = SessionManager.get_token(username)
-             result
-           ),
+    with user_id when not is_nil(user_id) <- user_id,
+         {:error, :not_found} <- SessionManager.get_session(user_id),
          encrypted_token when not is_nil(encrypted_token) <- refresh_token,
          {:ok, refresh_token} <-
            Phoenix.Token.verify(SetlistifyWeb.Endpoint, "user auth", encrypted_token,
              max_age: 86400 * 30
            ) do
-      # Attempt to refresh the token and start a new process
-
-      case API.refresh_token(refresh_token) do
-        {:ok, tokens} ->
-          {:ok, _pid} = SessionSupervisor.start_user_token(username, tokens)
+      case API.refresh_to_user_session(refresh_token) do
+        {:ok, user_session} ->
+          {:ok, _pid} = SessionSupervisor.start_user_token(user_id, user_session)
           conn
 
         {:error, _reason} ->
@@ -43,13 +40,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
           |> halt()
       end
     else
-      nil ->
-        conn
-
-      {:error, _reason} ->
-        conn
-
-      _other ->
+      _ ->
         conn
     end
   end

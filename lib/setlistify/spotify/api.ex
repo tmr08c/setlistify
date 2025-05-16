@@ -48,6 +48,13 @@ defmodule Setlistify.Spotify.API do
     impl().exchange_code(code, redirect_uri)
   end
 
+  @callback refresh_to_user_session(String.t()) ::
+              {:ok, Setlistify.Spotify.UserSession.t()}
+              | {:error, atom()}
+  def refresh_to_user_session(refresh_token) do
+    impl().refresh_to_user_session(refresh_token)
+  end
+
   defp impl do
     Application.get_env(:setlistify, :spotify_api_client, Setlistify.Spotify.API.ExternalClient)
   end

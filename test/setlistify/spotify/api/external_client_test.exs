@@ -261,6 +261,97 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
     end
   end
 
+  describe "refresh_to_user_session/2" do
+    test "successfully refreshes token and fetches user profile" do
+      # Expect token refresh
+      Req.Test.expect(
+        MySpotifyStub,
+        fn conn ->
+          assert conn.request_path == "/api/token"
+
+          response = %{
+            "access_token" => "new_access_token",
+            "refresh_token" => "new_refresh_token",
+            "expires_in" => 3600
+          }
+
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(200, Jason.encode!(response))
+        end
+      )
+
+      # Expect user profile request
+      Req.Test.expect(
+        MySpotifyStub,
+        fn conn ->
+          assert conn.request_path == "/v1/me"
+
+          profile = %{
+            "id" => "original_user_id",
+            "display_name" => "Test User"
+          }
+
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(200, Jason.encode!(profile))
+        end
+      )
+
+      assert {:ok, user_session} =
+               ExternalClient.refresh_to_user_session("valid_refresh")
+
+      assert user_session.access_token == "new_access_token"
+      assert user_session.refresh_token == "new_refresh_token"
+      assert user_session.user_id == "original_user_id"
+      assert user_session.username == "Test User"
+      assert user_session.expires_at > System.system_time(:second)
+    end
+
+    @tag :capture_log
+    test "returns error when token refresh fails" do
+      Req.Test.expect(MySpotifyStub, fn conn ->
+        Plug.Conn.send_resp(conn, 401, "Unauthorized")
+      end)
+
+      assert {:error, :invalid_token} =
+               ExternalClient.refresh_to_user_session("bad_token")
+    end
+
+    @tag :capture_log
+    test "returns error when profile fetch fails" do
+      # Expect successful token refresh
+      Req.Test.expect(
+        MySpotifyStub,
+        fn conn ->
+          assert conn.request_path == "/api/token"
+
+          response = %{
+            "access_token" => "new_access_token",
+            "refresh_token" => "new_refresh_token",
+            "expires_in" => 3600
+          }
+
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(200, Jason.encode!(response))
+        end
+      )
+
+      # Expect failed profile request
+      Req.Test.expect(
+        MySpotifyStub,
+        fn conn ->
+          assert conn.request_path == "/v1/me"
+          Plug.Conn.send_resp(conn, 500, "Internal Server Error")
+        end
+      )
+
+      assert {:error, :failed_to_fetch_profile} =
+               ExternalClient.refresh_to_user_session("valid_refresh")
+    end
+  end
+
   describe "exchange_code/2" do
     test "successfully exchanges code for tokens" do
       # Expect token exchange request
@@ -430,7 +521,6 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
   end
 
   describe "search_for_track/4 with expired token" do
-    # @tag :capture_log
     test "should handle 401 responses by refreshing token and retrying", %{client: client} do
       {:ok, pid} =
         Setlistify.Spotify.SessionSupervisor.start_user_token(
