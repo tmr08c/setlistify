@@ -20,12 +20,10 @@ defmodule SetlistifyWeb.OAuthCallbackController do
           # TODO Consider if this should be called in `exchange_code`
           SessionSupervisor.start_user_token(user_session.user_id, user_session)
 
-          # TODO should we be putting the "user" key on the session
           conn
           |> put_session(:refresh_token, encrypted_refresh_token)
           |> put_session(:user_id, user_session.user_id)
-          # TODO: Stop passing in access_token
-          |> UserAuth.auth_user({user_session.username, user_session.access_token})
+          |> UserAuth.auth_user(user_session.user_id)
 
         {:error, _reason} ->
           conn

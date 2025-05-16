@@ -110,8 +110,8 @@ defmodule SetlistifyWeb.OAuthCallbackSessionTest do
           "redirect_to" => "/some/path"
         })
 
-      # Call auth_user directly
-      conn = SetlistifyWeb.UserAuth.auth_user(conn, {"username", "token"})
+      # Call auth_user directly with user_id
+      conn = SetlistifyWeb.UserAuth.auth_user(conn, user_id)
 
       # Verify session data was preserved
       assert get_session(conn, "user_id") == user_id

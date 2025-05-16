@@ -50,9 +50,8 @@ defmodule SetlistifyWeb.UserAuth do
   disconnected on log out. The line can be safely removed
   if you are not using LiveView.
   """
-  def auth_user(conn, {_username, token}) do
+  def auth_user(conn, user_id) do
     # Get values we need to preserve before clearing session
-    user_id = get_session(conn, :user_id)
     encrypted_refresh_token = get_session(conn, :refresh_token)
     redirect_to = get_session(conn, :redirect_to)
 
@@ -60,7 +59,7 @@ defmodule SetlistifyWeb.UserAuth do
     |> renew_session()
     |> put_session(:user_id, user_id)
     |> put_session(:refresh_token, encrypted_refresh_token)
-    |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
+    |> put_session(:live_socket_id, "users_sessions:#{user_id}")
     |> redirect(external: redirect_to || url(~p"/"))
   end
 
