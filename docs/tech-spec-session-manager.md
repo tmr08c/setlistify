@@ -212,6 +212,46 @@ end
 3. **Documentation** - Update README with new authentication flow
 4. **Rename refresh_token to refresh_session** - Update SessionManager.refresh_token to be refresh_session and return the UserSession instead of just the access token ✅ COMPLETED
 
+### Protected Routes Specification
+
+#### Problem
+Currently, some pages in the application may render without authentication, showing partial or broken UI when `user_session` is nil. These pages should require authentication and redirect unauthenticated users to the login page.
+
+#### Solution
+Create an authentication requirement hook/plug that:
+- Checks if the user has a valid session
+- Redirects to Spotify login if not authenticated
+- Can be applied to specific routes that require authentication
+- Handles both regular HTTP requests and LiveView pages
+
+#### Implementation Approach
+
+1. **Create a new auth plug for protected routes**
+   - `require_authenticated_user/2` plug function
+   - Check for `user_id` in session
+   - Redirect to login with appropriate flash message
+   - Store the original path to redirect back after login
+
+2. **Update router to use the new plug**
+   - Create a new pipeline for authenticated routes
+   - Apply to routes that require authentication
+   - Identify which routes need protection
+
+3. **Update LiveView mount hooks**
+   - Add a new on_mount callback for protected LiveViews
+   - Similar logic to the plug but for LiveView mounting
+   - Handle redirect appropriately for LiveView context
+
+4. **Test the authentication flow**
+   - Verify unauthenticated users are redirected
+   - Ensure redirect_to is preserved through OAuth flow
+   - Test both standard and LiveView pages
+
+#### Routes to Protect
+- `/playlists` - User's playlists page
+- `/playlists/:id` - Individual playlist page
+- Any future user-specific pages
+
 ### Token Refresh Helper Specification
 
 #### Problem
