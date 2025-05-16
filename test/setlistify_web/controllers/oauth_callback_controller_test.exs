@@ -107,7 +107,6 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
         conn
         |> init_test_session(%{})
         |> fetch_flash()
-        |> put_session("user", %{"username" => test_user})
         |> put_session(:refresh_token, "some_token")
         |> put_session(:user_id, test_user)
 
@@ -133,7 +132,6 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       refute get_session(sign_out_conn, :refresh_token)
 
       # Check that user was removed from the session
-      refute get_session(sign_out_conn, "user")
 
       # Check that process was removed from registry
       refute_in_registry(test_user)

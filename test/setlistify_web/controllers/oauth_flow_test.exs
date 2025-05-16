@@ -76,7 +76,6 @@ defmodule SetlistifyWeb.OAuthFlowTest do
       # Step 3: Test sign out
       signout_conn =
         callback_conn
-        |> put_session("user", %{"username" => test_user})
         |> put_session(:refresh_token, "test_refresh_token")
         |> put_session(:user_id, test_user)
 
@@ -88,7 +87,6 @@ defmodule SetlistifyWeb.OAuthFlowTest do
 
       # Session should be cleared
       refute get_session(signout_response, :refresh_token)
-      refute get_session(signout_response, "user")
 
       # Should redirect to home page
       assert signout_response.status == 302

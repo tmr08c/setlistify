@@ -74,24 +74,14 @@ defmodule SetlistifyWeb.OAuthCallbackController do
   end
 
   def sign_out(conn, _) do
-    user_session = get_session(conn, "user")
     user_id = get_session(conn, :user_id)
-
-    # Extract username for legacy compatibility
-    username =
-      case user_session do
-        %{"username" => username} -> username
-        _ -> nil
-      end
 
     # Log out user (which now handles clearing refresh token and the entire session)
     conn = UserAuth.log_out_user(conn)
 
-    # Stop the session process using user_id or fallback to username
-    cond do
-      user_id -> SessionSupervisor.stop_user_token(user_id)
-      username -> SessionSupervisor.stop_user_token(username)
-      true -> nil
+    # Stop the session process
+    if user_id do
+      SessionSupervisor.stop_user_token(user_id)
     end
 
     # Return the updated conn
