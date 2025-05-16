@@ -4,7 +4,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
   require Logger
   alias Setlistify.Spotify.UserSession
 
-  def new(token, endpoint \\ "https://api.spotify.com/v1/") do
+  defp client(%UserSession{access_token: token}, endpoint \\ "https://api.spotify.com/v1/") do
     Logger.debug("Current Spotify API client token: #{token}")
     default_opts = [base_url: endpoint, auth: {:bearer, token}]
     config_opts = Application.get_env(:setlistify, :spotify_req_options, [])
@@ -12,25 +12,17 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     Req.new(Keyword.merge(default_opts, config_opts))
   end
 
-  def username(client) do
-    result = Req.get(client, url: "/me")
-
-    case result do
-      {:ok, %{status: 200, body: body}} ->
-        Logger.info("Successfully retrieved user profile from Spotify")
-        body["display_name"] || body["id"]
-
-      {:error, error} ->
-        Logger.error("Error retrieving Spotify user profile: #{inspect(error)}")
-        # Return a fallback username to prevent authentication failure
-        {:error, error}
-    end
+  def username(%UserSession{username: username}) do
+    # Since we already have the username in the UserSession, just return it
+    username
   end
 
-  def search_for_track(client, artist, track, user_id \\ nil) do
+  def search_for_track(user_session, artist, track) do
     try do
+      req = client(user_session)
+
       resp =
-        Req.get(client,
+        Req.get(req,
           url: "/search",
           params: %{q: "artist:#{artist} track:#{track}", type: "track"}
         )
@@ -45,31 +37,30 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
           if authenticate_header && String.contains?(authenticate_header, "invalid_token") do
             Logger.info(
-              "Token expired during search, attempting to refresh for user_id: #{user_id}"
+              "Token expired during search, attempting to refresh for user_id: #{user_session.user_id}"
             )
 
-            # Attempt to refresh the token using the provided user_id
-            case Setlistify.Spotify.SessionManager.refresh_token(user_id) do
-              {:ok, new_token} ->
+            # Attempt to refresh the token using the user_id from UserSession
+            case Setlistify.Spotify.SessionManager.refresh_token(user_session.user_id) do
+              {:ok, _new_token} ->
                 Logger.info("Successfully refreshed token, retrying search")
-                # Create a new client with the refreshed token
-                new_client = new(new_token)
-
-                # Retry the search with the new client, passing the user_id again in case we need another refresh
-                search_for_track(new_client, artist, track, user_id)
+                # Get the new session and retry
+                case Setlistify.Spotify.SessionManager.get_session(user_session.user_id) do
+                  {:ok, new_session} -> search_for_track(new_session, artist, track)
+                  _ -> nil
+                end
 
               {:error, reason} ->
-                Logger.error("Failed to refresh token for user_id #{user_id}: #{inspect(reason)}")
+                Logger.error(
+                  "Failed to refresh token for user_id #{user_session.user_id}: #{inspect(reason)}"
+                )
+
                 nil
             end
           else
-            if user_id do
-              Logger.error(
-                "Unauthorized search request with user_id #{user_id}: #{inspect(response)}"
-              )
-            else
-              Logger.error("Unauthorized search request without user_id: #{inspect(response)}")
-            end
+            Logger.error(
+              "Unauthorized search request with user_id #{user_session.user_id}: #{inspect(response)}"
+            )
 
             nil
           end
@@ -101,14 +92,13 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     end
   end
 
-  def create_playlist(client, name, description) do
-    # TODO Update to no longer user the `username` function
-    #
-    # 1. it would be preferable not to re-request this data while the user is logged in
-    # 2. I probably don't want to use display name here and want to *always* use ID
+  def create_playlist(user_session, name, description) do
+    req = client(user_session)
+
+    # Use user_id from the UserSession - this is what the TODO was asking for
     resp =
-      Req.post!(client,
-        url: "/users/#{username(client)}/playlists",
+      Req.post!(req,
+        url: "/users/#{user_session.user_id}/playlists",
         json: %{
           name: name,
           description: description,
@@ -124,9 +114,11 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
   def add_tracks_to_playlist(_, _, []), do: :ok
 
-  def add_tracks_to_playlist(client, playlist_id, tracks) do
+  def add_tracks_to_playlist(user_session, playlist_id, tracks) do
+    req = client(user_session)
+
     resp =
-      Req.post!(client,
+      Req.post!(req,
         url: "/playlists/#{playlist_id}/tracks",
         json: %{uris: tracks}
       )
@@ -212,7 +204,6 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
     Logger.debug("Spotify token exchange request for URI: #{redirect_uri}")
 
-    # Use try/rescue to handle potential transport errors
     result =
       Req.post(
         req,
@@ -250,7 +241,12 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
   # Helper function to fetch user profile and create UserSession from tokens
   defp build_user_session_from_tokens(tokens) do
-    profile_result = new(tokens.access_token) |> Req.get(url: "/me")
+    default_opts = [base_url: "https://api.spotify.com/v1/", auth: {:bearer, tokens.access_token}]
+    config_opts = Application.get_env(:setlistify, :spotify_req_options, [])
+
+    req = Req.new(Keyword.merge(default_opts, config_opts))
+
+    profile_result = Req.get(req, url: "/me")
 
     case profile_result do
       {:ok, %{status: 200, body: profile}} ->

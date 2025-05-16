@@ -85,12 +85,11 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
 
     # Mock searching for songs in setlist
     Spotify.API.MockClient
-    |> expect(:new, 2, fn "token" -> %Req.Request{} end)
-    |> expect(:search_for_track, fn _client, ^artist, "song1", ^user_id ->
+    |> expect(:search_for_track, fn ^user_session, ^artist, "song1" ->
       # We have a match for song
       %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
     end)
-    |> expect(:search_for_track, 2, fn _client, ^artist, "song2", ^user_id ->
+    |> expect(:search_for_track, 2, fn ^user_session, ^artist, "song2" ->
       # We cannot find a match for the song
       #
       # Because we do not find a match, we will not cache it, resulting in
@@ -141,12 +140,11 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
 
     # Mock searching for songs in setlist
     Spotify.API.MockClient
-    |> expect(:new, 2, fn "token" -> %Req.Request{} end)
-    |> expect(:search_for_track, fn _client, ^artist, "song1", ^user_id ->
+    |> expect(:search_for_track, fn ^user_session, ^artist, "song1" ->
       # We have a match for song
       %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
     end)
-    |> expect(:search_for_track, 2, fn _client, ^artist, "song2", ^user_id ->
+    |> expect(:search_for_track, 2, fn ^user_session, ^artist, "song2" ->
       # We cannot find a match for the song
       #
       # Because we do not find a match, we will not cache it, resulting in
@@ -158,8 +156,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
 
     # Mock playlist creation
     Spotify.API.MockClient
-    |> expect(:new, 1, fn "token" -> %Req.Request{} end)
-    |> expect(:create_playlist, fn _client, name, description ->
+    |> expect(:create_playlist, fn ^user_session, name, description ->
       formatted_date = Date.utc_today() |> Date.to_iso8601()
       assert name =~ artist
       assert name =~ venue
@@ -172,7 +169,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
 
       %{id: "playlist_id_123", external_url: external_url}
     end)
-    |> expect(:add_tracks_to_playlist, fn _client, "playlist_id_123", tracks ->
+    |> expect(:add_tracks_to_playlist, fn ^user_session, "playlist_id_123", tracks ->
       assert tracks == ["spotify:track:123"]
       :ok
     end)

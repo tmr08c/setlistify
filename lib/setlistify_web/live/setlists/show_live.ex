@@ -9,16 +9,13 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
     setlist =
       if user_session do
-        client = Spotify.API.new(user_session.access_token)
-        user_id = user_session.user_id
-
         sets =
           setlist.sets
           |> Enum.map(fn set ->
             songs =
               Task.async_stream(set.songs, fn song ->
                 spotify_info =
-                  Spotify.API.search_for_track(client, setlist.artist, song.title, user_id)
+                  Spotify.API.search_for_track(user_session, setlist.artist, song.title)
 
                 Map.put(song, :spotify_info, spotify_info)
               end)
@@ -45,14 +42,13 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     user_session = socket.assigns.user_session
 
     if user_session do
-      client = Spotify.API.new(user_session.access_token)
       name = "#{socket.assigns.artist} @ #{socket.assigns.venue_name} (#{socket.assigns.date})"
 
       description =
         "Created by Setlistify: #{socket.assigns.artist} at #{socket.assigns.venue_name} on #{socket.assigns.date}"
 
       %{id: playlist_id, external_url: external_url} =
-        Spotify.API.create_playlist(client, name, description)
+        Spotify.API.create_playlist(user_session, name, description)
 
       # Build a flatlist of track Ids from our setlist
       track_ids =
@@ -62,7 +58,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
           |> Enum.map(& &1.spotify_info.uri)
         end)
 
-      :ok = Spotify.API.add_tracks_to_playlist(client, playlist_id, track_ids)
+      :ok = Spotify.API.add_tracks_to_playlist(user_session, playlist_id, track_ids)
 
       {:noreply, push_navigate(socket, to: ~p"/playlists?provider=spotify&url=#{external_url}")}
     else

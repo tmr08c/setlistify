@@ -20,11 +20,6 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
     :ok = Application.put_env(:setlistify, :spotify_client_id, "test_client_id")
     :ok = Application.put_env(:setlistify, :spotify_client_secret, "test_client_secret")
 
-    # Set up Mox expectations
-    Hammox.stub(Setlistify.Spotify.API.MockClient, :new, fn token ->
-      Req.new(base_url: "https://api.spotify.com/v1/", auth: {:bearer, token})
-    end)
-
     {:ok, %{test_user: test_user}}
   end
 

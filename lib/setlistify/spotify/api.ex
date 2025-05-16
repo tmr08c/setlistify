@@ -1,32 +1,31 @@
 defmodule Setlistify.Spotify.API do
-  @callback new(String.t()) :: Req.Request.t()
-  def new(token), do: impl().new(token)
+  alias Setlistify.Spotify.UserSession
 
-  @callback username(Req.Request.t()) :: String.t()
-  def username(client), do: impl().username(client)
+  @callback username(UserSession.t()) :: String.t()
+  def username(user_session), do: impl().username(user_session)
 
   # TODO Set response type
-  @callback search_for_track(Req.Request.t(), String.t(), String.t(), String.t()) ::
+  @callback search_for_track(UserSession.t(), String.t(), String.t()) ::
               nil | %{uri: String.t(), preview_url: String.t()}
-  def search_for_track(client, artist, track, user_id \\ nil) do
+  def search_for_track(user_session, artist, track) do
     :spotify_track_cache
     |> Cachex.fetch({artist, track}, fn {artist, track} ->
-      impl().search_for_track(client, artist, track, user_id)
+      impl().search_for_track(user_session, artist, track)
     end)
     |> elem(1)
   end
 
-  @callback create_playlist(Req.Request.t(), String.t(), String.t()) :: %{
+  @callback create_playlist(UserSession.t(), String.t(), String.t()) :: %{
               id: String.t(),
               external_url: String.t()
             }
-  def create_playlist(client, name, description) do
-    impl().create_playlist(client, name, description)
+  def create_playlist(user_session, name, description) do
+    impl().create_playlist(user_session, name, description)
   end
 
-  @callback add_tracks_to_playlist(Req.Request.t(), String.t(), [String.t()]) :: :ok | :error
-  def add_tracks_to_playlist(client, playlist_id, tracks) do
-    impl().add_tracks_to_playlist(client, playlist_id, tracks)
+  @callback add_tracks_to_playlist(UserSession.t(), String.t(), [String.t()]) :: :ok | :error
+  def add_tracks_to_playlist(user_session, playlist_id, tracks) do
+    impl().add_tracks_to_playlist(user_session, playlist_id, tracks)
   end
 
   @callback get_embed(String.t()) :: {:ok, String.t()} | {:error, atom()}
