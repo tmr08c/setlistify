@@ -3,6 +3,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
   require Logger
   alias Setlistify.Spotify.UserSession
+  alias Setlistify.Spotify.SessionManager
 
   defp client(%UserSession{access_token: token}, endpoint \\ "https://api.spotify.com/v1/") do
     Logger.debug("Current Spotify API client token: #{token}")
@@ -17,87 +18,111 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     username
   end
 
-  def search_for_track(user_session, artist, track) do
-    try do
-      req = client(user_session)
+  # Helper function to handle token refresh and retry logic
+  defp with_token_refresh(user_session, request_fn, context) do
+    req = client(user_session)
 
-      resp =
-        Req.get(req,
-          url: "/search",
-          params: %{q: "artist:#{artist} track:#{track}", type: "track"}
-        )
+    case request_fn.(req) do
+      {:ok, %{status: 401} = response} ->
+        # Check if this is a token expiration issue
+        authenticate_header =
+          Enum.find_value(response.headers, fn {header, value} ->
+            if String.downcase(header) == "www-authenticate", do: value
+          end)
 
-      case resp do
-        {:ok, %{status: 401} = response} ->
-          # Check if this is a token expiration issue
-          [authenticate_header] =
-            Enum.find_value(response.headers, fn {header, value} ->
-              if String.downcase(header) == "www-authenticate", do: value
-            end)
-
-          if authenticate_header && String.contains?(authenticate_header, "invalid_token") do
-            Logger.info(
-              "Token expired during search, attempting to refresh for user_id: #{user_session.user_id}"
-            )
-
-            # Attempt to refresh the token using the user_id from UserSession
-            case Setlistify.Spotify.SessionManager.refresh_token(user_session.user_id) do
-              {:ok, _new_token} ->
-                Logger.info("Successfully refreshed token, retrying search")
-                # Get the new session and retry
-                case Setlistify.Spotify.SessionManager.get_session(user_session.user_id) do
-                  {:ok, new_session} -> search_for_track(new_session, artist, track)
-                  _ -> nil
-                end
-
-              {:error, reason} ->
-                Logger.error(
-                  "Failed to refresh token for user_id #{user_session.user_id}: #{inspect(reason)}"
-                )
-
-                nil
-            end
-          else
-            Logger.error(
-              "Unauthorized search request with user_id #{user_session.user_id}: #{inspect(response)}"
-            )
-
-            nil
+        # Handle both string and list formats
+        authenticate_value =
+          case authenticate_header do
+            nil -> ""
+            header when is_binary(header) -> header
+            [header | _] when is_binary(header) -> header
+            _ -> ""
           end
 
-        {:ok, %{status: 200} = resp} ->
-          items = resp.body |> Map.get("tracks", %{}) |> Map.get("items", [])
+        if authenticate_header && String.contains?(authenticate_value, "invalid_token") do
+          Logger.debug(
+            "Token expired during #{context}, attempting to refresh for user_id: #{user_session.user_id}"
+          )
 
-          with nil <- List.first(items) do
-            Logger.warning("No search results for artist: #{artist}, track: #{track}")
-            nil
-          else
-            track_info ->
-              Logger.info("Found match for artist: #{artist}, track: #{track}")
-              %{uri: track_info["uri"], preview_url: track_info["preview_url"]}
+          # Attempt to refresh the token
+          case SessionManager.refresh_token(user_session.user_id) do
+            {:ok, _new_token} ->
+              Logger.debug("Successfully refreshed token during #{context}, retrying request")
+              # Get the new session and retry ONCE
+              case SessionManager.get_session(user_session.user_id) do
+                {:ok, new_session} ->
+                  # Create new client and retry the request
+                  new_req = client(new_session)
+                  request_fn.(new_req)
+
+                _ ->
+                  Logger.error("Failed to get new session during #{context}")
+                  {:error, :session_refresh_failed}
+              end
+
+            {:error, reason} ->
+              Logger.error(
+                "Failed to refresh token during #{context} for user_id #{user_session.user_id}: #{inspect(reason)}"
+              )
+
+              {:error, :token_refresh_failed}
           end
+        else
+          # Non-token 401 error, just pass it through
+          {:ok, response}
+        end
 
-        {:ok, response} ->
-          Logger.error("Unexpected response from Spotify search: #{inspect(response)}")
-          nil
-
-        {:error, error} ->
-          Logger.error("Error during Spotify search: #{inspect(error)}")
-          nil
-      end
-    rescue
-      error ->
-        Logger.error("Exception during Spotify search: #{inspect(error)}")
-        nil
+      # Any other response passes through unchanged
+      other ->
+        other
     end
   end
 
-  def create_playlist(user_session, name, description) do
-    req = client(user_session)
+  def search_for_track(user_session, artist, track) do
+    request_fn = fn req ->
+      Req.get(req,
+        url: "/search",
+        params: %{q: "artist:#{artist} track:#{track}", type: "track"}
+      )
+    end
 
-    # Use user_id from the UserSession - this is what the TODO was asking for
-    resp =
-      Req.post!(req,
+    case with_token_refresh(user_session, request_fn, "track search") do
+      {:ok, %{status: 200} = resp} ->
+        items = resp.body |> Map.get("tracks", %{}) |> Map.get("items", [])
+
+        with nil <- List.first(items) do
+          Logger.warning("No search results for artist: #{artist}, track: #{track}")
+          nil
+        else
+          track_info ->
+            Logger.info("Found match for artist: #{artist}, track: #{track}")
+            %{uri: track_info["uri"], preview_url: track_info["preview_url"]}
+        end
+
+      {:ok, %{status: 401} = response} ->
+        Logger.error(
+          "Unauthorized search request with user_id #{user_session.user_id}: #{inspect(response)}"
+        )
+
+        nil
+
+      {:ok, response} ->
+        Logger.error("Unexpected response from Spotify search: #{inspect(response)}")
+        nil
+
+      {:error, _reason} ->
+        # Error already logged by with_token_refresh
+        nil
+    end
+  rescue
+    error ->
+      Logger.error("Exception during Spotify search: #{inspect(error)}")
+      nil
+  end
+
+  def create_playlist(user_session, name, description) do
+    request_fn = fn req ->
+      Req.post(req,
         url: "/users/#{user_session.user_id}/playlists",
         json: %{
           name: name,
@@ -105,25 +130,48 @@ defmodule Setlistify.Spotify.API.ExternalClient do
           public: false
         }
       )
+    end
 
-    %{
-      id: Map.fetch!(resp.body, "id"),
-      external_url: resp.body |> Map.fetch!("external_urls") |> Map.fetch!("spotify")
-    }
+    case with_token_refresh(user_session, request_fn, "playlist creation") do
+      {:ok, %{status: status} = resp} when status in [200, 201] ->
+        {:ok,
+         %{
+           id: Map.fetch!(resp.body, "id"),
+           external_url: resp.body |> Map.fetch!("external_urls") |> Map.fetch!("spotify")
+         }}
+
+      {:ok, response} ->
+        Logger.error("Unexpected response creating playlist: #{inspect(response)}")
+        {:error, :playlist_creation_failed}
+
+      {:error, _reason} = error ->
+        # Error already logged by with_token_refresh
+        error
+    end
   end
 
-  def add_tracks_to_playlist(_, _, []), do: :ok
+  def add_tracks_to_playlist(_, _, []), do: {:ok, :no_tracks}
 
   def add_tracks_to_playlist(user_session, playlist_id, tracks) do
-    req = client(user_session)
-
-    resp =
-      Req.post!(req,
+    request_fn = fn req ->
+      Req.post(req,
         url: "/playlists/#{playlist_id}/tracks",
         json: %{uris: tracks}
       )
+    end
 
-    if resp.status == 201, do: :ok, else: :error
+    case with_token_refresh(user_session, request_fn, "adding tracks to playlist") do
+      {:ok, %{status: 201}} ->
+        {:ok, :tracks_added}
+
+      {:ok, response} ->
+        Logger.error("Failed to add tracks to playlist: #{inspect(response)}")
+        {:error, :tracks_addition_failed}
+
+      {:error, _reason} = error ->
+        # Error already logged by with_token_refresh
+        error
+    end
   end
 
   def get_embed(url) do

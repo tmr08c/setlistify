@@ -207,9 +207,10 @@ end
 
 ## Remaining Work
 
-1. **Extract Token Refresh Helper** - Refactor token refresh and retry logic into a reusable helper function
+1. **Extract Token Refresh Helper** - Refactor token refresh and retry logic into a reusable helper function ✅ COMPLETED
 2. **Protected Routes** - Add auth requirement hook/plug for pages that require authentication, as some pages may need to redirect when user_session is nil instead of rendering without auth
 3. **Documentation** - Update README with new authentication flow
+4. **Rename refresh_token to refresh_session** - Update SessionManager.refresh_token to be refresh_session and return the UserSession instead of just the access token
 
 ### Token Refresh Helper Specification
 
@@ -303,6 +304,106 @@ end
 - Test preservation of original response for non-401 errors
 - Update existing tests for functions converting from bang to regular
 
+### Rename refresh_token to refresh_session Specification
+
+#### Problem
+The current `SessionManager.refresh_token/1` function is misleadingly named and returns only the access token. Since we now manage full user sessions with the UserSession struct, the function should reflect this and return the complete refreshed session.
+
+#### Solution
+Rename `refresh_token` to `refresh_session` and update it to return the full UserSession:
+- Function remains public for direct session refresh needs
+- Returns `{:ok, %UserSession{}}` instead of `{:ok, access_token}`
+- Maintains backward compatibility by keeping internal token refresh logic
+
+#### Implementation Details
+
+```elixir
+# Current API
+def refresh_token(user_id) do
+  # Returns {:ok, access_token} or {:error, reason}
+end
+
+# New API
+def refresh_session(user_id) do
+  # Returns {:ok, %UserSession{}} or {:error, reason}
+end
+```
+
+#### Migration Steps
+1. Add new `refresh_session/1` function
+2. Update internal `do_refresh_token` to support both return types
+3. Update all callers to use `refresh_session`
+4. Mark `refresh_token` as deprecated
+5. Remove `refresh_token` in next major version
+
+#### Benefits
+- More accurate function naming
+- Returns complete session data
+- Aligns with UserSession-centric architecture
+- Enables callers to get fresh session without additional `get_session` call
+
+### PubSub Broadcasting Specification
+
+#### Problem
+When tokens are refreshed in the background by SessionManager, LiveView components maintain stale UserSession data in their socket assigns. This leads to potential authentication failures and inconsistent UI state.
+
+#### Solution
+Implement Phoenix PubSub broadcasting to notify LiveViews when tokens are refreshed:
+- SessionManager broadcasts token refresh events on user-specific channels
+- LiveViews subscribe to their user's channel on mount
+- Default handle_info callback updates socket assigns with fresh session data
+
+#### Implementation Details
+
+1. **SessionManager Broadcasting** ✅ COMPLETED
+```elixir
+defp broadcast_token_refreshed(state) do
+  user_session = %UserSession{
+    access_token: state.access_token,
+    refresh_token: state.refresh_token,
+    expires_at: state.expires_at,
+    user_id: state.user_id,
+    username: Map.get(state, :username, state.user_id)
+  }
+
+  Phoenix.PubSub.broadcast(
+    Setlistify.PubSub,
+    "user:#{state.user_id}",
+    {:token_refreshed, user_session}
+  )
+end
+```
+
+2. **LiveView Subscription** ✅ COMPLETED
+```elixir
+def on_mount(:default, _params, session, socket) do
+  with {:ok, user_id} <- Map.fetch(session, "user_id"),
+       {:ok, user_session} <- SessionManager.get_session(user_id) do
+    # Subscribe to token refresh events for this user
+    Phoenix.PubSub.subscribe(Setlistify.PubSub, "user:#{user_id}")
+    # ... rest of mount logic
+  end
+end
+```
+
+3. **LiveView Update Handler** ✅ COMPLETED
+```elixir
+def handle_info({:token_refreshed, new_session}, socket) do
+  {:noreply, Phoenix.Component.assign(socket, :user_session, new_session)}
+end
+```
+
+#### Benefits
+- Real-time session synchronization across all LiveView components
+- No manual session refresh required in LiveViews
+- User-specific channels ensure privacy and efficiency
+- Seamless token rotation without UI disruption
+
+#### Testing
+- Verified broadcasts are received by correct user
+- Confirmed users don't receive other users' broadcasts
+- Tested multi-user scenarios with isolated channels
+
 ## Completed Work
 
 1. ✅ **Clean up session storage** - Removed old `access_token` and `account_name` from auth_user
@@ -310,6 +411,8 @@ end
 3. ✅ **Update Spotify.API function signatures** - Changed to accept UserSession instead of client
 4. ✅ **Remove legacy session keys** - Cleaned up "user" session key from sign_out function
 5. ✅ **Fix redirect handling** - Preserve redirect_to through OAuth flow correctly
+6. ✅ **Extract Token Refresh Helper** - Implemented with_token_refresh helper with contextual logging
+7. ✅ **PubSub Broadcasting for Token Refresh** - Implemented real-time LiveView updates when tokens refresh
 
 ## Success Criteria
 

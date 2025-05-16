@@ -95,33 +95,20 @@ defmodule Setlistify.Spotify.SessionManager do
   end
 
   @impl true
-  def handle_call(:refresh_token, _from, %{refresh_token: refresh_token} = state) do
-    case API.refresh_token(refresh_token) do
-      {:ok, new_tokens} ->
-        schedule_refresh(new_tokens.expires_in - @refresh_threshold)
-
-        new_state =
-          Map.merge(state, new_tokens)
-          |> Map.put(:expires_at, timestamp() + new_tokens.expires_in)
-
+  def handle_call(:refresh_token, _from, state) do
+    case do_refresh_token(state) do
+      {:ok, new_state, new_tokens} ->
         {:reply, {:ok, new_tokens.access_token}, new_state}
 
-      {:error, reason} = error ->
-        Logger.error("Failed to refresh token: #{inspect(reason)}")
+      {:error, _reason} = error ->
         {:stop, :normal, error, state}
     end
   end
 
   @impl true
-  def handle_info(:refresh_token, %{refresh_token: refresh_token} = state) do
-    case API.refresh_token(refresh_token) do
-      {:ok, new_tokens} ->
-        schedule_refresh(new_tokens.expires_in - @refresh_threshold)
-
-        new_state =
-          Map.merge(state, new_tokens)
-          |> Map.put(:expires_at, timestamp() + new_tokens.expires_in)
-
+  def handle_info(:refresh_token, state) do
+    case do_refresh_token(state) do
+      {:ok, new_state, _new_tokens} ->
         {:noreply, new_state}
 
       {:error, _reason} ->
@@ -153,4 +140,40 @@ defmodule Setlistify.Spotify.SessionManager do
   defp schedule_refresh(_), do: Process.send(self(), :refresh_token, [])
 
   defp timestamp, do: System.system_time(:second)
+
+  defp do_refresh_token(%{refresh_token: refresh_token} = state) do
+    case API.refresh_token(refresh_token) do
+      {:ok, new_tokens} ->
+        schedule_refresh(new_tokens.expires_in - @refresh_threshold)
+
+        new_state =
+          state
+          |> Map.merge(new_tokens)
+          |> Map.put(:expires_at, timestamp() + new_tokens.expires_in)
+
+        # Broadcast token refresh event to interested LiveViews
+        broadcast_token_refreshed(new_state)
+
+        {:ok, new_state, new_tokens}
+
+      {:error, _reason} = error ->
+        error
+    end
+  end
+
+  defp broadcast_token_refreshed(state) do
+    user_session = %UserSession{
+      access_token: state.access_token,
+      refresh_token: state.refresh_token,
+      expires_at: state.expires_at,
+      user_id: state.user_id,
+      username: Map.get(state, :username, state.user_id)
+    }
+
+    Phoenix.PubSub.broadcast(
+      Setlistify.PubSub,
+      "user:#{state.user_id}",
+      {:token_refreshed, user_session}
+    )
+  end
 end

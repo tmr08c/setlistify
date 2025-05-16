@@ -9,6 +9,9 @@ defmodule SetlistifyWeb.UserAuth do
   def on_mount(:default, _params, session, socket) do
     with {:ok, user_id} <- Map.fetch(session, "user_id"),
          {:ok, user_session} <- SessionManager.get_session(user_id) do
+      # Subscribe to token refresh events for this user
+      Phoenix.PubSub.subscribe(Setlistify.PubSub, "user:#{user_id}")
+
       socket =
         socket
         |> Phoenix.Component.assign_new(:user_id, fn -> user_id end)

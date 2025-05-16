@@ -55,6 +55,11 @@ defmodule SetlistifyWeb do
         layout: {SetlistifyWeb.Layouts, :app}
 
       unquote(html_helpers())
+
+      # Handle token refresh messages from PubSub
+      def handle_info({:token_refreshed, new_session}, socket) do
+        {:noreply, Phoenix.Component.assign(socket, :user_session, new_session)}
+      end
     end
   end
 

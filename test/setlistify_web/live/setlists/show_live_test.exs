@@ -167,11 +167,11 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
       assert description =~ venue
       assert description =~ formatted_date
 
-      %{id: "playlist_id_123", external_url: external_url}
+      {:ok, %{id: "playlist_id_123", external_url: external_url}}
     end)
     |> expect(:add_tracks_to_playlist, fn ^user_session, "playlist_id_123", tracks ->
       assert tracks == ["spotify:track:123"]
-      :ok
+      {:ok, :tracks_added}
     end)
 
     result = view |> element("button", "Create Playlist") |> render_click()

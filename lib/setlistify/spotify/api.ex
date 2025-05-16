@@ -15,15 +15,14 @@ defmodule Setlistify.Spotify.API do
     |> elem(1)
   end
 
-  @callback create_playlist(UserSession.t(), String.t(), String.t()) :: %{
-              id: String.t(),
-              external_url: String.t()
-            }
+  @callback create_playlist(UserSession.t(), String.t(), String.t()) ::
+              {:ok, %{id: String.t(), external_url: String.t()}} | {:error, atom()}
   def create_playlist(user_session, name, description) do
     impl().create_playlist(user_session, name, description)
   end
 
-  @callback add_tracks_to_playlist(UserSession.t(), String.t(), [String.t()]) :: :ok | :error
+  @callback add_tracks_to_playlist(UserSession.t(), String.t(), [String.t()]) ::
+              {:ok, atom()} | {:error, atom()}
   def add_tracks_to_playlist(user_session, playlist_id, tracks) do
     impl().add_tracks_to_playlist(user_session, playlist_id, tracks)
   end

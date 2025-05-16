@@ -180,4 +180,130 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       assert {:ok, "refreshed_token"} = SessionManager.get_token(user_id)
     end
   end
+
+  describe "PubSub broadcasting" do
+    test "broadcasts token refresh to the user's channel", %{
+      user_id: user_id,
+      initial_token: initial_token
+    } do
+      # Subscribe to the user's channel
+      Phoenix.PubSub.subscribe(Setlistify.PubSub, "user:#{user_id}")
+
+      # Mock the refresh_token API call
+      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn _refresh_token ->
+        {:ok,
+         %{
+           access_token: "new_access_token",
+           refresh_token: @refresh_token,
+           expires_in: 3600
+         }}
+      end)
+
+      # Start the session
+      {:ok, pid} = SessionManager.start_link({user_id, initial_token})
+
+      # Ensure we're allowing the right process
+      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+
+      # Trigger a refresh
+      assert {:ok, "new_access_token"} = SessionManager.refresh_token(user_id)
+
+      # Should receive the broadcast
+      assert_receive {:token_refreshed,
+                      %UserSession{
+                        access_token: "new_access_token",
+                        refresh_token: @refresh_token,
+                        user_id: ^user_id
+                      }}
+    end
+
+    test "does not broadcast to other users' channels", %{initial_token: initial_token} do
+      user1_id = unique_user_id()
+      user2_id = unique_user_id()
+
+      # Subscribe to user2's channel
+      Phoenix.PubSub.subscribe(Setlistify.PubSub, "user:#{user2_id}")
+
+      # Mock the refresh_token API call for user1
+      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
+        assert refresh_token == @refresh_token
+
+        {:ok,
+         %{
+           access_token: "user1_new_token",
+           refresh_token: @refresh_token,
+           expires_in: 3600
+         }}
+      end)
+
+      # Start session for user1
+      {:ok, pid} = SessionManager.start_link({user1_id, initial_token})
+
+      # Allow the mock to be called from the session process
+      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+
+      # Trigger a refresh for user1
+      assert {:ok, "user1_new_token"} = SessionManager.refresh_token(user1_id)
+
+      # Should NOT receive a broadcast on user2's channel
+      refute_receive {:token_refreshed, _}, 100
+    end
+
+    test "different users receive their own broadcasts", %{initial_token: initial_token} do
+      user1_id = unique_user_id()
+      user2_id = unique_user_id()
+
+      # Subscribe to both channels
+      Phoenix.PubSub.subscribe(Setlistify.PubSub, "user:#{user1_id}")
+      Phoenix.PubSub.subscribe(Setlistify.PubSub, "user:#{user2_id}")
+
+      # Mock refresh for user1
+      expect(Setlistify.Spotify.API.MockClient, :refresh_token, 1, fn "user1_refresh" ->
+        {:ok,
+         %{
+           access_token: "user1_new_token",
+           refresh_token: "user1_refresh",
+           expires_in: 3600
+         }}
+      end)
+
+      # Mock refresh for user2
+      expect(Setlistify.Spotify.API.MockClient, :refresh_token, 1, fn "user2_refresh" ->
+        {:ok,
+         %{
+           access_token: "user2_new_token",
+           refresh_token: "user2_refresh",
+           expires_in: 3600
+         }}
+      end)
+
+      # Start sessions
+      user1_tokens = %{initial_token | refresh_token: "user1_refresh"}
+      user2_tokens = %{initial_token | refresh_token: "user2_refresh"}
+
+      {:ok, pid1} = SessionManager.start_link({user1_id, user1_tokens})
+      {:ok, pid2} = SessionManager.start_link({user2_id, user2_tokens})
+
+      # Allow the mocks to be called from the session processes
+      allow(Setlistify.Spotify.API.MockClient, self(), pid1)
+      allow(Setlistify.Spotify.API.MockClient, self(), pid2)
+
+      # Trigger refreshes
+      assert {:ok, "user1_new_token"} = SessionManager.refresh_token(user1_id)
+      assert {:ok, "user2_new_token"} = SessionManager.refresh_token(user2_id)
+
+      # Should receive correct broadcasts for each user
+      assert_receive {:token_refreshed,
+                      %UserSession{
+                        access_token: "user1_new_token",
+                        user_id: ^user1_id
+                      }}
+
+      assert_receive {:token_refreshed,
+                      %UserSession{
+                        access_token: "user2_new_token",
+                        user_id: ^user2_id
+                      }}
+    end
+  end
 end

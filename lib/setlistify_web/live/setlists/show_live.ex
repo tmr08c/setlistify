@@ -12,6 +12,9 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
         sets =
           setlist.sets
           |> Enum.map(fn set ->
+            # TODO: The workflow of updating UserSession after a refresh (see
+            # SetlistifyWeb.handle_info) probably won't work with this pattern
+            # because the spawned tasks won't receive the message.
             songs =
               Task.async_stream(set.songs, fn song ->
                 spotify_info =
@@ -47,20 +50,29 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
       description =
         "Created by Setlistify: #{socket.assigns.artist} at #{socket.assigns.venue_name} on #{socket.assigns.date}"
 
-      %{id: playlist_id, external_url: external_url} =
-        Spotify.API.create_playlist(user_session, name, description)
+      case Spotify.API.create_playlist(user_session, name, description) do
+        {:ok, %{id: playlist_id, external_url: external_url}} ->
+          # Build a flatlist of track Ids from our setlist
+          track_ids =
+            Enum.flat_map(socket.assigns.sets, fn set ->
+              set.songs
+              |> Enum.filter(&(Map.has_key?(&1, :spotify_info) and not is_nil(&1.spotify_info)))
+              |> Enum.map(& &1.spotify_info.uri)
+            end)
 
-      # Build a flatlist of track Ids from our setlist
-      track_ids =
-        Enum.flat_map(socket.assigns.sets, fn set ->
-          set.songs
-          |> Enum.filter(&(Map.has_key?(&1, :spotify_info) and not is_nil(&1.spotify_info)))
-          |> Enum.map(& &1.spotify_info.uri)
-        end)
+          case Spotify.API.add_tracks_to_playlist(user_session, playlist_id, track_ids) do
+            {:ok, _} ->
+              {:noreply,
+               push_navigate(socket, to: ~p"/playlists?provider=spotify&url=#{external_url}")}
 
-      :ok = Spotify.API.add_tracks_to_playlist(user_session, playlist_id, track_ids)
+            {:error, reason} ->
+              {:noreply,
+               put_flash(socket, :error, "Failed to add tracks to playlist: #{inspect(reason)}")}
+          end
 
-      {:noreply, push_navigate(socket, to: ~p"/playlists?provider=spotify&url=#{external_url}")}
+        {:error, reason} ->
+          {:noreply, put_flash(socket, :error, "Failed to create playlist: #{inspect(reason)}")}
+      end
     else
       {:noreply,
        put_flash(socket, :error, "Unable to access Spotify session. Please log in again.")}
