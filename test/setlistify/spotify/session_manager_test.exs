@@ -97,6 +97,12 @@ defmodule Setlistify.Spotify.SessionManagerTest do
   end
 
   describe "refresh_token/1" do
+    @moduledoc """
+    Tests for the deprecated refresh_token/1 function.
+    These tests ensure backward compatibility while the function is still available.
+    """
+
+    @tag :deprecated
     test "refreshes token successfully", %{user_id: user_id, initial_token: initial_token} do
       {:ok, pid} = SessionManager.start_link({user_id, initial_token})
       new_token = "new_access_token"
@@ -118,6 +124,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
     end
 
     @tag :capture_log
+    @tag :deprecated
     test "terminates process on refresh failure", %{
       user_id: user_id,
       initial_token: initial_token
@@ -133,6 +140,58 @@ defmodule Setlistify.Spotify.SessionManagerTest do
 
       assert {:error, :invalid_token} = SessionManager.refresh_token(user_id)
       refute Process.alive?(pid)
+    end
+  end
+
+  describe "refresh_session/1" do
+    test "refreshes token and returns UserSession", %{
+      user_id: user_id,
+      initial_token: initial_token
+    } do
+      {:ok, pid} = SessionManager.start_link({user_id, initial_token})
+
+      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
+        assert refresh_token == initial_token.refresh_token
+
+        {:ok,
+         %{
+           access_token: "new_access_token",
+           refresh_token: @refresh_token,
+           expires_in: 3600
+         }}
+      end)
+
+      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+
+      assert {:ok, session} = SessionManager.refresh_session(user_id)
+      assert %UserSession{} = session
+      assert session.access_token == "new_access_token"
+      assert session.refresh_token == @refresh_token
+      assert session.user_id == user_id
+      assert session.expires_at > System.system_time(:second)
+    end
+
+    @tag :capture_log
+    test "terminates process on refresh failure", %{
+      user_id: user_id,
+      initial_token: initial_token
+    } do
+      {:ok, pid} = SessionManager.start_link({user_id, initial_token})
+
+      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
+        assert refresh_token == initial_token.refresh_token
+        {:error, :invalid_token}
+      end)
+
+      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+
+      assert {:error, :invalid_token} = SessionManager.refresh_session(user_id)
+      refute Process.alive?(pid)
+    end
+
+    test "returns error when process not found", %{user_id: _user_id} do
+      nonexistent_user = unique_user_id()
+      assert {:error, :not_found} = SessionManager.refresh_session(nonexistent_user)
     end
   end
 
@@ -206,7 +265,8 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       allow(Setlistify.Spotify.API.MockClient, self(), pid)
 
       # Trigger a refresh
-      assert {:ok, "new_access_token"} = SessionManager.refresh_token(user_id)
+      assert {:ok, session} = SessionManager.refresh_session(user_id)
+      assert session.access_token == "new_access_token"
 
       # Should receive the broadcast
       assert_receive {:token_refreshed,
@@ -243,7 +303,8 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       allow(Setlistify.Spotify.API.MockClient, self(), pid)
 
       # Trigger a refresh for user1
-      assert {:ok, "user1_new_token"} = SessionManager.refresh_token(user1_id)
+      assert {:ok, session} = SessionManager.refresh_session(user1_id)
+      assert session.access_token == "user1_new_token"
 
       # Should NOT receive a broadcast on user2's channel
       refute_receive {:token_refreshed, _}, 100
@@ -289,8 +350,10 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       allow(Setlistify.Spotify.API.MockClient, self(), pid2)
 
       # Trigger refreshes
-      assert {:ok, "user1_new_token"} = SessionManager.refresh_token(user1_id)
-      assert {:ok, "user2_new_token"} = SessionManager.refresh_token(user2_id)
+      assert {:ok, session1} = SessionManager.refresh_session(user1_id)
+      assert session1.access_token == "user1_new_token"
+      assert {:ok, session2} = SessionManager.refresh_session(user2_id)
+      assert session2.access_token == "user2_new_token"
 
       # Should receive correct broadcasts for each user
       assert_receive {:token_refreshed,

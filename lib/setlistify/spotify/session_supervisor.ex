@@ -30,7 +30,7 @@ defmodule Setlistify.Spotify.SessionSupervisor do
     SessionManager.get_token(user_id)
   end
 
-  def refresh_token(user_id) do
-    SessionManager.refresh_token(user_id)
+  def refresh_session(user_id) do
+    SessionManager.refresh_session(user_id)
   end
 end

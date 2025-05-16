@@ -45,20 +45,12 @@ defmodule Setlistify.Spotify.API.ExternalClient do
           )
 
           # Attempt to refresh the token
-          case SessionManager.refresh_token(user_session.user_id) do
-            {:ok, _new_token} ->
+          case SessionManager.refresh_session(user_session.user_id) do
+            {:ok, new_session} ->
               Logger.debug("Successfully refreshed token during #{context}, retrying request")
-              # Get the new session and retry ONCE
-              case SessionManager.get_session(user_session.user_id) do
-                {:ok, new_session} ->
-                  # Create new client and retry the request
-                  new_req = client(new_session)
-                  request_fn.(new_req)
-
-                _ ->
-                  Logger.error("Failed to get new session during #{context}")
-                  {:error, :session_refresh_failed}
-              end
+              # Create new client and retry the request
+              new_req = client(new_session)
+              request_fn.(new_req)
 
             {:error, reason} ->
               Logger.error(

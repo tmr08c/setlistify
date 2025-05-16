@@ -25,9 +25,21 @@ defmodule Setlistify.Spotify.SessionManager do
     end
   end
 
+  @deprecated "Use refresh_session/1 instead"
   def refresh_token(user_id) do
     case lookup(user_id) do
       {:ok, pid} -> GenServer.call(pid, :refresh_token)
+      :error -> {:error, :not_found}
+    end
+  end
+
+  @doc """
+  Refreshes the token for a specific user and returns the updated UserSession.
+  """
+  @spec refresh_session(binary()) :: {:ok, UserSession.t()} | {:error, atom()}
+  def refresh_session(user_id) do
+    case lookup(user_id) do
+      {:ok, pid} -> GenServer.call(pid, :refresh_session)
       :error -> {:error, :not_found}
     end
   end
@@ -99,6 +111,26 @@ defmodule Setlistify.Spotify.SessionManager do
     case do_refresh_token(state) do
       {:ok, new_state, new_tokens} ->
         {:reply, {:ok, new_tokens.access_token}, new_state}
+
+      {:error, _reason} = error ->
+        {:stop, :normal, error, state}
+    end
+  end
+
+  @impl true
+  def handle_call(:refresh_session, _from, state) do
+    case do_refresh_token(state) do
+      {:ok, new_state, _new_tokens} ->
+        # Return the full UserSession
+        session = %UserSession{
+          access_token: new_state.access_token,
+          refresh_token: new_state.refresh_token,
+          expires_at: new_state.expires_at,
+          user_id: new_state.user_id,
+          username: Map.get(new_state, :username, new_state.user_id)
+        }
+
+        {:reply, {:ok, session}, new_state}
 
       {:error, _reason} = error ->
         {:stop, :normal, error, state}

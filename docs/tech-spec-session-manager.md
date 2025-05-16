@@ -210,7 +210,7 @@ end
 1. **Extract Token Refresh Helper** - Refactor token refresh and retry logic into a reusable helper function ✅ COMPLETED
 2. **Protected Routes** - Add auth requirement hook/plug for pages that require authentication, as some pages may need to redirect when user_session is nil instead of rendering without auth
 3. **Documentation** - Update README with new authentication flow
-4. **Rename refresh_token to refresh_session** - Update SessionManager.refresh_token to be refresh_session and return the UserSession instead of just the access token
+4. **Rename refresh_token to refresh_session** - Update SessionManager.refresh_token to be refresh_session and return the UserSession instead of just the access token ✅ COMPLETED
 
 ### Token Refresh Helper Specification
 
@@ -413,6 +413,7 @@ end
 5. ✅ **Fix redirect handling** - Preserve redirect_to through OAuth flow correctly
 6. ✅ **Extract Token Refresh Helper** - Implemented with_token_refresh helper with contextual logging
 7. ✅ **PubSub Broadcasting for Token Refresh** - Implemented real-time LiveView updates when tokens refresh
+8. ✅ **Rename refresh_token to refresh_session** - Added new function that returns full UserSession, deprecated old function
 
 ## Success Criteria
 
