@@ -101,7 +101,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
       assert session.user_id == user_id
     end
 
-    test "redirects and clears session on refresh failure", %{conn: conn, user_id: user_id} do
+    test "clears session and continues on refresh failure", %{conn: conn, user_id: user_id} do
       encrypted_token = Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", @refresh_token)
 
       # Mock failed token refresh using the new function
@@ -127,9 +127,13 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
         |> put_session(:refresh_token, encrypted_token)
         |> RestoreSpotifyToken.call([])
 
-      assert conn.halted
+      # Should not halt the connection
+      refute conn.halted
       assert Phoenix.Flash.get(conn.assigns.flash, :error) =~ "session has expired"
-      assert redirected_to(conn) == "/"
+
+      # Session should be cleared
+      assert get_session(conn, :user_id) == nil
+      assert get_session(conn, :refresh_token) == nil
 
       # After a refresh failure, the session should not exist
       assert {:error, :not_found} = SessionManager.get_session(user_id)

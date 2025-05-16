@@ -29,15 +29,13 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
           conn
 
         {:error, _reason} ->
-          # If refresh fails, clear the session
+          # If refresh fails, clear the session but continue with the request
           conn
           |> clear_session()
           |> Phoenix.Controller.put_flash(
             :error,
             "Your Spotify session has expired. Please log in again."
           )
-          |> Phoenix.Controller.redirect(to: "/")
-          |> halt()
       end
     else
       _ ->

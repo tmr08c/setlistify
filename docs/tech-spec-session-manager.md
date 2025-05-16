@@ -186,9 +186,10 @@ end
 
 ## Remaining Work
 
-1. **Clean up session storage** - Remove old `access_token` and `account_name` from auth_user
-2. **Session expiration handling** - Handle the redirect_to parameter better when sessions expire
+1. **Clean up session storage** - Remove old `access_token` and `account_name` from auth_user ✅ COMPLETED
+2. **Session expiration handling** - ~~Handle the redirect_to parameter better when sessions expire~~ ✅ IMPROVED - Changed to clear session but continue request flow, letting LiveView handle the UI state gracefully without a jarring redirect
 3. **Documentation** - Update README with new authentication flow
+4. **Protected Routes** - Add auth requirement hook/plug for pages that require authentication, as some pages may need to redirect when user_session is nil instead of rendering without auth
 
 ## Success Criteria
 
