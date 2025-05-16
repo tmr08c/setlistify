@@ -228,16 +228,8 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     case result do
       {:ok, %{status: 200, body: body}} ->
         Logger.info("Successfully exchanged code for Spotify tokens")
-        auth_token_response = Spotify.API.Types.TokenResponse.from_json!(body)
 
-        # Convert the token response to our internal format
-        tokens = %{
-          access_token: auth_token_response.access_token,
-          refresh_token: auth_token_response.refresh_token,
-          expires_in: auth_token_response.expires_in
-        }
-
-        build_user_session_from_tokens(tokens)
+        body |> Spotify.API.Types.TokenResponse.from_json!() |> build_user_session_from_tokens()
 
       {:ok, %{status: status, body: body}} when status in [400, 401] ->
         Logger.error(
