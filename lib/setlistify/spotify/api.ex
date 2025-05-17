@@ -1,9 +1,6 @@
 defmodule Setlistify.Spotify.API do
   alias Setlistify.Spotify.UserSession
 
-  @callback username(UserSession.t()) :: String.t()
-  def username(user_session), do: impl().username(user_session)
-
   # TODO Set response type
   @callback search_for_track(UserSession.t(), String.t(), String.t()) ::
               nil | %{uri: String.t(), preview_url: String.t()}

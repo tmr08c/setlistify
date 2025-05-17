@@ -33,11 +33,6 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
     {:ok, user_session: user_session}
   end
 
-  test "username/1", %{user_session: user_session} do
-    # The username function now just returns the username from the UserSession
-    assert ExternalClient.username(user_session) == "Test User"
-  end
-
   describe "search_for_track/3" do
     test "returns the first matching track", %{user_session: user_session} do
       Req.Test.stub(MySpotifyStub, fn

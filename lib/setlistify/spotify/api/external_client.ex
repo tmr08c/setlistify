@@ -13,11 +13,6 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     Req.new(Keyword.merge(default_opts, config_opts))
   end
 
-  def username(%UserSession{username: username}) do
-    # Since we already have the username in the UserSession, just return it
-    username
-  end
-
   # Helper function to handle token refresh and retry logic
   defp with_token_refresh(user_session, request_fn, context) do
     req = client(user_session)
