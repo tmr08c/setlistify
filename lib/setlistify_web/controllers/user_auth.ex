@@ -1,44 +1,53 @@
 defmodule SetlistifyWeb.UserAuth do
+  @moduledoc """
+  Authentication functions for regular HTTP controllers and plug pipeline.
+
+  For LiveView authentication hooks, see SetlistifyWeb.Auth.LiveHooks.
+  """
+
   use SetlistifyWeb, :verified_routes
 
   import Plug.Conn
   import Phoenix.Controller
 
-  alias Setlistify.Spotify.SessionManager
+  @behaviour Plug
 
-  def on_mount(:default, _params, session, socket) do
-    with {:ok, user_id} <- Map.fetch(session, "user_id"),
-         {:ok, user_session} <- SessionManager.get_session(user_id) do
-      # Subscribe to token refresh events for this user
-      Phoenix.PubSub.subscribe(Setlistify.PubSub, "user:#{user_id}")
+  @impl true
+  def init(opts), do: opts
 
-      socket =
-        socket
-        |> Phoenix.Component.assign_new(:user_id, fn -> user_id end)
-        |> Phoenix.Component.assign_new(:user_session, fn -> user_session end)
-        |> Phoenix.Component.assign(:redirect_to, nil)
+  @impl true
+  def call(conn, opts) do
+    require_authenticated_user(conn, opts)
+  end
 
-      {:cont, socket}
+  @doc """
+  Used for HTTP routes that require the user to be authenticated.
+  """
+  def require_authenticated_user(conn, _opts) do
+    if conn |> get_session(:user_id) do
+      conn
     else
-      _ ->
-        socket =
-          socket
-          |> Phoenix.LiveView.attach_hook(
-            :track_redirect_to,
-            :handle_params,
-            &track_redirect_to/3
-          )
-          |> Phoenix.Component.assign(:user_id, nil)
-          |> Phoenix.Component.assign(:user_session, nil)
-
-        {:cont, socket}
+      conn
+      |> put_flash(:error, "You must log in to access this page.")
+      |> store_return_to()
+      |> redirect(to: ~p"/")
+      |> halt()
     end
   end
 
-  # If the user is not logged in, we want to track the current URL so, if they
-  # log in, we can redirect them back to where they came from.
-  defp track_redirect_to(_params, uri, socket) do
-    {:cont, Phoenix.Component.assign(socket, :redirect_to, uri)}
+  # Store the path to redirect to on successful login
+  defp store_return_to(conn) do
+    put_session(conn, :redirect_to, get_current_path_from_conn(conn))
+  end
+
+  defp get_current_path_from_conn(conn) do
+    query_string =
+      case conn.query_string do
+        "" -> ""
+        qs -> "?" <> qs
+      end
+
+    conn.request_path <> query_string
   end
 
   @doc """
