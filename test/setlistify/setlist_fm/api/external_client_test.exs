@@ -26,6 +26,12 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     assert event.venue.name == "9:30 Club"
     assert event.date == Date.new!(2022, 12, 20)
     assert event.id
+
+    # Check total song count - the first setlist has 15 + 5 = 20 songs total
+    assert event.song_count == 20
+
+    # Check venue location
+    assert event.venue.location == "Washington, United States"
   end
 
   @get_response fixture_dir() |> Path.join("setlist_fm_setlist_response.json") |> File.read!()
