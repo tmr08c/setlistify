@@ -9,7 +9,6 @@ defmodule SetlistifyWeb.Router do
     plug :protect_from_forgery
     plug :put_secure_browser_headers
 
-    # TODO Does this need to be a separate plug? Could we only check it if we try to auth the user and find we can't find them in the Registry look up
     plug SetlistifyWeb.Plugs.RestoreSpotifyToken
   end
 
@@ -24,8 +23,6 @@ defmodule SetlistifyWeb.Router do
   scope "/", SetlistifyWeb do
     pipe_through :browser
 
-    # TODO I may want to see if the user is already logged in and redirect
-    # accordingly
     get "/oauth/callbacks/:provider", OAuthCallbackController, :new
     get "/signin/:provider", OAuthCallbackController, :sign_in
     get "/signout", OAuthCallbackController, :sign_out
