@@ -18,6 +18,10 @@ defmodule Setlistify.Application do
       {Finch, name: Setlistify.Finch},
       # Start the Endpoint (http/https)
       SetlistifyWeb.Endpoint,
+      # Start the Registry for user session processes
+      {Registry, keys: :unique, name: Setlistify.UserSessionRegistry},
+      # Start the DynamicSupervisor for user session processes
+      {DynamicSupervisor, name: Setlistify.UserSessionSupervisor},
       # Start Caches
       Supervisor.child_spec(
         {Cachex,

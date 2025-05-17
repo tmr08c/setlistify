@@ -1,32 +1,89 @@
 defmodule SetlistifyWeb.OAuthCallbackController do
+  @moduledoc """
+  Handles OAuth2 authentication flow with Spotify.
+
+  This controller manages the complete OAuth2 authorization code flow:
+  1. Redirects users to Spotify for authorization
+  2. Handles the callback from Spotify with authorization code
+  3. Exchanges the code for access/refresh tokens
+  4. Creates user sessions and manages authentication state
+
+  ## OAuth Flow Diagram
+
+  ```mermaid
+  sequenceDiagram
+    participant User
+    participant Browser
+    participant App as Setlistify App
+    participant OAuth as OAuthCallbackController
+    participant API as Spotify API
+    participant Auth as UserAuth
+    participant SM as SessionManager
+    participant SS as SessionSupervisor
+    
+    User->>Browser: Click "Sign in with Spotify"
+    Browser->>App: GET /signin/spotify
+    App->>OAuth: sign_in(conn, %{"provider" => "spotify"})
+    OAuth->>OAuth: Generate random state
+    OAuth->>Browser: Redirect to Spotify OAuth
+    Browser->>API: Authorization request
+    API->>Browser: Show consent screen
+    User->>Browser: Approve access
+    Browser->>API: User consent
+    API->>Browser: Redirect with code & state
+    Browser->>App: GET /oauth/callbacks/spotify?code=XXX&state=YYY
+    App->>OAuth: new(conn, %{"code" => code, "state" => state})
+    OAuth->>OAuth: Verify state matches
+    OAuth->>API: Exchange code for tokens
+    API->>OAuth: Return tokens & user data
+    OAuth->>OAuth: Create UserSession struct
+    OAuth->>SS: Start session manager process
+    SS->>SM: Create new SessionManager
+    OAuth->>Auth: auth_user(conn, user_id)
+    Auth->>Browser: Set session cookies
+    Auth->>Browser: Redirect to original path or root
+    Browser->>User: Authenticated app page
+  ```
+
+  ## Security Considerations
+
+  - State parameter prevents CSRF attacks by ensuring the callback matches the original request
+  - Tokens are encrypted before storing in session cookies
+  - Refresh tokens are never exposed to the client
+  - SessionManager handles automatic token refresh
+  """
+
   alias SetlistifyWeb.UserAuth
-  alias Setlistify.Spotify
+  alias Setlistify.Spotify.SessionSupervisor
+  alias Setlistify.Spotify.API
 
   use SetlistifyWeb, :controller
 
   def new(conn, %{"provider" => "spotify", "code" => code, "state" => state}) do
     if state == get_session(conn, :oauth_state) do
-      auth =
-        :base64.encode(
-          Application.fetch_env!(:setlistify, :spotify_client_id) <>
-            ":" <> Application.fetch_env!(:setlistify, :spotify_client_secret)
-        )
+      # Exchange authorization code for access and refresh tokens
+      redirect_uri = url(~p"/oauth/callbacks/spotify")
 
-      resp =
-        Req.post!(
-          "https://accounts.spotify.com/api/token",
-          headers: %{authorization: "Basic #{auth}"},
-          form: %{
-            grant_type: :authorization_code,
-            code: code,
-            redirect_uri: url(~p"/oauth/callbacks/spotify")
-          }
-        )
+      case API.exchange_code(code, redirect_uri) do
+        {:ok, user_session} ->
+          # Create encrypted token for session storage
+          encrypted_refresh_token =
+            Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", user_session.refresh_token)
 
-      %{"access_token" => token} = resp.body
-      username = token |> Spotify.API.new() |> Spotify.API.username()
+          # Start session manager process with UserSession
+          # TODO Consider if this should be called in `exchange_code`
+          SessionSupervisor.start_user_token(user_session.user_id, user_session)
 
-      UserAuth.auth_user(conn, {username, token})
+          conn
+          |> put_session(:refresh_token, encrypted_refresh_token)
+          |> put_session(:user_id, user_session.user_id)
+          |> UserAuth.auth_user(user_session.user_id)
+
+        {:error, _reason} ->
+          conn
+          |> put_flash(:error, "Failed to authenticate with Spotify. Please try again.")
+          |> redirect(to: ~p"/")
+      end
     else
       conn
       |> put_flash(:error, "Response from Spotify did not match. Please try again.")
@@ -71,6 +128,17 @@ defmodule SetlistifyWeb.OAuthCallbackController do
   end
 
   def sign_out(conn, _) do
-    UserAuth.log_out_user(conn)
+    user_id = get_session(conn, :user_id)
+
+    # Log out user (which now handles clearing refresh token and the entire session)
+    conn = UserAuth.log_out_user(conn)
+
+    # Stop the session process
+    if user_id do
+      SessionSupervisor.stop_user_token(user_id)
+    end
+
+    # Return the updated conn
+    conn
   end
 end

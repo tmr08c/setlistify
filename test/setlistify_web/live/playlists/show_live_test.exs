@@ -5,8 +5,38 @@ defmodule SetlistifyWeb.Playlists.ShowLiveTest do
   import Hammox
 
   alias Setlistify.Spotify.API.MockClient
+  alias Setlistify.Spotify.{SessionManager, UserSession}
 
   setup :verify_on_exit!
+
+  setup do
+    # Start necessary services for authentication  
+    start_supervised!({Registry, keys: :unique, name: Setlistify.Spotify.UserSessionRegistry})
+
+    start_supervised!(
+      {DynamicSupervisor, strategy: :one_for_one, name: Setlistify.Spotify.SessionSupervisor}
+    )
+
+    # Create a test user session
+    user_id = "test-user-#{System.unique_integer()}"
+
+    user_session = %UserSession{
+      user_id: user_id,
+      username: "Test User",
+      access_token: "test-access-token",
+      refresh_token: "test-refresh-token",
+      expires_at: System.system_time(:second) + 3600
+    }
+
+    # Start the session manager
+    {:ok, _pid} = SessionManager.start_link({user_id, user_session})
+
+    # Create an authenticated connection
+    conn = build_conn()
+    authenticated_conn = authenticate_conn(conn, user_id)
+
+    %{conn: authenticated_conn, user_id: user_id, user_session: user_session}
+  end
 
   describe "playlists" do
     test "displays link to playlist", %{conn: conn} do

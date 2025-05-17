@@ -1,0 +1,115 @@
+defmodule Setlistify.Spotify.SessionSupervisorTest do
+  use ExUnit.Case, async: true
+  alias Setlistify.Spotify.SessionSupervisor
+  alias Setlistify.Spotify.UserSession
+  import Setlistify.Test.RegistryHelpers
+
+  # Generate unique user IDs for each test to prevent test pollution
+  def uniq_user_id(), do: "user_#{System.unique_integer([:positive])}"
+
+  setup do
+    # Just generate a unique user ID for each test
+    user_id = uniq_user_id()
+
+    user_session = %UserSession{
+      access_token: "initial_access_token",
+      refresh_token: "refresh_token",
+      expires_at: System.system_time(:second) + 3600,
+      user_id: user_id,
+      username: "test_user"
+    }
+
+    {:ok, %{user_id: user_id, user_session: user_session}}
+  end
+
+  describe "start_user_token/2" do
+    test "starts a new token process", %{user_id: user_id, user_session: user_session} do
+      # Verify the process doesn't exist before starting
+      assert {:error, :not_found} = SessionSupervisor.get_token(user_id)
+
+      # Now start a fresh process
+      assert {:ok, pid} = SessionSupervisor.start_user_token(user_id, user_session)
+      assert Process.alive?(pid)
+
+      # Verify we can get the token
+      assert {:ok, "initial_access_token"} = SessionSupervisor.get_token(user_id)
+    end
+
+    test "can start multiple user token processes", %{user_session: user_session} do
+      user1 = uniq_user_id()
+      user2 = uniq_user_id()
+
+      user_session1 = %{user_session | user_id: user1}
+      user_session2 = %{user_session | user_id: user2}
+
+      assert {:ok, pid1} = SessionSupervisor.start_user_token(user1, user_session1)
+      assert {:ok, pid2} = SessionSupervisor.start_user_token(user2, user_session2)
+
+      assert Process.alive?(pid1)
+      assert Process.alive?(pid2)
+      assert pid1 != pid2
+    end
+  end
+
+  describe "stop_user_token/1" do
+    test "stops the token process", %{user_id: user_id, user_session: user_session} do
+      {:ok, pid} = SessionSupervisor.start_user_token(user_id, user_session)
+      assert :ok = SessionSupervisor.stop_user_token(user_id)
+      refute Process.alive?(pid)
+    end
+
+    test "returns error when process not found", %{user_id: _user_id} do
+      nonexistent_user = uniq_user_id()
+      assert {:error, :not_found} = SessionSupervisor.stop_user_token(nonexistent_user)
+    end
+
+    test "doesn't automatically start a new token process after stopping", %{
+      user_id: user_id,
+      user_session: user_session
+    } do
+      # Start a token process
+      {:ok, pid} = SessionSupervisor.start_user_token(user_id, user_session)
+      assert Process.alive?(pid)
+
+      # Verify we can get the token
+      assert {:ok, _token} = SessionSupervisor.get_token(user_id)
+
+      # Stop the process
+      assert :ok = SessionSupervisor.stop_user_token(user_id)
+
+      # Verify the process is stopped
+      refute Process.alive?(pid)
+
+      # Verify there are *no* token registry processes for the user
+      #
+      # When we tell the process to stop, we don't want another one to be
+      # started.
+      #
+      # We need to need to add some process sleep time to give the registry time
+      # to update to remove the process.
+      #
+      # If we have a regression and the supervisor starts processes
+      # again, this test can end up being flaky because the process may not
+      # start in time for the registry to find it. If this test starts flaking,
+      # adding a sleep before the lookup may help make the error more
+      # reproduible. We also have a simlar test in OAuthCallbackControllerTest
+      # when we check the sign out, that test may help reproduce the error case
+      # as well.
+      Process.sleep(1)
+
+      refute_in_registry(user_id)
+    end
+  end
+
+  describe "get_token/1" do
+    test "retrieves token from running process", %{user_id: user_id, user_session: user_session} do
+      {:ok, _pid} = SessionSupervisor.start_user_token(user_id, user_session)
+      assert {:ok, "initial_access_token"} = SessionSupervisor.get_token(user_id)
+    end
+
+    test "returns error when process not found for get_token", %{user_id: _user_id} do
+      nonexistent_user = uniq_user_id()
+      assert {:error, :not_found} = SessionSupervisor.get_token(nonexistent_user)
+    end
+  end
+end

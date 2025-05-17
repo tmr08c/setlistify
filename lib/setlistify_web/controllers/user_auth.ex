@@ -1,32 +1,53 @@
 defmodule SetlistifyWeb.UserAuth do
+  @moduledoc """
+  Authentication functions for regular HTTP controllers and plug pipeline.
+
+  For LiveView authentication hooks, see SetlistifyWeb.Auth.LiveHooks.
+  """
+
   use SetlistifyWeb, :verified_routes
 
   import Plug.Conn
   import Phoenix.Controller
 
-  def on_mount(:default, _params, session, socket) do
-    case session do
-      %{"access_token" => access_token, "account_name" => account_name} ->
-        account = %Setlistify.MusicAccount{access_token: access_token, username: account_name}
-        {:cont, Phoenix.Component.assign_new(socket, :music_account, fn -> account end)}
+  @behaviour Plug
 
-      %{} ->
-        socket =
-          Phoenix.LiveView.attach_hook(
-            socket,
-            :track_redirect_to,
-            :handle_params,
-            &track_redirect_to/3
-          )
+  @impl true
+  def init(opts), do: opts
 
-        {:cont, Phoenix.Component.assign(socket, :music_account, nil)}
+  @impl true
+  def call(conn, opts) do
+    require_authenticated_user(conn, opts)
+  end
+
+  @doc """
+  Used for HTTP routes that require the user to be authenticated.
+  """
+  def require_authenticated_user(conn, _opts) do
+    if conn |> get_session(:user_id) do
+      conn
+    else
+      conn
+      |> put_flash(:error, "You must log in to access this page.")
+      |> store_return_to()
+      |> redirect(to: ~p"/")
+      |> halt()
     end
   end
 
-  # If the user is not logged in, we want to track the current URL so, if they
-  # log in, we can redirect them back to where they came from.
-  defp track_redirect_to(_params, uri, socket) do
-    {:cont, Phoenix.Component.assign(socket, :redirect_to, uri)}
+  # Store the path to redirect to on successful login
+  defp store_return_to(conn) do
+    put_session(conn, :redirect_to, get_current_path_from_conn(conn))
+  end
+
+  defp get_current_path_from_conn(conn) do
+    query_string =
+      case conn.query_string do
+        "" -> ""
+        qs -> "?" <> qs
+      end
+
+    conn.request_path <> query_string
   end
 
   @doc """
@@ -41,13 +62,17 @@ defmodule SetlistifyWeb.UserAuth do
   disconnected on log out. The line can be safely removed
   if you are not using LiveView.
   """
-  def auth_user(conn, {username, token}) do
+  def auth_user(conn, user_id) do
+    # Get values we need to preserve before clearing session
+    encrypted_refresh_token = get_session(conn, :refresh_token)
+    redirect_to = get_session(conn, :redirect_to)
+
     conn
     |> renew_session()
-    |> put_session(:access_token, token)
-    |> put_session(:account_name, username)
-    |> put_session(:live_socket_id, "users_sessions:#{Base.url_encode64(token)}")
-    |> redirect(external: get_session(conn, :redirect_to) || url(~p"/"))
+    |> put_session(:user_id, user_id)
+    |> put_session(:refresh_token, encrypted_refresh_token)
+    |> put_session(:live_socket_id, "users_sessions:#{user_id}")
+    |> redirect(external: redirect_to || url(~p"/"))
   end
 
   # This function renews the session ID and erases the whole

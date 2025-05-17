@@ -12,6 +12,12 @@ defmodule Setlistify.MixProject do
       deps: deps(),
       dialyzer: [
         plt_file: {:no_warn, "priv/plts/dialyzer.plt"}
+      ],
+      docs: [
+        main: "readme",
+        extras: ["README.md"],
+        before_closing_head_tag: &before_closing_head_tag/1,
+        mermaid: true
       ]
     ]
   end
@@ -39,6 +45,7 @@ defmodule Setlistify.MixProject do
       {:cachex, "~> 3.6.0"},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:esbuild, "~> 0.5", runtime: Mix.env() == :dev},
+      {:ex_doc, "~> 0.30", only: :dev, runtime: false},
       {:finch, "~> 0.13"},
       {:floki, ">= 0.30.0", only: :test},
       {:gettext, "~> 0.20"},
@@ -73,4 +80,27 @@ defmodule Setlistify.MixProject do
       "assets.deploy": ["tailwind default --minify", "esbuild default --minify", "phx.digest"]
     ]
   end
+
+  # Add Mermaid support to the generated documentation
+  defp before_closing_head_tag(:html) do
+    """
+    <script type="module">
+      import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+      mermaid.initialize({
+        startOnLoad: true,
+        theme: 'default',
+        themeVariables: {
+          primaryColor: '#BB2528',
+          primaryTextColor: '#fff',
+          primaryBorderColor: '#7C0000',
+          lineColor: '#F8B229',
+          secondaryColor: '#006100',
+          tertiaryColor: '#fff'
+        }
+      });
+    </script>
+    """
+  end
+
+  defp before_closing_head_tag(_), do: ""
 end

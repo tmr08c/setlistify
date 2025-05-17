@@ -8,6 +8,12 @@ defmodule SetlistifyWeb.Router do
     plug :put_root_layout, {SetlistifyWeb.Layouts, :root}
     plug :protect_from_forgery
     plug :put_secure_browser_headers
+
+    plug SetlistifyWeb.Plugs.RestoreSpotifyToken
+  end
+
+  pipeline :require_authenticated_user do
+    plug SetlistifyWeb.UserAuth, :require_authenticated_user
   end
 
   pipeline :api do
@@ -17,15 +23,17 @@ defmodule SetlistifyWeb.Router do
   scope "/", SetlistifyWeb do
     pipe_through :browser
 
-    # TODO I may want to see if the user is already logged in and redirect
-    # accordingly
     get "/oauth/callbacks/:provider", OAuthCallbackController, :new
     get "/signin/:provider", OAuthCallbackController, :sign_in
     get "/signout", OAuthCallbackController, :sign_out
 
-    live_session :default, on_mount: SetlistifyWeb.UserAuth do
+    live_session :default, on_mount: SetlistifyWeb.Auth.LiveHooks do
       live "/", SearchLive
       live "/setlist/:id", Setlists.ShowLive
+    end
+
+    live_session :require_authenticated_user,
+      on_mount: {SetlistifyWeb.Auth.LiveHooks, :ensure_authenticated} do
       live "/playlists", Playlists.ShowLive
     end
   end

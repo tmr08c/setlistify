@@ -29,6 +29,9 @@ defmodule SetlistifyWeb.ConnCase do
       import Phoenix.ConnTest
       import SetlistifyWeb.ConnCase
 
+      # Import test helpers
+      import Setlistify.Test.RegistryHelpers
+
       # Find elements using the test-specific identifier pattern set up in
       # `UrlStordenerWeb.html_helper`
       defp tid(id), do: "[data-test-#{id}]"
@@ -45,5 +48,9 @@ defmodule SetlistifyWeb.ConnCase do
 
   setup do
     {:ok, conn: Phoenix.ConnTest.build_conn()}
+  end
+
+  def authenticate_conn(conn, user_id) do
+    Plug.Test.init_test_session(conn, user_id: user_id)
   end
 end
