@@ -1,4 +1,91 @@
 defmodule Setlistify.Spotify.SessionManager do
+  @moduledoc """
+  GenServer that manages Spotify user sessions including tokens and user data.
+
+  The SessionManager is responsible for:
+  - Storing and managing UserSession data (tokens, user info)
+  - Automatically refreshing tokens before they expire
+  - Broadcasting token refresh events via PubSub
+  - Providing a centralized access point for session data
+
+  ## Architecture Diagram
+
+  ```mermaid
+  graph TB
+    subgraph "Session Management"
+      SS[SessionSupervisor]
+      SM1[SessionManager<br/>User 1]
+      SM2[SessionManager<br/>User 2]
+      SM3[SessionManager<br/>User N]
+      REG[(UserSessionRegistry)]
+    end
+    
+    subgraph "Web Layer"
+      LV1[LiveView 1]
+      LV2[LiveView 2]
+      CTRL[Controllers]
+    end
+    
+    subgraph "External"
+      SPOT[Spotify API]
+    end
+    
+    SS -->|supervises| SM1
+    SS -->|supervises| SM2
+    SS -->|supervises| SM3
+    
+    SM1 -->|registers| REG
+    SM2 -->|registers| REG
+    SM3 -->|registers| REG
+    
+    LV1 -->|get_session| SM1
+    LV2 -->|get_session| SM2
+    CTRL -->|get_session| SM1
+    
+    SM1 -->|refresh_token| SPOT
+    SM1 -->|broadcasts| PubSub
+    
+    PubSub -.->|token_refreshed| LV1
+    PubSub -.->|token_refreshed| LV2
+  ```
+
+  ## Token Refresh Flow
+
+  ```mermaid
+  sequenceDiagram
+    participant SM as SessionManager
+    participant Timer
+    participant API as Spotify API
+    participant PS as PubSub
+    participant LV as LiveView
+    
+    Note over SM: Token expires in 60 min
+    SM->>Timer: Schedule refresh<br/>(55 min)
+    Note over SM: Wait...
+    Timer-->>SM: :refresh_token message
+    SM->>API: POST /api/token<br/>(refresh_token)
+    API-->>SM: New tokens
+    SM->>SM: Update state
+    SM->>Timer: Schedule next refresh
+    SM->>PS: broadcast(:token_refreshed)
+    PS-->>LV: {:token_refreshed, session}
+    LV->>LV: Update socket assigns
+  ```
+
+  ## Usage Example
+
+  ```elixir
+  # Start a new session
+  {:ok, pid} = SessionManager.start_link({user_id, user_session})
+
+  # Get current session data
+  {:ok, session} = SessionManager.get_session(user_id)
+
+  # Manually refresh (usually automatic)
+  {:ok, new_session} = SessionManager.refresh_session(user_id)
+  ```
+  """
+
   use GenServer
   require Logger
   alias Setlistify.Spotify.API

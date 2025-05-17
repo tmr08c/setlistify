@@ -209,7 +209,7 @@ end
 
 1. **Extract Token Refresh Helper** - Refactor token refresh and retry logic into a reusable helper function ✅ COMPLETED
 2. **Protected Routes** - Add auth requirement hook/plug for pages that require authentication, as some pages may need to redirect when user_session is nil instead of rendering without auth ✅ COMPLETED
-3. **Documentation** - Update README with new authentication flow
+3. **Documentation** - Update README with new authentication flow ✅ COMPLETED
 4. **Rename refresh_token to refresh_session** - Update SessionManager.refresh_token to be refresh_session and return the UserSession instead of just the access token ✅ COMPLETED
 
 ### Protected Routes Specification ✅ COMPLETED

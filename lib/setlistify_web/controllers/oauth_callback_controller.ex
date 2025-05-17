@@ -1,4 +1,58 @@
 defmodule SetlistifyWeb.OAuthCallbackController do
+  @moduledoc """
+  Handles OAuth2 authentication flow with Spotify.
+
+  This controller manages the complete OAuth2 authorization code flow:
+  1. Redirects users to Spotify for authorization
+  2. Handles the callback from Spotify with authorization code
+  3. Exchanges the code for access/refresh tokens
+  4. Creates user sessions and manages authentication state
+
+  ## OAuth Flow Diagram
+
+  ```mermaid
+  sequenceDiagram
+    participant User
+    participant Browser
+    participant App as Setlistify App
+    participant OAuth as OAuthCallbackController
+    participant API as Spotify API
+    participant Auth as UserAuth
+    participant SM as SessionManager
+    participant SS as SessionSupervisor
+    
+    User->>Browser: Click "Sign in with Spotify"
+    Browser->>App: GET /signin/spotify
+    App->>OAuth: sign_in(conn, %{"provider" => "spotify"})
+    OAuth->>OAuth: Generate random state
+    OAuth->>Browser: Redirect to Spotify OAuth
+    Browser->>API: Authorization request
+    API->>Browser: Show consent screen
+    User->>Browser: Approve access
+    Browser->>API: User consent
+    API->>Browser: Redirect with code & state
+    Browser->>App: GET /oauth/callbacks/spotify?code=XXX&state=YYY
+    App->>OAuth: new(conn, %{"code" => code, "state" => state})
+    OAuth->>OAuth: Verify state matches
+    OAuth->>API: Exchange code for tokens
+    API->>OAuth: Return tokens & user data
+    OAuth->>OAuth: Create UserSession struct
+    OAuth->>SS: Start session manager process
+    SS->>SM: Create new SessionManager
+    OAuth->>Auth: auth_user(conn, user_id)
+    Auth->>Browser: Set session cookies
+    Auth->>Browser: Redirect to original path or root
+    Browser->>User: Authenticated app page
+  ```
+
+  ## Security Considerations
+
+  - State parameter prevents CSRF attacks by ensuring the callback matches the original request
+  - Tokens are encrypted before storing in session cookies
+  - Refresh tokens are never exposed to the client
+  - SessionManager handles automatic token refresh
+  """
+
   alias SetlistifyWeb.UserAuth
   alias Setlistify.Spotify.SessionSupervisor
   alias Setlistify.Spotify.API
