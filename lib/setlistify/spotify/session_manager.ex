@@ -155,23 +155,23 @@ defmodule Setlistify.Spotify.SessionManager do
     state =
       case initial_data do
         %UserSession{} = session ->
-          # UserSession already has expires_at
-          schedule_refresh(session.expires_at - timestamp() - @refresh_threshold)
-
-          Map.from_struct(session)
-          |> Map.put(:user_id, user_id)
+          Map.put(session, :user_id, user_id)
 
         # TODO this should be removed when we have fully migrated to UserSession
         %{access_token: _, refresh_token: _, expires_in: expires_in} = tokens ->
-          # Legacy token map format - convert to proper state
-          schedule_refresh(expires_in - @refresh_threshold)
-
           tokens
           |> Map.put(:expires_at, timestamp() + expires_in)
           |> Map.put(:user_id, user_id)
       end
 
-    {:ok, state}
+    {:ok, state, {:continue, :schedule_refresh}}
+  end
+
+  @impl true
+  def handle_continue(:schedule_refresh, state = %{expires_at: expires_at}) do
+    schedule_refresh(expires_at - timestamp() - @refresh_threshold)
+
+    {:noreply, state}
   end
 
   @impl true
