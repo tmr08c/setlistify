@@ -105,3 +105,11 @@ Please design this solution with the existing codebase in mind, which you can ex
 - **Renamed UserTokenRegistry to UserSessionRegistry** for registry management
 - Updated all module references and test files accordingly
 - Maintained backward compatibility during the refactoring
+
+### Future Improvements
+- **Simplify socket assigns for authentication**
+  - Consider removing the separate `user_id` from socket assigns since it duplicates data in `user_session.user_id`
+  - Would require updating PubSub subscriptions to use `user_session.user_id` instead of `user_id` directly
+  - Would need to update tests that expect both fields in assigns
+  - This would follow DRY principle and create a single source of truth for user identification
+  - Trade-off: Slight inconvenience of accessing nested field vs. cleaner data model

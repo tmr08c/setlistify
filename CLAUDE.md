@@ -88,3 +88,5 @@ These values are automatically loaded from `.env` in development. You can copy `
 ## Development Reminders
 
 - run mix format after making changes
+- mix test to run all tests
+- Run format frequently to avoid style warnings

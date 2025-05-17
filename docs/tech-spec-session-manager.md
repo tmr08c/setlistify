@@ -208,11 +208,11 @@ end
 ## Remaining Work
 
 1. **Extract Token Refresh Helper** - Refactor token refresh and retry logic into a reusable helper function ✅ COMPLETED
-2. **Protected Routes** - Add auth requirement hook/plug for pages that require authentication, as some pages may need to redirect when user_session is nil instead of rendering without auth
+2. **Protected Routes** - Add auth requirement hook/plug for pages that require authentication, as some pages may need to redirect when user_session is nil instead of rendering without auth ✅ COMPLETED
 3. **Documentation** - Update README with new authentication flow
 4. **Rename refresh_token to refresh_session** - Update SessionManager.refresh_token to be refresh_session and return the UserSession instead of just the access token ✅ COMPLETED
 
-### Protected Routes Specification
+### Protected Routes Specification ✅ COMPLETED
 
 #### Problem
 Currently, some pages in the application may render without authentication, showing partial or broken UI when `user_session` is nil. These pages should require authentication and redirect unauthenticated users to the login page.
@@ -224,33 +224,65 @@ Create an authentication requirement hook/plug that:
 - Can be applied to specific routes that require authentication
 - Handles both regular HTTP requests and LiveView pages
 
-#### Implementation Approach
+#### Implementation
 
-1. **Create a new auth plug for protected routes**
-   - `require_authenticated_user/2` plug function
-   - Check for `user_id` in session
-   - Redirect to login with appropriate flash message
-   - Store the original path to redirect back after login
+1. **Added authentication plug for protected routes** ✅
+   - Created `require_authenticated_user/2` plug function in UserAuth
+   - Checks for `user_id` in session
+   - Redirects to login with appropriate flash message
+   - Stores the original path in session to redirect back after login
 
-2. **Update router to use the new plug**
-   - Create a new pipeline for authenticated routes
-   - Apply to routes that require authentication
-   - Identify which routes need protection
+2. **Updated router configuration** ✅
+   - Added new pipeline for authenticated routes
+   - Created protected LiveView session with `:ensure_authenticated` hook
+   - Moved `/playlists` route to protected session
 
-3. **Update LiveView mount hooks**
-   - Add a new on_mount callback for protected LiveViews
-   - Similar logic to the plug but for LiveView mounting
-   - Handle redirect appropriately for LiveView context
+3. **Added LiveView mount hook** ✅
+   - Created `on_mount(:ensure_authenticated)` callback in new `SetlistifyWeb.Auth.LiveHooks` module
+   - Separated LiveView concerns from HTTP plug concerns
+   - Validates user session and redirects if not authenticated
+   - Handles proper LiveView redirects with flash messages
+   - Preserves redirect URL for post-login navigation
 
-4. **Test the authentication flow**
-   - Verify unauthenticated users are redirected
-   - Ensure redirect_to is preserved through OAuth flow
-   - Test both standard and LiveView pages
+4. **Architectural Refactoring** ✅
+   - Extracted LiveView authentication to `SetlistifyWeb.Auth.LiveHooks`
+   - Kept HTTP plug authentication in `SetlistifyWeb.UserAuth`
+   - Improved separation of concerns and code organization
+   - Fixed warning about duplicate function clauses
 
-#### Routes to Protect
-- `/playlists` - User's playlists page
-- `/playlists/:id` - Individual playlist page
-- Any future user-specific pages
+5. **Comprehensive test coverage** ✅
+   - Tests for HTTP plug authentication
+   - Tests for LiveView mount authentication
+   - Protected routes integration tests
+   - Separate test suite for LiveHooks module
+   - All tests passing
+
+#### Protected Routes
+- `/playlists` - User's playlists page (now protected)
+- Future user-specific pages can use the same pattern
+
+#### Usage
+```elixir
+# For regular routes
+pipeline :require_authenticated_user do
+  plug SetlistifyWeb.UserAuth, :require_authenticated_user
+end
+
+# For LiveView routes
+live_session :require_authenticated_user,
+  on_mount: {SetlistifyWeb.Auth.LiveHooks, :ensure_authenticated} do
+  live "/playlists", Playlists.ShowLive
+end
+```
+
+#### Module Structure
+```
+lib/setlistify_web/
+├── controllers/
+│   └── user_auth.ex          # HTTP plug authentication
+└── auth/
+    └── live_hooks.ex         # LiveView authentication hooks
+```
 
 ### Token Refresh Helper Specification
 

@@ -13,6 +13,10 @@ defmodule SetlistifyWeb.Router do
     plug SetlistifyWeb.Plugs.RestoreSpotifyToken
   end
 
+  pipeline :require_authenticated_user do
+    plug SetlistifyWeb.UserAuth, :require_authenticated_user
+  end
+
   pipeline :api do
     plug :accepts, ["json"]
   end
@@ -26,9 +30,13 @@ defmodule SetlistifyWeb.Router do
     get "/signin/:provider", OAuthCallbackController, :sign_in
     get "/signout", OAuthCallbackController, :sign_out
 
-    live_session :default, on_mount: SetlistifyWeb.UserAuth do
+    live_session :default, on_mount: SetlistifyWeb.Auth.LiveHooks do
       live "/", SearchLive
       live "/setlist/:id", Setlists.ShowLive
+    end
+
+    live_session :require_authenticated_user,
+      on_mount: {SetlistifyWeb.Auth.LiveHooks, :ensure_authenticated} do
       live "/playlists", Playlists.ShowLive
     end
   end

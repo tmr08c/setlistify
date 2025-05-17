@@ -49,4 +49,8 @@ defmodule SetlistifyWeb.ConnCase do
   setup do
     {:ok, conn: Phoenix.ConnTest.build_conn()}
   end
+
+  def authenticate_conn(conn, user_id) do
+    Plug.Test.init_test_session(conn, user_id: user_id)
+  end
 end
