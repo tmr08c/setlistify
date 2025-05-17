@@ -27,12 +27,28 @@ defmodule Setlistify.Spotify.SessionManagerTest do
 
   describe "start_link/1" do
     test "starts a new session manager process", %{user_id: user_id, initial_token: initial_token} do
-      assert {:ok, pid} = SessionManager.start_link({user_id, initial_token})
+      user_session = %UserSession{
+        access_token: initial_token.access_token,
+        refresh_token: initial_token.refresh_token,
+        expires_at: System.system_time(:second) + initial_token.expires_in,
+        user_id: user_id,
+        username: "test_user"
+      }
+
+      assert {:ok, pid} = SessionManager.start_link({user_id, user_session})
       assert Process.alive?(pid)
     end
 
     test "registers process with Registry", %{user_id: user_id, initial_token: initial_token} do
-      {:ok, pid} = SessionManager.start_link({user_id, initial_token})
+      user_session = %UserSession{
+        access_token: initial_token.access_token,
+        refresh_token: initial_token.refresh_token,
+        expires_at: System.system_time(:second) + initial_token.expires_in,
+        user_id: user_id,
+        username: "test_user"
+      }
+
+      {:ok, pid} = SessionManager.start_link({user_id, user_session})
       registry_pid = assert_in_registry(user_id)
       assert registry_pid == pid
     end
@@ -54,7 +70,15 @@ defmodule Setlistify.Spotify.SessionManagerTest do
 
   describe "get_token/1" do
     test "returns current access token", %{user_id: user_id, initial_token: initial_token} do
-      {:ok, _pid} = SessionManager.start_link({user_id, initial_token})
+      user_session = %UserSession{
+        access_token: initial_token.access_token,
+        refresh_token: initial_token.refresh_token,
+        expires_at: System.system_time(:second) + initial_token.expires_in,
+        user_id: user_id,
+        username: "test_user"
+      }
+
+      {:ok, _pid} = SessionManager.start_link({user_id, user_session})
       assert {:ok, "initial_access_token"} = SessionManager.get_token(user_id)
     end
 
@@ -66,7 +90,15 @@ defmodule Setlistify.Spotify.SessionManagerTest do
 
   describe "get_session/1" do
     test "returns UserSession struct", %{user_id: user_id, initial_token: initial_token} do
-      {:ok, _pid} = SessionManager.start_link({user_id, initial_token})
+      user_session = %UserSession{
+        access_token: initial_token.access_token,
+        refresh_token: initial_token.refresh_token,
+        expires_at: System.system_time(:second) + initial_token.expires_in,
+        user_id: user_id,
+        username: "test_user"
+      }
+
+      {:ok, _pid} = SessionManager.start_link({user_id, user_session})
       assert {:ok, session} = SessionManager.get_session(user_id)
       assert %UserSession{} = session
       assert session.access_token == "initial_access_token"
@@ -148,7 +180,15 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       user_id: user_id,
       initial_token: initial_token
     } do
-      {:ok, pid} = SessionManager.start_link({user_id, initial_token})
+      user_session = %UserSession{
+        access_token: initial_token.access_token,
+        refresh_token: initial_token.refresh_token,
+        expires_at: System.system_time(:second) + initial_token.expires_in,
+        user_id: user_id,
+        username: "test_user"
+      }
+
+      {:ok, pid} = SessionManager.start_link({user_id, user_session})
 
       expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
         assert refresh_token == initial_token.refresh_token
@@ -176,7 +216,15 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       user_id: user_id,
       initial_token: initial_token
     } do
-      {:ok, pid} = SessionManager.start_link({user_id, initial_token})
+      user_session = %UserSession{
+        access_token: initial_token.access_token,
+        refresh_token: initial_token.refresh_token,
+        expires_at: System.system_time(:second) + initial_token.expires_in,
+        user_id: user_id,
+        username: "test_user"
+      }
+
+      {:ok, pid} = SessionManager.start_link({user_id, user_session})
 
       expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
         assert refresh_token == initial_token.refresh_token
@@ -230,8 +278,17 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       # @refresh_threshold, so we will attempt to refresh right away.
       token = %{initial_token | expires_in: 1}
 
+      # Create a UserSession for the test
+      user_session = %UserSession{
+        access_token: token.access_token,
+        refresh_token: token.refresh_token,
+        expires_at: System.system_time(:second) + token.expires_in,
+        user_id: user_id,
+        username: "test_user"
+      }
+
       # Start the session process which should trigger a refresh immediately
-      {:ok, pid} = SessionManager.start_link({user_id, token})
+      {:ok, pid} = SessionManager.start_link({user_id, user_session})
 
       assert Process.alive?(pid)
 
@@ -259,7 +316,15 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       end)
 
       # Start the session
-      {:ok, pid} = SessionManager.start_link({user_id, initial_token})
+      user_session = %UserSession{
+        access_token: initial_token.access_token,
+        refresh_token: initial_token.refresh_token,
+        expires_at: System.system_time(:second) + initial_token.expires_in,
+        user_id: user_id,
+        username: "test_user"
+      }
+
+      {:ok, pid} = SessionManager.start_link({user_id, user_session})
 
       # Ensure we're allowing the right process
       allow(Setlistify.Spotify.API.MockClient, self(), pid)
@@ -297,7 +362,15 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       end)
 
       # Start session for user1
-      {:ok, pid} = SessionManager.start_link({user1_id, initial_token})
+      user1_session = %UserSession{
+        access_token: initial_token.access_token,
+        refresh_token: initial_token.refresh_token,
+        expires_at: System.system_time(:second) + initial_token.expires_in,
+        user_id: user1_id,
+        username: "test_user"
+      }
+
+      {:ok, pid} = SessionManager.start_link({user1_id, user1_session})
 
       # Allow the mock to be called from the session process
       allow(Setlistify.Spotify.API.MockClient, self(), pid)
@@ -342,8 +415,24 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       user1_tokens = %{initial_token | refresh_token: "user1_refresh"}
       user2_tokens = %{initial_token | refresh_token: "user2_refresh"}
 
-      {:ok, pid1} = SessionManager.start_link({user1_id, user1_tokens})
-      {:ok, pid2} = SessionManager.start_link({user2_id, user2_tokens})
+      user1_session = %UserSession{
+        access_token: user1_tokens.access_token,
+        refresh_token: user1_tokens.refresh_token,
+        expires_at: System.system_time(:second) + user1_tokens.expires_in,
+        user_id: user1_id,
+        username: "test_user1"
+      }
+
+      user2_session = %UserSession{
+        access_token: user2_tokens.access_token,
+        refresh_token: user2_tokens.refresh_token,
+        expires_at: System.system_time(:second) + user2_tokens.expires_in,
+        user_id: user2_id,
+        username: "test_user2"
+      }
+
+      {:ok, pid1} = SessionManager.start_link({user1_id, user1_session})
+      {:ok, pid2} = SessionManager.start_link({user2_id, user2_session})
 
       # Allow the mocks to be called from the session processes
       allow(Setlistify.Spotify.API.MockClient, self(), pid1)

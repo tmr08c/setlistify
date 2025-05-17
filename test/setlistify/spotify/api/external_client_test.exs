@@ -523,14 +523,19 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       # Stop any existing manager first
       Setlistify.Spotify.SessionSupervisor.stop_user_token(@user_profile_user_id)
 
+      # Create a UserSession instance for the test
+      test_session = %UserSession{
+        access_token: "expired_access_token",
+        refresh_token: "refresh_token",
+        expires_at: System.system_time(:second) + 10000,
+        user_id: @user_profile_user_id,
+        username: "Test User"
+      }
+
       {:ok, pid} =
         Setlistify.Spotify.SessionSupervisor.start_user_token(
           @user_profile_user_id,
-          %{
-            access_token: "expired_access_token",
-            refresh_token: "refresh_token",
-            expires_in: 10000
-          }
+          test_session
         )
 
       expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn _refresh_token ->
@@ -598,14 +603,19 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       # Stop any existing manager first
       Setlistify.Spotify.SessionSupervisor.stop_user_token(@user_profile_user_id)
 
+      # Create a UserSession instance for the test
+      test_session = %UserSession{
+        access_token: "expired_access_token",
+        refresh_token: "bad_refresh_token",
+        expires_at: System.system_time(:second) + 10000,
+        user_id: @user_profile_user_id,
+        username: "Test User"
+      }
+
       {:ok, pid} =
         Setlistify.Spotify.SessionSupervisor.start_user_token(
           @user_profile_user_id,
-          %{
-            access_token: "expired_access_token",
-            refresh_token: "bad_refresh_token",
-            expires_in: 10000
-          }
+          test_session
         )
 
       # Mock failed token refresh
@@ -656,14 +666,19 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       # Stop any existing manager first
       Setlistify.Spotify.SessionSupervisor.stop_user_token(@user_profile_user_id)
 
+      # Create a UserSession instance for the test
+      test_session = %UserSession{
+        access_token: "expired_access_token",
+        refresh_token: "refresh_token",
+        expires_at: System.system_time(:second) + 10000,
+        user_id: @user_profile_user_id,
+        username: "Test User"
+      }
+
       {:ok, pid} =
         Setlistify.Spotify.SessionSupervisor.start_user_token(
           @user_profile_user_id,
-          %{
-            access_token: "expired_access_token",
-            refresh_token: "refresh_token",
-            expires_in: 10000
-          }
+          test_session
         )
 
       expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn _refresh_token ->
@@ -730,14 +745,19 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       # Stop any existing manager first
       Setlistify.Spotify.SessionSupervisor.stop_user_token(@user_profile_user_id)
 
+      # Create a UserSession instance for the test
+      test_session = %UserSession{
+        access_token: "expired_access_token",
+        refresh_token: "bad_refresh_token",
+        expires_at: System.system_time(:second) + 10000,
+        user_id: @user_profile_user_id,
+        username: "Test User"
+      }
+
       {:ok, pid} =
         Setlistify.Spotify.SessionSupervisor.start_user_token(
           @user_profile_user_id,
-          %{
-            access_token: "expired_access_token",
-            refresh_token: "bad_refresh_token",
-            expires_in: 10000
-          }
+          test_session
         )
 
       # Mock failed token refresh
@@ -790,14 +810,19 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       # Stop any existing manager first
       Setlistify.Spotify.SessionSupervisor.stop_user_token(@user_profile_user_id)
 
+      # Create a UserSession instance for the test
+      test_session = %UserSession{
+        access_token: "expired_access_token",
+        refresh_token: "refresh_token",
+        expires_at: System.system_time(:second) + 10000,
+        user_id: @user_profile_user_id,
+        username: "Test User"
+      }
+
       {:ok, pid} =
         Setlistify.Spotify.SessionSupervisor.start_user_token(
           @user_profile_user_id,
-          %{
-            access_token: "expired_access_token",
-            refresh_token: "refresh_token",
-            expires_in: 10000
-          }
+          test_session
         )
 
       expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn _refresh_token ->

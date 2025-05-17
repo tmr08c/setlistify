@@ -151,18 +151,21 @@ defmodule Setlistify.Spotify.SessionManager do
   # Server Callbacks
 
   @impl true
-  def init({user_id, initial_data}) do
-    state =
-      case initial_data do
-        %UserSession{} = session ->
-          Map.put(session, :user_id, user_id)
+  def init({user_id, %UserSession{} = session}) do
+    # Use the passed user_id to ensure consistency with Registry key
+    state = Map.put(session, :user_id, user_id)
+    {:ok, state, {:continue, :schedule_refresh}}
+  end
 
-        # TODO this should be removed when we have fully migrated to UserSession
-        %{access_token: _, refresh_token: _, expires_in: expires_in} = tokens ->
-          tokens
-          |> Map.put(:expires_at, timestamp() + expires_in)
-          |> Map.put(:user_id, user_id)
-      end
+  @deprecated "Use UserSession struct instead of map in init/1"
+  def init(
+        {user_id, %{access_token: _, refresh_token: _, expires_in: expires_in} = initial_tokens}
+      ) do
+    # Handle deprecated map format - convert to state structure
+    state =
+      initial_tokens
+      |> Map.put(:user_id, user_id)
+      |> Map.put(:expires_at, timestamp() + expires_in)
 
     {:ok, state, {:continue, :schedule_refresh}}
   end
