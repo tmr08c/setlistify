@@ -193,6 +193,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
         "song1" ->
           # We have a match for song
           %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
+
         "song2" ->
           # We cannot find a match for the song
           nil
