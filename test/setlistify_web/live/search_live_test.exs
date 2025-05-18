@@ -41,6 +41,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
 
     assert html =~ "The Beatles"
     assert html =~ "Compaq Center"
+    assert html =~ "Houston, TX, United States"
     assert html =~ "2023-01-01"
 
     view |> element(tid("setlist-#{setlist_id}")) |> render_click()
