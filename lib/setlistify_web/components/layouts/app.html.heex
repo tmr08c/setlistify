@@ -1,35 +1,52 @@
-<header class="px-4 sm:px-6 lg:px-8">
-  <div class="flex items-center justify-between border-b border-zinc-100 py-3">
-    <div class="flex items-center gap-4">
-      <a href="/">
-        <Heroicons.home class="w-5 h-5" />
+<header class="fixed top-0 left-0 right-0 bg-black z-50 px-4 sm:px-6 lg:px-8 border-b border-gray-800">
+  <div class="flex items-center justify-between h-16 sm:h-20">
+    <div class="flex items-center gap-2 sm:gap-4">
+      <a href="/" class="flex items-center">
+        <.logo />
+        <span class="text-lg sm:text-xl font-bold ml-2">Setlistify</span>
       </a>
     </div>
-    <div :if={@user_session} class="flex space-x-4">
-      <span>Signed in as {@user_session.username}</span>
-
-      <span>
-        <.link navigate={~p"/signout"}>Sign Out</.link>
-      </span>
+    <div :if={@user_session} class="flex items-center space-x-2 sm:space-x-4">
+      <span class="text-gray-400 hidden sm:inline">Signed in as {@user_session.username}</span>
+      <span class="text-gray-400 sm:hidden text-sm">{@user_session.username}</span>
+      <.link
+        navigate={~p"/signout"}
+        class="text-white hover:text-emerald-400 transition-colors text-sm sm:text-base"
+      >
+        Sign Out
+      </.link>
     </div>
-    <div :if={!@user_session} class="flex space-x-4">
-      <span>
-        <%= if @redirect_to do %>
-          <.link navigate={~p"/signin/spotify?redirect_to=#{@redirect_to}"}>
-            Sign in with Spotify
-          </.link>
-        <% else %>
-          <.link navigate={~p"/signin/spotify"}>
-            Sign in with Spotify
-          </.link>
-        <% end %>
-      </span>
+    <div :if={!@user_session} class="flex space-x-2 sm:space-x-4">
+      <%= if @redirect_to do %>
+        <.link
+          navigate={~p"/signin/spotify?redirect_to=#{@redirect_to}"}
+          class="text-white hover:text-emerald-400 transition-colors text-sm sm:text-base whitespace-nowrap"
+        >
+          <span class="hidden sm:inline">Sign in with Spotify</span>
+          <span class="sm:hidden">Sign in</span>
+        </.link>
+      <% else %>
+        <.link
+          navigate={~p"/signin/spotify"}
+          class="text-white hover:text-emerald-400 transition-colors text-sm sm:text-base whitespace-nowrap"
+        >
+          <span class="hidden sm:inline">Sign in with Spotify</span>
+          <span class="sm:hidden">Sign in</span>
+        </.link>
+      <% end %>
     </div>
   </div>
 </header>
-<main class="px-4 py-20 sm:px-6 lg:px-8">
-  <div class="mx-auto max-w-2xl">
-    <.flash_group flash={@flash} />
+<main class="pt-16 sm:pt-24 min-h-screen">
+  <.flash_group flash={@flash} />
+  <div class="pb-20">
     {@inner_content}
   </div>
 </main>
+<footer class="border-t border-gray-800 py-6 px-4 text-center">
+  <div class="max-w-6xl mx-auto">
+    <p class="text-sm text-gray-500">
+      © {Date.utc_today().year} Setlistify • Not affiliated with Spotify
+    </p>
+  </div>
+</footer>

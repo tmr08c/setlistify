@@ -23,7 +23,37 @@ import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
-let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}})
+
+let Hooks = {}
+
+Hooks.RotatingText = {
+  mounted() {
+    this.texts = JSON.parse(this.el.dataset.texts)
+    this.currentIndex = 0
+    this.textElement = this.el.querySelector("span")
+
+    setInterval(() => {
+      this.currentIndex = (this.currentIndex + 1) % this.texts.length
+      this.textElement.style.opacity = "0"
+
+      setTimeout(() => {
+        this.textElement.textContent = this.texts[this.currentIndex]
+        this.textElement.style.opacity = "1"
+      }, 300)
+    }, 3000)
+  }
+}
+
+Hooks.DelayedBounce = {
+  mounted() {
+    // Start bouncing after a 3 second delay
+    setTimeout(() => {
+      this.el.classList.add('bouncing')
+    }, 3000)
+  }
+}
+
+let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}, hooks: Hooks})
 
 // Show progress bar on live navigation and form submits
 topbar.config({barColors: {0: "#29d"}, shadowColor: "rgba(0, 0, 0, .3)"})
@@ -38,4 +68,3 @@ liveSocket.connect()
 // >> liveSocket.enableLatencySim(1000)  // enabled for duration of browser session
 // >> liveSocket.disableLatencySim()
 window.liveSocket = liveSocket
-

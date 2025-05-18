@@ -3,3 +3,66 @@
 @import "tailwindcss/utilities";
 
 /* This file is for your main application CSS */
+
+/* Learn More button delayed animation */
+.learn-more-button {
+  /* Button is visible from the start */
+}
+
+/* Bouncing animation */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+.learn-more-button.bouncing {
+  animation: bounce 1.5s ease-in-out infinite;
+}
+
+/* Rotating text animation */
+[phx-hook="RotatingText"] span {
+  transition: opacity 0.3s ease-in-out;
+  display: inline-block;
+}
+
+
+/* Custom scrollbar for dark theme */
+@media (hover: hover) {
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #111827;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #374151;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #4b5563;
+  }
+}
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #374151 #111827;
+}
+
+
+/* Fix for mobile browsers with bottom bars - no Tailwind equivalent */
+@supports (-webkit-touch-callout: none) {
+  /* iOS Safari */
+  body {
+    /* Compensate for mobile browser UI */
+    min-height: -webkit-fill-available;
+  }
+}

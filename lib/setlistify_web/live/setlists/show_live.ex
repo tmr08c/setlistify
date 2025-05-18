@@ -38,7 +38,8 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
        artist: setlist.artist,
        venue_name: setlist.venue.name,
        venue_location: setlist.venue.location,
-       date: setlist.date
+       date: setlist.date,
+       redirect_to: "/setlist/#{id}"
      )}
   end
 
@@ -82,56 +83,102 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="mb-3 text-2xl">{@artist} @ {@venue_name}</h1>
-    <p class="mb-3 text-slate-500">{format_location(@venue_location)} • {@date}</p>
+    <.section_container class="py-6 sm:py-10">
+      <div class="max-w-4xl mx-auto px-4">
+        <div class="text-center mb-6 sm:mb-8">
+          <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">
+            <span class="text-emerald-400">{@artist}</span>
+          </h1>
+          <p class="text-lg sm:text-xl text-gray-400">
+            {@venue_name}
+          </p>
+          <p class="text-gray-400">
+            {format_location(@venue_location)} • {@date}
+          </p>
+        </div>
 
-    <div class="space-y-3 mb-6">
-      <%= for set <- @sets do %>
-        <article>
-          <h2 class="text-lg mb-3">{set_name(set)}</h2>
+        <div class="bg-black/50 border border-gray-800 rounded-xl p-4 sm:p-6 md:p-8 mb-6 sm:mb-8">
+          <div class="space-y-8">
+            <%= for set <- @sets do %>
+              <article>
+                <h2 class="text-xl font-semibold mb-4 text-emerald-400">
+                  {set_name(set)}
+                </h2>
 
-          <ol class="list-decimal">
-            <%= for song <- set.songs do %>
-              <li>
-                <div class="flex space-x-1 items-center">
-                  <Heroicons.check
-                    :if={@user_session && song[:spotify_info] != nil}
-                    mini
-                    class="h-4 w-4"
-                    aria-label="found matching song"
-                  />
-                  <Heroicons.x_mark
-                    :if={@user_session && song[:spotify_info] == nil}
-                    mini
-                    class="h-4 w-4"
-                    aria-label="no matching song found"
-                  />
-                  <span>{song.title}</span>
-                </div>
-              </li>
+                <ol class="list-decimal list-inside space-y-2 ml-6">
+                  <%= for song <- set.songs do %>
+                    <li>
+                      <span class="inline-flex items-center gap-2">
+                        <Heroicons.check
+                          :if={@user_session && song[:spotify_info] != nil}
+                          mini
+                          class="h-4 w-4 text-emerald-500"
+                          aria-label="found matching song"
+                        />
+                        <Heroicons.x_mark
+                          :if={@user_session && song[:spotify_info] == nil}
+                          mini
+                          class="h-4 w-4 text-red-500"
+                          aria-label="no matching song found"
+                        />
+                        <span class={[
+                          @user_session && song[:spotify_info] == nil && "text-gray-500",
+                          "inline"
+                        ]}>
+                          {song.title}
+                        </span>
+                      </span>
+                    </li>
+                  <% end %>
+                </ol>
+              </article>
             <% end %>
-          </ol>
-        </article>
-      <% end %>
-    </div>
+          </div>
+        </div>
 
-    <hr />
-
-    <%= if @user_session do %>
-      <.button type="button" phx-click="create_playlist">
-        Create Playlist
-      </.button>
-    <% else %>
-      <.link navigate={~p"/signin/spotify?redirect_to=#{@redirect_to}"}>
-        Sign in to Spotify to Create Playlist
-      </.link>
-    <% end %>
+        <div class="bg-gray-900 rounded-xl p-4 sm:p-6 border border-gray-800">
+          <div class="text-center">
+            <%= if @user_session do %>
+              <div class="space-y-4">
+                <p class="text-gray-400 mb-4">
+                  Ready to create your playlist? We'll add all available tracks to your Spotify account.
+                </p>
+                <.button type="button" phx-click="create_playlist" class="w-full sm:w-auto">
+                  <.icon name="hero-musical-note" class="mr-2" /> Create Spotify Playlist
+                </.button>
+              </div>
+            <% else %>
+              <div class="space-y-4">
+                <p class="text-gray-400 mb-4">
+                  Sign in to create a Spotify playlist from this setlist
+                </p>
+                <.link
+                  navigate={~p"/signin/spotify?redirect_to=#{@redirect_to}"}
+                  class={[
+                    "inline-flex items-center justify-center",
+                    "bg-emerald-500 text-black font-semibold",
+                    "px-6 py-3 rounded-full",
+                    "hover:bg-emerald-400 transition-colors"
+                  ]}
+                >
+                  <.icon name="hero-arrow-right-end-on-rectangle" class="mr-2" /> Sign in with Spotify
+                </.link>
+              </div>
+            <% end %>
+          </div>
+        </div>
+      </div>
+    </.section_container>
     """
   end
 
   defp set_name(%{encore: encore}) when is_number(encore), do: "Encore #{encore}"
   defp set_name(%{name: nil}), do: "Unnamed Setlist"
-  defp set_name(%{name: name}), do: name
+
+  defp set_name(%{name: name}) do
+    # Remove trailing colon if present for consistency with encore format
+    String.trim_trailing(name, ":")
+  end
 
   defp format_location(%{city: city, state: state, country: country}) do
     [city, state, country]
