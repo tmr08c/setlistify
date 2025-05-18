@@ -50,7 +50,7 @@ defmodule SetlistifyWeb.CoreComponents do
       data-cancel={JS.exec(@on_cancel, "phx-remove")}
       class="relative z-50 hidden"
     >
-      <div id={"#{@id}-bg"} class="bg-zinc-50/90 fixed inset-0 transition-opacity" aria-hidden="true" />
+      <div id={"#{@id}-bg"} class="bg-black/80 fixed inset-0 transition-opacity" aria-hidden="true" />
       <div
         class="fixed inset-0 overflow-y-auto"
         aria-labelledby={"#{@id}-title"}
@@ -66,19 +66,19 @@ defmodule SetlistifyWeb.CoreComponents do
               phx-window-keydown={JS.exec("data-cancel", to: "##{@id}")}
               phx-key="escape"
               phx-click-away={JS.exec("data-cancel", to: "##{@id}")}
-              class="shadow-zinc-700/10 ring-zinc-700/10 relative hidden rounded-2xl bg-white p-14 shadow-lg ring-1 transition"
+              class="shadow-emerald-500/10 ring-gray-800 relative hidden rounded-2xl bg-gray-900 p-14 shadow-lg ring-1 transition"
             >
               <div class="absolute top-6 right-5">
                 <button
                   phx-click={JS.exec("data-cancel", to: "##{@id}")}
                   type="button"
-                  class="-m-3 flex-none p-3 opacity-20 hover:opacity-40"
+                  class="-m-3 flex-none p-3 text-gray-400 hover:text-white transition-colors"
                   aria-label={gettext("close")}
                 >
                   <.icon name="hero-x-mark-solid" class="h-5 w-5" />
                 </button>
               </div>
-              <div id={"#{@id}-content"}>
+              <div id={"#{@id}-content"} class="text-white">
                 {render_slot(@inner_block)}
               </div>
             </.focus_wrap>
@@ -116,8 +116,8 @@ defmodule SetlistifyWeb.CoreComponents do
       role="alert"
       class={[
         "fixed top-2 right-2 mr-2 w-80 sm:w-96 z-50 rounded-lg p-3 ring-1",
-        @kind == :info && "bg-emerald-50 text-emerald-800 ring-emerald-500 fill-cyan-900",
-        @kind == :error && "bg-rose-50 text-rose-900 shadow-md ring-rose-500 fill-rose-900"
+        @kind == :info && "bg-emerald-900 text-emerald-100 ring-emerald-500",
+        @kind == :error && "bg-rose-900 text-rose-100 shadow-md ring-rose-500"
       ]}
       {@rest}
     >
@@ -201,7 +201,7 @@ defmodule SetlistifyWeb.CoreComponents do
   def simple_form(assigns) do
     ~H"""
     <.form :let={f} for={@for} as={@as} {@rest}>
-      <div class="mt-10 space-y-8 bg-white">
+      <div class="space-y-8">
         {render_slot(@inner_block, f)}
         <div :for={action <- @actions} class="mt-2 flex items-center justify-between gap-6">
           {render_slot(action, f)}
@@ -230,8 +230,8 @@ defmodule SetlistifyWeb.CoreComponents do
     <button
       type={@type}
       class={[
-        "phx-submit-loading:opacity-75 rounded-lg bg-zinc-900 hover:bg-zinc-700 py-2 px-3",
-        "text-sm font-semibold leading-6 text-white active:text-white/80",
+        "phx-submit-loading:opacity-75 rounded-full bg-emerald-500 hover:bg-emerald-400 px-8 py-3",
+        "text-base font-semibold text-black transition-colors",
         @class
       ]}
       {@rest}
@@ -309,7 +309,7 @@ defmodule SetlistifyWeb.CoreComponents do
 
     ~H"""
     <div>
-      <label class="flex items-center gap-4 text-sm leading-6 text-zinc-600">
+      <label class="flex items-center gap-4 text-sm leading-6 text-gray-300">
         <input type="hidden" name={@name} value="false" disabled={@rest[:disabled]} />
         <input
           type="checkbox"
@@ -317,7 +317,7 @@ defmodule SetlistifyWeb.CoreComponents do
           name={@name}
           value="true"
           checked={@checked}
-          class="rounded border-zinc-300 text-zinc-900 focus:ring-0"
+          class="rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500"
           {@rest}
         /> {@label}
       </label>
@@ -333,7 +333,7 @@ defmodule SetlistifyWeb.CoreComponents do
       <select
         id={@id}
         name={@name}
-        class="mt-2 block w-full rounded-md border border-gray-300 bg-white shadow-sm focus:border-zinc-400 focus:ring-0 sm:text-sm"
+        class="mt-2 block w-full rounded-lg border border-gray-800 bg-gray-900 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 sm:text-sm"
         multiple={@multiple}
         {@rest}
       >
@@ -353,8 +353,8 @@ defmodule SetlistifyWeb.CoreComponents do
         id={@id}
         name={@name}
         class={[
-          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6 min-h-[6rem]",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
+          "mt-2 block w-full rounded-lg bg-gray-900 text-white focus:ring-2 focus:ring-emerald-500 sm:text-sm sm:leading-6 min-h-[6rem]",
+          @errors == [] && "border-gray-800 focus:border-emerald-500",
           @errors != [] && "border-rose-400 focus:border-rose-400"
         ]}
         {@rest}
@@ -375,8 +375,8 @@ defmodule SetlistifyWeb.CoreComponents do
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "mt-2 block w-full rounded-lg text-zinc-900 focus:ring-0 sm:text-sm sm:leading-6",
-          @errors == [] && "border-zinc-300 focus:border-zinc-400",
+          "mt-2 block w-full rounded-lg bg-gray-900 text-white border focus:ring-2 focus:ring-emerald-500 sm:text-sm sm:leading-6",
+          @errors == [] && "border-gray-800 focus:border-emerald-500",
           @errors != [] && "border-rose-400 focus:border-rose-400"
         ]}
         {@rest}
@@ -394,7 +394,7 @@ defmodule SetlistifyWeb.CoreComponents do
 
   def label(assigns) do
     ~H"""
-    <label for={@for} class="block text-sm font-semibold leading-6 text-zinc-800">
+    <label for={@for} class="block text-sm font-semibold leading-6 text-gray-300">
       {render_slot(@inner_block)}
     </label>
     """
@@ -427,10 +427,10 @@ defmodule SetlistifyWeb.CoreComponents do
     ~H"""
     <header class={[@actions != [] && "flex items-center justify-between gap-6", @class]}>
       <div>
-        <h1 class="text-lg font-semibold leading-8 text-zinc-800">
+        <h1 class="text-lg font-semibold leading-8 text-white">
           {render_slot(@inner_block)}
         </h1>
-        <p :if={@subtitle != []} class="mt-2 text-sm leading-6 text-zinc-600">
+        <p :if={@subtitle != []} class="mt-2 text-sm leading-6 text-gray-400">
           {render_slot(@subtitle)}
         </p>
       </div>
@@ -473,7 +473,7 @@ defmodule SetlistifyWeb.CoreComponents do
     ~H"""
     <div class="overflow-y-auto px-4 sm:overflow-visible sm:px-0">
       <table class="w-[40rem] mt-11 sm:w-full">
-        <thead class="text-sm text-left leading-6 text-zinc-500">
+        <thead class="text-sm text-left leading-6 text-gray-400">
           <tr>
             <th :for={col <- @col} class="p-0 pb-4 pr-6 font-normal">{col[:label]}</th>
             <th :if={@action != []} class="relative p-0 pb-4">
@@ -484,27 +484,27 @@ defmodule SetlistifyWeb.CoreComponents do
         <tbody
           id={@id}
           phx-update={match?(%Phoenix.LiveView.LiveStream{}, @rows) && "stream"}
-          class="relative divide-y divide-zinc-100 border-t border-zinc-200 text-sm leading-6 text-zinc-700"
+          class="relative divide-y divide-gray-800 border-t border-gray-800 text-sm leading-6 text-gray-300"
         >
-          <tr :for={row <- @rows} id={@row_id && @row_id.(row)} class="group hover:bg-zinc-50">
+          <tr :for={row <- @rows} id={@row_id && @row_id.(row)} class="group hover:bg-gray-900">
             <td
               :for={{col, i} <- Enum.with_index(@col)}
               phx-click={@row_click && @row_click.(row)}
               class={["relative p-0", @row_click && "hover:cursor-pointer"]}
             >
               <div class="block py-4 pr-6">
-                <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-zinc-50 sm:rounded-l-xl" />
-                <span class={["relative", i == 0 && "font-semibold text-zinc-900"]}>
+                <span class="absolute -inset-y-px right-0 -left-4 group-hover:bg-gray-900 sm:rounded-l-xl" />
+                <span class={["relative", i == 0 && "font-semibold text-white"]}>
                   {render_slot(col, @row_item.(row))}
                 </span>
               </div>
             </td>
             <td :if={@action != []} class="relative w-14 p-0">
               <div class="relative whitespace-nowrap py-4 text-right text-sm font-medium">
-                <span class="absolute -inset-y-px -right-4 left-0 group-hover:bg-zinc-50 sm:rounded-r-xl" />
+                <span class="absolute -inset-y-px -right-4 left-0 group-hover:bg-gray-900 sm:rounded-r-xl" />
                 <span
                   :for={action <- @action}
-                  class="relative ml-4 font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
+                  class="relative ml-4 font-semibold leading-6 text-emerald-400 hover:text-emerald-300"
                 >
                   {render_slot(action, @row_item.(row))}
                 </span>
@@ -534,10 +534,10 @@ defmodule SetlistifyWeb.CoreComponents do
   def list(assigns) do
     ~H"""
     <div class="mt-14">
-      <dl class="-my-4 divide-y divide-zinc-100">
+      <dl class="-my-4 divide-y divide-gray-800">
         <div :for={item <- @item} class="flex gap-4 py-4 text-sm leading-6 sm:gap-8">
-          <dt class="w-1/4 flex-none text-zinc-500">{item.title}</dt>
-          <dd class="text-zinc-700">{render_slot(item)}</dd>
+          <dt class="w-1/4 flex-none text-gray-400">{item.title}</dt>
+          <dd class="text-white">{render_slot(item)}</dd>
         </div>
       </dl>
     </div>
@@ -559,7 +559,7 @@ defmodule SetlistifyWeb.CoreComponents do
     <div class="mt-16">
       <.link
         navigate={@navigate}
-        class="text-sm font-semibold leading-6 text-zinc-900 hover:text-zinc-700"
+        class="text-sm font-semibold leading-6 text-emerald-400 hover:text-emerald-300 transition-colors"
       >
         <.icon name="hero-arrow-left-solid" class="h-3 w-3" /> {render_slot(@inner_block)}
       </.link>
@@ -669,5 +669,124 @@ defmodule SetlistifyWeb.CoreComponents do
   """
   def translate_errors(errors, field) when is_list(errors) do
     for {^field, {msg, opts}} <- errors, do: translate_error({msg, opts})
+  end
+
+  @doc """
+  Renders the Setlistify logo.
+  """
+  def logo(assigns) do
+    ~H"""
+    <div class="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center">
+      <div class="w-2 h-2 bg-black rounded-full"></div>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a search input with integrated button.
+  """
+  attr :placeholder, :string, default: "Search..."
+  attr :name, :string, required: true
+  attr :id, :string, required: true
+  attr :value, :string, default: ""
+  attr :rest, :global
+
+  def search_input(assigns) do
+    ~H"""
+    <div class="relative w-full max-w-2xl">
+      <input
+        type="text"
+        id={@id}
+        name={@name}
+        value={@value}
+        class="w-full px-4 sm:px-6 py-3 sm:py-4 pr-14 sm:pr-16 text-sm sm:text-base text-white bg-gray-900 border border-gray-800 rounded-full placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+        placeholder={@placeholder}
+        {@rest}
+      />
+      <button
+        type="submit"
+        class="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 bg-emerald-500 rounded-full flex items-center justify-center hover:bg-emerald-400 transition-colors"
+      >
+        <Heroicons.magnifying_glass class="w-4 h-4 sm:w-5 sm:h-5 text-black" />
+      </button>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a hero section with centered content.
+  """
+  attr :class, :string, default: nil
+  slot :inner_block, required: true
+
+  def hero_section(assigns) do
+    ~H"""
+    <section class={["h-[calc(100vh-6rem)] flex flex-col", @class]}>
+      {render_slot(@inner_block)}
+    </section>
+    """
+  end
+
+  @doc """
+  Renders rotating text with animation.
+  """
+  attr :texts, :list, required: true
+  attr :class, :string, default: nil
+
+  def rotating_text(assigns) do
+    ~H"""
+    <div class={["h-12 flex justify-center items-center", @class]}>
+      <div
+        id="rotating-text"
+        class="text-emerald-300 text-lg sm:text-xl md:text-2xl font-medium text-center px-4"
+        phx-hook="RotatingText"
+        data-texts={Jason.encode!(@texts)}
+      >
+        <span>{List.first(@texts)}</span>
+      </div>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a step card for the "How it Works" section.
+  """
+  attr :number, :integer, required: true
+  attr :title, :string, required: true
+  attr :class, :string, default: nil
+  slot :inner_block, required: true
+
+  def step_card(assigns) do
+    ~H"""
+    <div class={[
+      "bg-black/30 backdrop-blur-sm border border-gray-800 rounded-xl p-6 flex flex-col items-center text-center",
+      @class
+    ]}>
+      <div class="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-black font-bold text-2xl mb-4">
+        {@number}
+      </div>
+      <h3 class="text-xl font-semibold mb-3">{@title}</h3>
+      <p class="text-gray-400 leading-relaxed">
+        {render_slot(@inner_block)}
+      </p>
+    </div>
+    """
+  end
+
+  @doc """
+  Renders a section container with consistent padding.
+  """
+  attr :id, :string, default: nil
+  attr :class, :string, default: nil
+  slot :inner_block, required: true
+
+  def section_container(assigns) do
+    ~H"""
+    <section id={@id} class={["py-8 sm:py-20 px-4", @class]}>
+      <div class="max-w-6xl mx-auto">
+        {render_slot(@inner_block)}
+      </div>
+    </section>
+    """
   end
 end

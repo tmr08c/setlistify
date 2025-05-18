@@ -186,18 +186,18 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
       }
     end)
 
-    # Mock searching for songs in setlist
+    # Mock searching for songs in setlist - use stub to handle async ordering
     Spotify.API.MockClient
-    |> expect(:search_for_track, fn ^user_session, ^artist, "song1" ->
-      # We have a match for song
-      %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
-    end)
-    |> expect(:search_for_track, 2, fn ^user_session, ^artist, "song2" ->
-      # We cannot find a match for the song
-      #
-      # Because we do not find a match, we will not cache it, resulting in
-      # making the call twice for both mount calls
-      nil
+    |> stub(:search_for_track, fn _user_session, _artist, title ->
+      case title do
+        "song1" ->
+          # We have a match for song
+          %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
+
+        "song2" ->
+          # We cannot find a match for the song
+          nil
+      end
     end)
 
     {:ok, view, _html} = live(conn, ~p"/setlist/#{setlist_id}")
@@ -222,7 +222,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
       {:ok, :tracks_added}
     end)
 
-    result = view |> element("button", "Create Playlist") |> render_click()
+    result = view |> element("button", "Create Spotify Playlist") |> render_click()
     {:error, {:live_redirect, %{kind: :push, to: redirect_to}}} = result
 
     assert redirect_to == "/playlists?provider=spotify&url=" <> URI.encode_www_form(external_url)

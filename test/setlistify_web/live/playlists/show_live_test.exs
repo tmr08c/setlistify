@@ -49,7 +49,7 @@ defmodule SetlistifyWeb.Playlists.ShowLiveTest do
 
       {:ok, view, _html} = live(conn, ~p"/playlists?provider=spotify&url=#{external_url}")
 
-      assert has_element?(view, "a[href='#{external_url}']", "here")
+      assert has_element?(view, "a[href='#{external_url}']", "Open in Spotify")
     end
 
     test "embeds Spotify player using oEmbed", %{conn: conn} do

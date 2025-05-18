@@ -13,7 +13,29 @@ module.exports = {
     extend: {
       colors: {
         brand: "#FD4F00",
-      }
+      },
+      fontFamily: {
+        'sans': ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+      },
+      animation: {
+        'fade-slide': 'fadeSlide 1s ease-out',
+        'bounce': 'bounce 1.5s ease-in-out infinite',
+        'bounce-delayed': 'bounceDelayed 2s ease-in-out infinite',
+      },
+      keyframes: {
+        fadeSlide: {
+          '0%': { opacity: '0', transform: 'translateY(10px)' },
+          '100%': { opacity: '1', transform: 'translateY(0)' },
+        },
+        bounceDelayed: {
+          '0%, 20%': { transform: 'translateY(0)' },
+          '30%': { transform: 'translateY(-20px)' },
+          '40%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
+          '60%': { transform: 'translateY(0)' },
+          '100%': { transform: 'translateY(0)' },
+        },
+      },
     },
   },
   plugins: [
