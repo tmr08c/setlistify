@@ -55,7 +55,12 @@ config :setlistify, SetlistifyWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :setlistify, dev_routes: true
 
-# Do not include metadata nor timestamps in development logs
+# Logger configuration - Loki will be added in Phase 2
+config :logger,
+  backends: [:console],
+  level: :debug
+
+# Console logger configuration
 config :logger, :console, format: "[$level] $message\n"
 
 # Set a higher stacktrace during development. Avoid configuring such
@@ -69,3 +74,32 @@ config :phoenix, :plug_init_mode, :runtime
 config :swoosh, :api_client, false
 
 config :phoenix_live_view, debug_heex_annotations: true
+
+# OpenTelemetry configuration for local development
+config :opentelemetry,
+  traces_exporter: :otlp
+
+config :opentelemetry_exporter,
+  otlp_protocol: :http_protobuf,
+  otlp_endpoint: "http://localhost:4318"
+
+# Resource attributes for local development
+config :opentelemetry, :resource,
+  service: [
+    name: "setlistify",
+    namespace: "setlistify",
+    version: Mix.Project.config()[:version] || "dev"
+  ],
+  deployment: [
+    environment: "development"
+  ],
+  host: [
+    name: System.get_env("HOSTNAME", "localhost")
+  ]
+
+# Local Loki logger configuration - will be enabled in Phase 2
+# config :loki_logger,
+#   url: "http://localhost:3100/loki/api/v1/push",
+#   level: :info,
+#   format: :json,
+#   metadata: [:request_id, :trace_id, :span_id]

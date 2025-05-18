@@ -56,6 +56,18 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# OpenTelemetry default configuration
+config :opentelemetry,
+  # Default to no exporter (tests)
+  traces_exporter: :none
+
+# This will be overridden in dev/prod
+config :opentelemetry, :resource,
+  service: [
+    name: "setlistify",
+    namespace: "setlistify"
+  ]
+
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

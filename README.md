@@ -48,6 +48,12 @@ live_session :require_authenticated_user,
 end
 ```
 
+## Requirements
+
+- Elixir 1.14+
+- Node.js 16+
+- Docker and Docker Compose (for OpenTelemetry local development)
+
 ## Development
 
 ### Getting set up
@@ -85,6 +91,49 @@ mix test
 ``` shell
 mix format
 ```
+
+## Observability with OpenTelemetry
+
+Setlistify includes comprehensive observability through OpenTelemetry, providing distributed tracing, structured logging, and metrics collection.
+
+### Local Development Stack
+
+For local development, we provide a complete Grafana stack that runs in Docker:
+
+```shell
+# Start the OpenTelemetry stack (checks for Docker automatically)
+./bin/otel-local start
+
+# View logs
+./bin/otel-local logs
+
+# Check status
+./bin/otel-local status
+
+# Stop the stack  
+./bin/otel-local stop
+
+# Reset (remove all data)
+./bin/otel-local reset
+```
+
+The script will check that Docker is installed and running before starting the stack.
+
+Once started, you can access:
+- **Grafana UI**: http://localhost:3000 (no login required)
+- **Tempo** (traces): http://localhost:3200
+- **Loki** (logs): http://localhost:3100
+- **Prometheus** (metrics): http://localhost:9090
+
+### Instrumentation
+
+The application is instrumented with:
+- Distributed tracing for all HTTP requests and LiveView interactions
+- Structured logging with trace context correlation
+- Metrics for API performance, OAuth operations, and business events
+- Automatic error tracking and exception reporting
+
+See the [OpenTelemetry Implementation Tech Spec](docs/opentelemetry-implementation-tech-spec.md) for detailed information.
 
 ## API Integration
 

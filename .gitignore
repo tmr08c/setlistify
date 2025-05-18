@@ -41,3 +41,8 @@ npm-debug.log
 /priv/plts/*.plt.hash
 
 **/.claude/settings.local.json
+
+# OpenTelemetry Docker data directories
+docker/tempo-data/
+docker/loki-data/
+docker/prometheus-data/
