@@ -30,7 +30,14 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
       %{
         artist: "The Beatles",
-        venue: %{name: "Compaq Center"},
+        venue: %{
+          name: "Compaq Center",
+          location: %{
+            city: "Houston",
+            state: "TX",
+            country: "United States"
+          }
+        },
         date: Date.new!(2023, 01, 01),
         sets: [
           %{name: "Warm up", songs: [%{title: "a warm up song"}]},
@@ -51,6 +58,33 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     assert html =~ "Encore 1"
     assert html =~ "encore song1"
     assert html =~ "encore song2"
+  end
+
+  test "displays venue location when viewing a setlist", %{conn: conn} do
+    setlist_id = Ecto.UUID.generate()
+
+    expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
+      %{
+        artist: "The Beatles",
+        venue: %{
+          name: "Compaq Center",
+          location: %{
+            city: "Houston",
+            state: "TX",
+            country: "United States"
+          }
+        },
+        date: Date.new!(2023, 01, 01),
+        sets: [
+          %{name: "Main", songs: [%{title: "Hey Jude"}]}
+        ]
+      }
+    end)
+
+    {:ok, _view, html} = live(conn, ~p"/setlist/#{setlist_id}")
+
+    assert html =~ "Compaq Center"
+    assert html =~ "Houston, TX, United States"
   end
 
   test "viewing a setlist when authenticated with Spotify searches for songs", %{conn: conn} do
@@ -77,7 +111,14 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
       %{
         artist: artist,
-        venue: %{name: "Compaq Center"},
+        venue: %{
+          name: "Compaq Center",
+          location: %{
+            city: "Houston",
+            state: "TX",
+            country: "United States"
+          }
+        },
         date: Date.utc_today(),
         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
       }
@@ -132,7 +173,14 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
       %{
         artist: artist,
-        venue: %{name: venue},
+        venue: %{
+          name: venue,
+          location: %{
+            city: "Houston",
+            state: "TX",
+            country: "United States"
+          }
+        },
         date: Date.utc_today(),
         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
       }

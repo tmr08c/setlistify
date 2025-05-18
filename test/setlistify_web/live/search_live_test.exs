@@ -21,9 +21,13 @@ defmodule SetlistifyWeb.SearchLiveTest do
       [
         %{
           artist: "The Beatles",
-          venue: %{name: "Compaq Center"},
+          venue: %{
+            name: "Compaq Center",
+            location: %{city: "Houston", state: "TX", country: "United States"}
+          },
           date: Date.new!(2023, 01, 01),
-          id: setlist_id
+          id: setlist_id,
+          song_count: 12
         }
       ]
     end)
@@ -37,9 +41,54 @@ defmodule SetlistifyWeb.SearchLiveTest do
 
     assert html =~ "The Beatles"
     assert html =~ "Compaq Center"
+    assert html =~ "Houston, TX, United States"
     assert html =~ "2023-01-01"
 
     view |> element(tid("setlist-#{setlist_id}")) |> render_click()
     assert_redirected(view, ~p"/setlist/#{setlist_id}")
+  end
+
+  test "displays song count in search results", %{conn: conn} do
+    expect(SetlistFm.API.MockClient, :search, 1, fn "test artist" ->
+      [
+        %{
+          artist: "Test Artist",
+          venue: %{
+            name: "Test Venue 1",
+            location: %{city: "Austin", state: "TX", country: "United States"}
+          },
+          date: Date.new!(2023, 01, 01),
+          id: "test-id-1",
+          song_count: 0
+        },
+        %{
+          artist: "Test Artist",
+          venue: %{
+            name: "Test Venue 2",
+            location: %{city: "Seattle", state: "WA", country: "United States"}
+          },
+          date: Date.new!(2023, 01, 02),
+          id: "test-id-2",
+          song_count: 15
+        },
+        %{
+          artist: "Test Artist",
+          venue: %{
+            name: "Test Venue 3",
+            location: %{city: "Nashville", state: "TN", country: "United States"}
+          },
+          date: Date.new!(2023, 01, 03),
+          id: "test-id-3",
+          song_count: 1
+        }
+      ]
+    end)
+
+    {:ok, _view, html} = live(conn, ~p"/?query=test+artist")
+
+    # Check that song counts are displayed
+    assert html =~ "0 songs"
+    assert html =~ "15 songs"
+    assert html =~ "1 song"
   end
 end

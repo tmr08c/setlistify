@@ -1,5 +1,6 @@
 defmodule SetlistifyWeb.SearchLive do
   use SetlistifyWeb, :live_view
+  use Gettext, backend: SetlistifyWeb.Gettext
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, setlists: [], search: search_form(%{}))}
@@ -52,8 +53,18 @@ defmodule SetlistifyWeb.SearchLive do
               <div class="py-3">{setlist.date.day}</div>
             </time>
             <div class="self-center space-y-1">
-              <div class="text-lg">{setlist.artist}</div>
-              <div class="font-light text-slate-400">{setlist.venue.name}</div>
+              <div class="text-lg">
+                {setlist.artist}
+                <span class="text-sm text-slate-500 ml-2">
+                  {format_song_count(setlist.song_count)}
+                </span>
+              </div>
+              <div class="font-light text-slate-400">
+                {setlist.venue.name}
+                <span class="text-slate-300">
+                  • {format_location(setlist.venue.location)}
+                </span>
+              </div>
             </div>
           </li>
         </.link>
@@ -73,5 +84,15 @@ defmodule SetlistifyWeb.SearchLive do
     |> Ecto.Changeset.cast(params, Map.keys(types))
     |> Ecto.Changeset.validate_required(Map.keys(types))
     |> Map.put(:action, :validate)
+  end
+
+  defp format_location(%{city: city, state: state, country: country}) do
+    [city, state, country]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(", ")
+  end
+
+  defp format_song_count(count) do
+    ngettext("1 song", "%{count} songs", count)
   end
 end
