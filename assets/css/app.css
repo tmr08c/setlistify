@@ -4,11 +4,6 @@
 
 /* This file is for your main application CSS */
 
-/* Learn More button delayed animation */
-.learn-more-button {
-  /* Button is visible from the start */
-}
-
 /* Bouncing animation */
 @keyframes bounce {
   0%, 100% {
@@ -19,7 +14,7 @@
   }
 }
 
-.learn-more-button.bouncing {
+.bouncing {
   animation: bounce 1.5s ease-in-out infinite;
 }
 
