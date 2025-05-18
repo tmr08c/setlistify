@@ -141,6 +141,9 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
 
     assert result.artist == "Modest Mouse"
     assert result.venue.name == "Terminal 5"
+    assert result.venue.location.city == "New York"
+    assert result.venue.location.state == "NY"
+    assert result.venue.location.country == "United States"
     assert result.date == Date.new!(2022, 12, 19)
     assert length(result.sets) == 3
     assert Enum.count(result.sets, & &1.encore) == 1

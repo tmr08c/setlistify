@@ -16,7 +16,14 @@ defmodule Setlistify.SetlistFm.API do
 
   @type setlist() :: %{
           artist: String.t(),
-          venue: %{name: String.t()},
+          venue: %{
+            name: String.t(),
+            location: %{
+              city: String.t(),
+              state: String.t() | nil,
+              country: String.t()
+            }
+          },
           date: Date.t(),
           sets: [set()]
         }

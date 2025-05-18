@@ -41,7 +41,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
 
     %{
       "artist" => %{"name" => artist_name},
-      "venue" => %{"name" => venue_name},
+      "venue" => %{"name" => venue_name, "city" => city_data},
       "eventDate" => date,
       # The [docs](https://api.setlist.fm/docs/1.0/json_Setlist.html) do not
       # indicate there is a "sets" key, but only a "set" key which is an array
@@ -57,7 +57,14 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
         %{name: set["name"], encore: set["encore"], songs: songs}
       end)
 
-    %{artist: artist_name, venue: %{name: venue_name}, date: format_date(date), sets: sets}
+    location = build_location(city_data)
+
+    %{
+      artist: artist_name,
+      venue: %{name: venue_name, location: location},
+      date: format_date(date),
+      sets: sets
+    }
   end
 
   defp request(endpoint) do
