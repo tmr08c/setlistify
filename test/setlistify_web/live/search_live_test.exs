@@ -21,9 +21,13 @@ defmodule SetlistifyWeb.SearchLiveTest do
       [
         %{
           artist: "The Beatles",
-          venue: %{name: "Compaq Center"},
+          venue: %{
+            name: "Compaq Center",
+            location: %{city: "Houston", state: "TX", country: "United States"}
+          },
           date: Date.new!(2023, 01, 01),
-          id: setlist_id
+          id: setlist_id,
+          song_count: 12
         }
       ]
     end)

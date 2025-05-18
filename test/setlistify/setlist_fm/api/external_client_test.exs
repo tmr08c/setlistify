@@ -31,7 +31,97 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     assert event.song_count == 20
 
     # Check venue location
-    assert event.venue.location == "Washington, United States"
+    assert event.venue.location.city == "Washington"
+    assert event.venue.location.state == "DC"
+    assert event.venue.location.country == "United States"
+  end
+
+  test "search/1 handles international venues without state" do
+    # Create a response with different venue formats
+    response = %{
+      "setlist" => [
+        %{
+          "artist" => %{"name" => "The Beatles"},
+          "eventDate" => "01-01-2023",
+          "id" => "test-id-1",
+          "venue" => %{
+            "name" => "Royal Albert Hall",
+            "city" => %{
+              "name" => "London",
+              "country" => %{"name" => "United Kingdom"}
+              # Note: no stateCode for UK venues
+            }
+          },
+          "sets" => %{"set" => [%{"song" => [%{"name" => "Hey Jude"}]}]}
+        },
+        %{
+          "artist" => %{"name" => "The Beatles"},
+          "eventDate" => "02-01-2023",
+          "id" => "test-id-2",
+          "venue" => %{
+            "name" => "Maple Leaf Gardens",
+            "city" => %{
+              "name" => "Toronto",
+              "stateCode" => "ON",
+              "country" => %{"name" => "Canada"}
+            }
+          },
+          "sets" => %{"set" => [%{"song" => [%{"name" => "Let It Be"}]}]}
+        }
+      ]
+    }
+
+    Req.Test.stub(MySetlistFmStub, fn
+      %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/json")
+        |> Plug.Conn.send_resp(200, Jason.encode!(response))
+    end)
+
+    [uk_event, canada_event] = ExternalClient.search("beatles")
+
+    # UK venue without state
+    assert uk_event.venue.location.city == "London"
+    assert uk_event.venue.location.state == nil
+    assert uk_event.venue.location.country == "United Kingdom"
+
+    # Canadian venue with state
+    assert canada_event.venue.location.city == "Toronto"
+    assert canada_event.venue.location.state == "ON"
+    assert canada_event.venue.location.country == "Canada"
+  end
+
+  test "search/1 handles missing or malformed venue data" do
+    response = %{
+      "setlist" => [
+        %{
+          "artist" => %{"name" => "Test Artist"},
+          "eventDate" => "01-01-2023",
+          "id" => "test-id",
+          "venue" => %{
+            "name" => "Test Venue",
+            # Empty city data
+            "city" => %{}
+          },
+          "sets" => %{"set" => []}
+        }
+      ]
+    }
+
+    Req.Test.stub(MySetlistFmStub, fn
+      %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/json")
+        |> Plug.Conn.send_resp(200, Jason.encode!(response))
+    end)
+
+    [event] = ExternalClient.search("test")
+
+    # Should handle missing data gracefully
+    assert event.venue.location.city == "Unknown"
+    assert event.venue.location.state == nil
+    assert event.venue.location.country == "Unknown"
+    assert event.song_count == 0
   end
 
   @get_response fixture_dir() |> Path.join("setlist_fm_setlist_response.json") |> File.read!()

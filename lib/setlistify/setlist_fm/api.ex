@@ -1,9 +1,17 @@
 defmodule Setlistify.SetlistFm.API do
   @type search_result() :: %{
           artist: String.t(),
-          venue: %{name: String.t()},
+          venue: %{
+            name: String.t(),
+            location: %{
+              city: String.t(),
+              state: String.t() | nil,
+              country: String.t()
+            }
+          },
           date: Date.t(),
-          id: String.t()
+          id: String.t(),
+          song_count: non_neg_integer()
         }
 
   @type setlist() :: %{

@@ -12,10 +12,27 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
         "artist" => %{"name" => artist_name},
         "eventDate" => date,
         "id" => id,
-        "venue" => %{"name" => venue_name}
+        "venue" => %{
+          "name" => venue_name,
+          "city" => city_data
+        },
+        "sets" => %{"set" => sets}
       } = setlist
 
-      %{artist: artist_name, date: format_date(date), id: id, venue: %{name: venue_name}}
+      song_count =
+        sets
+        |> Enum.flat_map(&Map.get(&1, "song", []))
+        |> length()
+
+      location = build_location(city_data)
+
+      %{
+        artist: artist_name,
+        date: format_date(date),
+        id: id,
+        venue: %{name: venue_name, location: location},
+        song_count: song_count
+      }
     end)
   end
 
@@ -60,5 +77,24 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
   defp format_date(date) do
     %{"year" => year, "month" => month, "day" => day} = Regex.named_captures(@date_regex, date)
     Date.new!(String.to_integer(year), String.to_integer(month), String.to_integer(day))
+  end
+
+  defp build_location(city_data) do
+    city_name = Map.get(city_data, "name", "Unknown")
+
+    country_name =
+      case Map.get(city_data, "country") do
+        %{"name" => name} -> name
+        _ -> "Unknown"
+      end
+
+    # stateCode is optional - only present for certain countries like US, Canada, etc.
+    state_code = Map.get(city_data, "stateCode")
+
+    %{
+      city: city_name,
+      state: state_code,
+      country: country_name
+    }
   end
 end
