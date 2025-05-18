@@ -37,6 +37,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
        sets: setlist.sets,
        artist: setlist.artist,
        venue_name: setlist.venue.name,
+       venue_location: setlist.venue.location,
        date: setlist.date
      )}
   end
@@ -81,7 +82,8 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
   def render(assigns) do
     ~H"""
-    <h1 class="mb-3 text-2xl">{@artist} @ {@venue_name} on {@date}</h1>
+    <h1 class="mb-3 text-2xl">{@artist} @ {@venue_name}</h1>
+    <p class="mb-3 text-slate-500">{format_location(@venue_location)} • {@date}</p>
 
     <div class="space-y-3 mb-6">
       <%= for set <- @sets do %>
@@ -130,4 +132,10 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   defp set_name(%{encore: encore}) when is_number(encore), do: "Encore #{encore}"
   defp set_name(%{name: nil}), do: "Unnamed Setlist"
   defp set_name(%{name: name}), do: name
+
+  defp format_location(%{city: city, state: state, country: country}) do
+    [city, state, country]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(", ")
+  end
 end

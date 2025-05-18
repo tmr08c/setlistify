@@ -53,7 +53,12 @@ defmodule SetlistifyWeb.SearchLive do
             </time>
             <div class="self-center space-y-1">
               <div class="text-lg">{setlist.artist}</div>
-              <div class="font-light text-slate-400">{setlist.venue.name}</div>
+              <div class="font-light text-slate-400">
+                {setlist.venue.name}
+                <span class="text-slate-300">
+                  • {format_location(setlist.venue.location)}
+                </span>
+              </div>
             </div>
           </li>
         </.link>
@@ -73,5 +78,11 @@ defmodule SetlistifyWeb.SearchLive do
     |> Ecto.Changeset.cast(params, Map.keys(types))
     |> Ecto.Changeset.validate_required(Map.keys(types))
     |> Map.put(:action, :validate)
+  end
+
+  defp format_location(%{city: city, state: state, country: country}) do
+    [city, state, country]
+    |> Enum.reject(&is_nil/1)
+    |> Enum.join(", ")
   end
 end
