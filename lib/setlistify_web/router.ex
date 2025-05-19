@@ -27,13 +27,20 @@ defmodule SetlistifyWeb.Router do
     get "/signin/:provider", OAuthCallbackController, :sign_in
     get "/signout", OAuthCallbackController, :sign_out
 
-    live_session :default, on_mount: SetlistifyWeb.Auth.LiveHooks do
+    live_session :default,
+      on_mount: [
+        {SetlistifyWeb.Telemetry.LiveViewTelemetry, :default},
+        SetlistifyWeb.Auth.LiveHooks
+      ] do
       live "/", SearchLive
       live "/setlist/:id", Setlists.ShowLive
     end
 
     live_session :require_authenticated_user,
-      on_mount: {SetlistifyWeb.Auth.LiveHooks, :ensure_authenticated} do
+      on_mount: [
+        {SetlistifyWeb.Telemetry.LiveViewTelemetry, :default},
+        {SetlistifyWeb.Auth.LiveHooks, :ensure_authenticated}
+      ] do
       live "/playlists", Playlists.ShowLive
     end
   end

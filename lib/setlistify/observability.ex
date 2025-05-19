@@ -7,6 +7,10 @@ defmodule Setlistify.Observability do
   require OpenTelemetry.Tracer
 
   def setup do
+    # Set up OpenTelemetry logger metadata
+    # This adds trace_id and span_id to all log entries
+    OpentelemetryLoggerMetadata.setup()
+
     # Set up OpenTelemetry handlers for telemetry events
     setup_telemetry_handlers()
 
@@ -42,6 +46,9 @@ defmodule Setlistify.Observability do
   defp setup_telemetry_handlers do
     # Set up handlers for Phoenix
     :ok = OpentelemetryPhoenix.setup()
+
+    # Process propagator doesn't need setup - it's used directly in LiveView processes
+    # to fetch parent context when needed
 
     # Attach to our custom events once we define them
     # This will be expanded in Phase 1

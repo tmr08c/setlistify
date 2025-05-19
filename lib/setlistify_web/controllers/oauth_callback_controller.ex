@@ -20,7 +20,7 @@ defmodule SetlistifyWeb.OAuthCallbackController do
     participant Auth as UserAuth
     participant SM as SessionManager
     participant SS as SessionSupervisor
-    
+
     User->>Browser: Click "Sign in with Spotify"
     Browser->>App: GET /signin/spotify
     App->>OAuth: sign_in(conn, %{"provider" => "spotify"})

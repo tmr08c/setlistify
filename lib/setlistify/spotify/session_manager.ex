@@ -19,32 +19,32 @@ defmodule Setlistify.Spotify.SessionManager do
       SM3[SessionManager<br/>User N]
       REG[(UserSessionRegistry)]
     end
-    
+
     subgraph "Web Layer"
       LV1[LiveView 1]
       LV2[LiveView 2]
       CTRL[Controllers]
     end
-    
+
     subgraph "External"
       SPOT[Spotify API]
     end
-    
+
     SS -->|supervises| SM1
     SS -->|supervises| SM2
     SS -->|supervises| SM3
-    
+
     SM1 -->|registers| REG
     SM2 -->|registers| REG
     SM3 -->|registers| REG
-    
+
     LV1 -->|get_session| SM1
     LV2 -->|get_session| SM2
     CTRL -->|get_session| SM1
-    
+
     SM1 -->|refresh_token| SPOT
     SM1 -->|broadcasts| PubSub
-    
+
     PubSub -.->|token_refreshed| LV1
     PubSub -.->|token_refreshed| LV2
   ```
@@ -58,7 +58,7 @@ defmodule Setlistify.Spotify.SessionManager do
     participant API as Spotify API
     participant PS as PubSub
     participant LV as LiveView
-    
+
     Note over SM: Token expires in 60 min
     SM->>Timer: Schedule refresh<br/>(55 min)
     Note over SM: Wait...

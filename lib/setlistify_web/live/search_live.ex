@@ -2,6 +2,9 @@ defmodule SetlistifyWeb.SearchLive do
   use SetlistifyWeb, :live_view
   use Gettext, backend: SetlistifyWeb.Gettext
 
+  require Logger
+  require OpenTelemetry.Tracer
+
   def mount(_params, _session, socket) do
     {:ok, assign(socket, setlists: [], search: search_form(%{}))}
   end
@@ -11,17 +14,28 @@ defmodule SetlistifyWeb.SearchLive do
   end
 
   def handle_params(params, _uri, socket) do
-    search_form = search_form(params)
-    search_changeset = search_form.source
+    # Create a span for the handle_params operation
+    OpenTelemetry.Tracer.with_span "search_live.handle_params" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"query", inspect(params)}
+      ])
 
-    setlists =
-      if search_changeset.valid? do
-        search_changeset |> Ecto.Changeset.get_field(:query) |> Setlistify.SetlistFm.API.search()
-      else
-        []
-      end
+      Logger.info("Log inside custom span looking for #{inspect(params)}")
 
-    {:noreply, assign(socket, search: search_form, setlists: setlists)}
+      search_form = search_form(params)
+      search_changeset = search_form.source
+
+      setlists =
+        if search_changeset.valid? do
+          search_changeset
+          |> Ecto.Changeset.get_field(:query)
+          |> Setlistify.SetlistFm.API.search()
+        else
+          []
+        end
+
+      {:noreply, assign(socket, search: search_form, setlists: setlists)}
+    end
   end
 
   def handle_event("search", %{"search" => params}, socket) do
