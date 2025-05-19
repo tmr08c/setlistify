@@ -67,10 +67,13 @@ defmodule SetlistifyWeb.SearchLive do
 
               <.rotating_text
                 class="mb-8"
+                text_class="text-gray-300 text-sm sm:text-base font-medium text-center px-4"
                 texts={[
-                  "Relive the concerts you've attended",
-                  "Prepare for your upcoming shows",
-                  "Discover an artist's live performance style"
+                  "Turn concert memories into streaming soundtracks",
+                  "Create the perfect pre-concert playlist",
+                  "Experience setlists from shows you missed",
+                  "Build your music library with authentic live experiences",
+                  "Share iconic concert experiences with friends"
                 ]}
               />
 
