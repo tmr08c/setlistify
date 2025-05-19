@@ -51,7 +51,7 @@ defmodule Setlistify.Application do
 
     # Start the supervisor
     case Supervisor.start_link(children, opts) do
-      {:ok, pid} = result ->
+      {:ok, _pid} = result ->
         # Initialize OpenTelemetry after supervisor starts
         Setlistify.Observability.setup()
         result
