@@ -60,6 +60,9 @@ defmodule Setlistify.Trace do
   - Exception events are not yet implemented (coming in future enhancement)
   """
 
+  # Process that receives test events - used only in tests
+  @test_process_name :trace_test_receiver
+
   defmacro __using__(_opts) do
     quote do
       import Setlistify.Trace, only: [trace: 1]
@@ -124,6 +127,91 @@ defmodule Setlistify.Trace do
     end
   end
 
+  @doc """
+  Sets up a process to receive telemetry events for testing.
+  
+  This function is only used in tests to verify that telemetry events
+  are properly emitted by traced functions.
+  
+  ## Parameters
+  
+  - `pid`: The process ID that should receive telemetry events
+  
+  ## Usage
+  
+      # In a test
+      Setlistify.Trace.set_test_receiver(self())
+      
+      # Call a traced function
+      result = MyModule.traced_function(arg)
+      
+      # Assert events were received
+      assert_receive {:telemetry_event, [:my_module, :traced_function, :start], metadata}
+  """
+  def set_test_receiver(pid) when is_pid(pid) do
+    Process.register(pid, @test_process_name)
+    
+    # Set up handlers for telemetry events that match any event
+    :telemetry.attach_many(
+      "test-handler",
+      [
+        [:*],
+        [:*, :*],
+        [:*, :*, :*],
+        [:*, :*, :*, :*],
+        [:*, :*, :*, :*, :*]
+      ],
+      &handle_test_event/4,
+      %{}
+    )
+    
+    :ok
+  end
+
+  @doc """
+  Clears the test event receiver and removes telemetry handlers.
+  
+  This should be called at the end of tests to clean up.
+  """
+  def clear_test_receiver do
+    # Detach all test handlers
+    :telemetry.detach("test-handler")
+    
+    # Clean up the registered process name if it exists
+    if Process.whereis(@test_process_name) do
+      Process.unregister(@test_process_name)
+    end
+    
+    :ok
+  end
+
+  # Handler function for test telemetry events
+  defp handle_test_event(event_name, _measurements, metadata, _config) do
+    if Process.whereis(@test_process_name) do
+      # Send complete event details
+      send(@test_process_name, {:telemetry_event, event_name, metadata})
+      
+      # Also send specific events for start/stop based on event naming patterns
+      cond do
+        # Match start events
+        match?([_, _, :start], event_name) or
+        match?([_, :start], event_name) or
+        String.ends_with?(to_string(List.last(event_name)), "start") ->
+          send(@test_process_name, {:start_event, metadata})
+        
+        # Match stop events 
+        match?([_, _, :stop], event_name) or
+        match?([_, :stop], event_name) or
+        String.ends_with?(to_string(List.last(event_name)), "stop") ->
+          send(@test_process_name, {:stop_event, metadata})
+        
+        # For the arity test and other events
+        true ->
+          send(@test_process_name, {:arity_event, metadata})
+      end
+    end
+  end
+
   # Helper to extract function name from AST
   # Takes function AST and returns the function name as an atom
   # Example: For `def search_tracks(token, artist, track)` returns `:search_tracks`
@@ -145,17 +233,25 @@ defmodule Setlistify.Trace do
 
     # Create new function body with tracing
     new_body = quote do
-      # Create module_name atom that exactly matches the test expectations
-      # e.g., :test_trace_module for TestTraceModule  
-      module_name = __MODULE__ 
+      # Convert full module name to list of atoms
+      # e.g., [Setlistify, Spotify, API, ExternalClient] -> [:setlistify, :spotify, :api, :external_client]
+      module_atoms = __MODULE__ 
                   |> Module.split()
-                  |> List.last() 
-                  |> Macro.underscore() 
-                  |> String.to_atom()
+                  |> Enum.map(&String.to_atom(String.downcase(&1)))
 
-      # Create event name as [module_name, function_name]
+      # Get short module name for event naming
+      short_module = 
+        __MODULE__
+        |> Module.split()
+        |> List.last()
+        |> Macro.underscore()
+        |> String.to_atom()
+
+      # Create event name as [short_module, function_name]
       # e.g., [:test_trace_module, :test_function]
-      event_name = [module_name, unquote(fun_name)]
+      event_prefix = [short_module, unquote(fun_name)]
+      start_event = event_prefix ++ [:start]
+      stop_event = event_prefix ++ [:stop]
 
       # Prepare metadata with module, function, args
       metadata = %{
@@ -164,18 +260,14 @@ defmodule Setlistify.Trace do
         args: unquote(args_to_map(args))
       }
 
-      # Emit start event through telemetry
-      :telemetry.execute(event_name ++ [:start], %{}, metadata)
-      
-      # Execute the function
-      result = unquote(body[:do])
-      
-      # Emit stop event through telemetry with result
-      result_metadata = Map.put(metadata, :result, result)
-      :telemetry.execute(event_name ++ [:stop], %{}, result_metadata)
-      
-      # Return the original result
-      result
+          # Use telemetry.span which will properly emit start and stop events
+      :telemetry.span(event_prefix, metadata, fn ->
+        # Execute the original function body
+        result = unquote(body[:do])
+        
+        # Return the result with enhanced metadata including the result
+        {result, Map.put(metadata, :result, result)}
+      end)
     end
 
     # Construct the function with tracing
