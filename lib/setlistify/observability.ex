@@ -7,8 +7,9 @@ defmodule Setlistify.Observability do
   require OpenTelemetry.Tracer
 
   def setup do
-    # Set up structured logging with trace context
-    Setlistify.StructuredLogger.setup()
+    # Set up OpenTelemetry logger metadata
+    # This adds trace_id and span_id to all log entries
+    OpentelemetryLoggerMetadata.setup()
     
     # Set up OpenTelemetry handlers for telemetry events
     setup_telemetry_handlers()
