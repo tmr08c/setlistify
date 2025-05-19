@@ -63,7 +63,22 @@ defmodule Setlistify.MixProject do
       {:swoosh, "~> 1.3"},
       {:tailwind, "~> 0.1.8", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
-      {:telemetry_poller, "~> 1.0"}
+      {:telemetry_poller, "~> 1.0"},
+
+      # OpenTelemetry
+      {:opentelemetry_exporter, "~> 1.6.0"},
+      {:opentelemetry, "~> 1.3.0"},
+      {:opentelemetry_api, "~> 1.2.0"},
+
+      # Framework Integrations
+      {:opentelemetry_phoenix, "~> 1.1.0"},
+      {:opentelemetry_telemetry, "~> 1.0.0"},
+
+      # Telemetry
+      {:telemetry, "~> 1.2.1"}
+
+      # Logging - will be enabled in Phase 2
+      # {:loki_logger, "~> 0.3.0"}
     ]
   end
 

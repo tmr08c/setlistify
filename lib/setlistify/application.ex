@@ -48,7 +48,17 @@ defmodule Setlistify.Application do
     # See https://hexdocs.pm/elixir/Supervisor.html
     # for other strategies and supported options
     opts = [strategy: :one_for_one, name: Setlistify.Supervisor]
-    Supervisor.start_link(children, opts)
+
+    # Start the supervisor
+    case Supervisor.start_link(children, opts) do
+      {:ok, _pid} = result ->
+        # Initialize OpenTelemetry after supervisor starts
+        Setlistify.Observability.setup()
+        result
+
+      error ->
+        error
+    end
   end
 
   # Tell Phoenix to update the endpoint configuration
