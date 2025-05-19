@@ -61,7 +61,7 @@ config :logger,
   level: :debug
 
 # Console logger configuration - include trace context
-config :logger, :console, 
+config :logger, :console,
   format: "$time [$level] $message $metadata\n",
   metadata: [:request_id, :trace_id, :span_id]
 

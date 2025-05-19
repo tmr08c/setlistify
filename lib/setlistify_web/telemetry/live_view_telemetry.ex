@@ -2,7 +2,7 @@ defmodule SetlistifyWeb.Telemetry.LiveViewTelemetry do
   @moduledoc """
   Creates a new span for LiveView processes since they don't inherit HTTP trace context.
   """
-  
+
   import Phoenix.LiveView
   require Logger
   require OpenTelemetry.Tracer
@@ -17,11 +17,11 @@ defmodule SetlistifyWeb.Telemetry.LiveViewTelemetry do
           {"liveview.module", inspect(socket.view)},
           {"liveview.connected", true}
         ])
-        
+
         Logger.info("LiveView telemetry: Created new span for connected LiveView")
       end
     end
-    
+
     {:cont, socket}
   end
 end

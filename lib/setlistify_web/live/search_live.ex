@@ -19,7 +19,7 @@ defmodule SetlistifyWeb.SearchLive do
       OpenTelemetry.Tracer.set_attributes([
         {"query", inspect(params)}
       ])
-      
+
       Logger.info("Log inside custom span looking for #{inspect(params)}")
 
       search_form = search_form(params)
@@ -27,7 +27,9 @@ defmodule SetlistifyWeb.SearchLive do
 
       setlists =
         if search_changeset.valid? do
-          search_changeset |> Ecto.Changeset.get_field(:query) |> Setlistify.SetlistFm.API.search()
+          search_changeset
+          |> Ecto.Changeset.get_field(:query)
+          |> Setlistify.SetlistFm.API.search()
         else
           []
         end
