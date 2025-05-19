@@ -110,8 +110,16 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
 
       # Start a session process using the supervisor to properly register it
       assert Registry.lookup(Setlistify.UserSessionRegistry, test_user) == []
-      tokens = %{access_token: "test", refresh_token: "test", expires_in: 3600}
-      {:ok, original_pid} = SessionSupervisor.start_user_token(test_user, tokens)
+
+      user_session = %Setlistify.Spotify.UserSession{
+        access_token: "test",
+        refresh_token: "test",
+        expires_at: System.system_time(:second) + 3600,
+        user_id: test_user,
+        username: "test_user"
+      }
+
+      {:ok, original_pid} = SessionSupervisor.start_user_token(test_user, user_session)
       assert Process.alive?(original_pid)
 
       # Verify process is registered with the Registry
