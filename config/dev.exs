@@ -60,8 +60,10 @@ config :logger,
   backends: [:console],
   level: :debug
 
-# Console logger configuration
-config :logger, :console, format: "[$level] $message\n"
+# Console logger configuration - include trace context
+config :logger, :console, 
+  format: "$time [$level] $message $metadata\n",
+  metadata: [:request_id, :trace_id, :span_id]
 
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
