@@ -64,11 +64,6 @@ defmodule SetlistifyWeb.Router do
 
       live_dashboard "/dashboard", metrics: SetlistifyWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
-
-      # Test route for trace context
-      get "/test_trace", SetlistifyWeb.TraceTestController, :test
-      live "/trace_debug", SetlistifyWeb.TraceDebugLive
-      live "/logger_debug", SetlistifyWeb.LoggerDebugLive
     end
   end
 end
