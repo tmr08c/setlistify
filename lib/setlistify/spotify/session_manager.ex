@@ -112,14 +112,6 @@ defmodule Setlistify.Spotify.SessionManager do
     end
   end
 
-  @deprecated "Use refresh_session/1 instead"
-  def refresh_token(user_id) do
-    case lookup(user_id) do
-      {:ok, pid} -> GenServer.call(pid, :refresh_token)
-      :error -> {:error, :not_found}
-    end
-  end
-
   @doc """
   Refreshes the token for a specific user and returns the updated UserSession.
   """
@@ -157,19 +149,6 @@ defmodule Setlistify.Spotify.SessionManager do
     {:ok, state, {:continue, :schedule_refresh}}
   end
 
-  @deprecated "Use UserSession struct instead of map in init/1"
-  def init(
-        {user_id, %{access_token: _, refresh_token: _, expires_in: expires_in} = initial_tokens}
-      ) do
-    # Handle deprecated map format - convert to state structure
-    state =
-      initial_tokens
-      |> Map.put(:user_id, user_id)
-      |> Map.put(:expires_at, timestamp() + expires_in)
-
-    {:ok, state, {:continue, :schedule_refresh}}
-  end
-
   @impl true
   def handle_continue(:schedule_refresh, state = %{expires_at: expires_at}) do
     schedule_refresh(expires_at - timestamp() - @refresh_threshold)
@@ -194,17 +173,6 @@ defmodule Setlistify.Spotify.SessionManager do
     }
 
     {:reply, {:ok, session}, state}
-  end
-
-  @impl true
-  def handle_call(:refresh_token, _from, state) do
-    case do_refresh_token(state) do
-      {:ok, new_state, new_tokens} ->
-        {:reply, {:ok, new_tokens.access_token}, new_state}
-
-      {:error, _reason} = error ->
-        {:stop, :normal, error, state}
-    end
   end
 
   @impl true

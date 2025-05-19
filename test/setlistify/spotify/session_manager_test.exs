@@ -128,53 +128,6 @@ defmodule Setlistify.Spotify.SessionManagerTest do
     end
   end
 
-  describe "refresh_token/1" do
-    @moduledoc """
-    Tests for the deprecated refresh_token/1 function.
-    These tests ensure backward compatibility while the function is still available.
-    """
-
-    @tag :deprecated
-    test "refreshes token successfully", %{user_id: user_id, initial_token: initial_token} do
-      {:ok, pid} = SessionManager.start_link({user_id, initial_token})
-      new_token = "new_access_token"
-
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
-        assert refresh_token == initial_token.refresh_token
-
-        {:ok,
-         %{
-           access_token: new_token,
-           refresh_token: refresh_token,
-           expires_in: 3600
-         }}
-      end)
-
-      allow(Setlistify.Spotify.API.MockClient, self(), pid)
-
-      assert {:ok, ^new_token} = SessionManager.refresh_token(user_id)
-    end
-
-    @tag :capture_log
-    @tag :deprecated
-    test "terminates process on refresh failure", %{
-      user_id: user_id,
-      initial_token: initial_token
-    } do
-      {:ok, pid} = SessionManager.start_link({user_id, initial_token})
-
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
-        assert refresh_token == initial_token.refresh_token
-        {:error, :invalid_token}
-      end)
-
-      allow(Setlistify.Spotify.API.MockClient, self(), pid)
-
-      assert {:error, :invalid_token} = SessionManager.refresh_token(user_id)
-      refute Process.alive?(pid)
-    end
-  end
-
   describe "refresh_session/1" do
     test "refreshes token and returns UserSession", %{
       user_id: user_id,
