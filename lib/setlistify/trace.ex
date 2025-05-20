@@ -149,80 +149,53 @@ defmodule Setlistify.Trace do
         end
       end
   """
-  defmacro trace({:def, _meta, [head | body]}) do
-    {fun_name, _head_meta, args} = head
+  defmacro trace({func_type, meta, [head | body]}) when func_type in [:def, :defp] do
+    do_trace(func_type, meta, head, body)
+  end
+  
+  # Helper function that implements the common tracing logic for both def and defp
+  defp do_trace(func_type, _meta, head, body) do
+    {fun_name, head_meta, args} = head
+    
+    # Create a new AST node for the function definition
+    function_definition = {func_type, [], [{fun_name, head_meta, args}, [do: traced_body(fun_name, args, body[:do])]]}
     
     quote do
       @traced_functions {unquote(fun_name), unquote(length(args || []))}
-      
-      def unquote(head) do
-        # Get short module name for event naming
-        short_module = 
-          __MODULE__
-          |> Module.split()
-          |> List.last()
-          |> Macro.underscore()
-          |> String.to_atom()
-
-        # Create event name as [short_module, function_name]
-        event_prefix = [short_module, unquote(fun_name)]
-        
-        # Prepare metadata with module, function, args
-        args_map = unquote(create_args_map(args))
-        metadata = %{
-          module: __MODULE__,
-          function: unquote(fun_name),
-          args: args_map
-        }
-
-        # Execute function within telemetry span
-        :telemetry.span(event_prefix, metadata, fn ->
-          # Execute the original function body
-          result = unquote(body[:do])
-          
-          # Return the result with enhanced metadata
-          {result, Map.put(metadata, :result, result)}
-        end)
-      end
+      unquote(function_definition)
     end
   end
   
-  # Same for private functions
-  defmacro trace({:defp, _meta, [head | body]}) do
-    {fun_name, _head_meta, args} = head
-    
+  # Generate the traced function body
+  defp traced_body(fun_name, args, original_body) do
     quote do
-      @traced_functions {unquote(fun_name), unquote(length(args || []))}
+      # Get short module name for event naming
+      short_module = 
+        __MODULE__
+        |> Module.split()
+        |> List.last()
+        |> Macro.underscore()
+        |> String.to_atom()
+
+      # Create event name as [short_module, function_name]
+      event_prefix = [short_module, unquote(fun_name)]
       
-      defp unquote(head) do
-        # Get short module name for event naming
-        short_module = 
-          __MODULE__
-          |> Module.split()
-          |> List.last()
-          |> Macro.underscore()
-          |> String.to_atom()
+      # Prepare metadata with module, function, args
+      args_map = unquote(create_args_map(args))
+      metadata = %{
+        module: __MODULE__,
+        function: unquote(fun_name),
+        args: args_map
+      }
 
-        # Create event name as [short_module, function_name]
-        event_prefix = [short_module, unquote(fun_name)]
+      # Execute function within telemetry span
+      :telemetry.span(event_prefix, metadata, fn ->
+        # Execute the original function body
+        result = unquote(original_body)
         
-        # Prepare metadata with module, function, args
-        args_map = unquote(create_args_map(args))
-        metadata = %{
-          module: __MODULE__,
-          function: unquote(fun_name),
-          args: args_map
-        }
-
-        # Execute function within telemetry span
-        :telemetry.span(event_prefix, metadata, fn ->
-          # Execute the original function body
-          result = unquote(body[:do])
-          
-          # Return the result with enhanced metadata
-          {result, Map.put(metadata, :result, result)}
-        end)
-      end
+        # Return the result with enhanced metadata
+        {result, Map.put(metadata, :result, result)}
+      end)
     end
   end
   
