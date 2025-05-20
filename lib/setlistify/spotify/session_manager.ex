@@ -88,6 +88,7 @@ defmodule Setlistify.Spotify.SessionManager do
 
   use GenServer
   require Logger
+  require OpenTelemetry.Tracer
   alias Setlistify.Spotify.API
   alias Setlistify.Spotify.UserSession
 
@@ -117,16 +118,20 @@ defmodule Setlistify.Spotify.SessionManager do
   """
   @spec refresh_session(binary()) :: {:ok, UserSession.t()} | {:error, atom()}
   def refresh_session(user_id) do
-    case lookup(user_id) do
-      {:ok, pid} -> GenServer.call(pid, :refresh_session)
-      :error -> {:error, :not_found}
+    OpenTelemetry.Tracer.with_span "spotify_session_refresh", %{attributes: [{"user_id", user_id}]} do
+      case lookup(user_id) do
+        {:ok, pid} -> GenServer.call(pid, :refresh_session)
+        :error -> {:error, :not_found}
+      end
     end
   end
 
   def get_session(user_id) do
-    case lookup(user_id) do
-      {:ok, pid} -> GenServer.call(pid, :get_session)
-      :error -> {:error, :not_found}
+    OpenTelemetry.Tracer.with_span "spotify_get_session", %{attributes: [{"user_id", user_id}]} do
+      case lookup(user_id) do
+        {:ok, pid} -> GenServer.call(pid, :get_session)
+        :error -> {:error, :not_found}
+      end
     end
   end
 
@@ -151,7 +156,7 @@ defmodule Setlistify.Spotify.SessionManager do
 
   @impl true
   def handle_continue(:schedule_refresh, state = %{expires_at: expires_at}) do
-    schedule_refresh(expires_at - timestamp() - @refresh_threshold)
+    schedule_refresh(expires_at - get_current_timestamp() - @refresh_threshold)
 
     {:noreply, state}
   end
@@ -229,25 +234,40 @@ defmodule Setlistify.Spotify.SessionManager do
 
   defp schedule_refresh(_), do: Process.send(self(), :refresh_token, [])
 
-  defp timestamp, do: System.system_time(:second)
+  defp get_current_timestamp, do: System.system_time(:second)
 
   defp do_refresh_token(%{refresh_token: refresh_token} = state) do
-    case API.refresh_token(refresh_token) do
-      {:ok, new_tokens} ->
-        schedule_refresh(new_tokens.expires_in - @refresh_threshold)
+    # Create a span for the token refresh operation
+    OpenTelemetry.Tracer.with_span "spotify_refresh_token", %{attributes: [{"user_id", state.user_id}]} do
+      case API.refresh_token(refresh_token) do
+        {:ok, new_tokens} ->
+          schedule_refresh(new_tokens.expires_in - @refresh_threshold)
 
-        new_state =
-          state
-          |> Map.merge(new_tokens)
-          |> Map.put(:expires_at, timestamp() + new_tokens.expires_in)
+          new_state =
+            state
+            |> Map.merge(new_tokens)
+            |> Map.put(:expires_at, get_current_timestamp() + new_tokens.expires_in)
 
-        # Broadcast token refresh event to interested LiveViews
-        broadcast_token_refreshed(new_state)
+          # Add details to the span
+          OpenTelemetry.Tracer.set_attributes([
+            {"token.expires_in", new_tokens.expires_in},
+            {"token.refreshed", true}
+          ])
 
-        {:ok, new_state, new_tokens}
+          # Broadcast token refresh event to interested LiveViews
+          broadcast_token_refreshed(new_state)
 
-      {:error, _reason} = error ->
-        error
+          {:ok, new_state, new_tokens}
+
+        {:error, reason} = error ->
+          # Record error in the span
+          OpenTelemetry.Tracer.set_attributes([
+            {"token.refreshed", false},
+            {"error", true},
+            {"error.message", inspect(reason)}
+          ])
+          error
+      end
     end
   end
 

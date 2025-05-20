@@ -58,65 +58,92 @@ defmodule SetlistifyWeb.OAuthCallbackController do
   alias Setlistify.Spotify.API
 
   use SetlistifyWeb, :controller
+  require OpenTelemetry.Tracer
 
   def new(conn, %{"provider" => "spotify", "code" => code, "state" => state}) do
-    if state == get_session(conn, :oauth_state) do
-      # Exchange authorization code for access and refresh tokens
-      redirect_uri = url(~p"/oauth/callbacks/spotify")
+    OpenTelemetry.Tracer.with_span "oauth_callback", %{attributes: [
+      {"oauth.provider", "spotify"}, 
+      {"oauth.has_code", true}, 
+      {"oauth.state_valid", state == get_session(conn, :oauth_state)}
+    ]} do
+      if state == get_session(conn, :oauth_state) do
+        # Exchange authorization code for access and refresh tokens
+        redirect_uri = url(~p"/oauth/callbacks/spotify")
 
-      case API.exchange_code(code, redirect_uri) do
-        {:ok, user_session} ->
-          # Create encrypted token for session storage
-          encrypted_refresh_token =
-            Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", user_session.refresh_token)
+        case API.exchange_code(code, redirect_uri) do
+          {:ok, user_session} ->
+            # Create encrypted token for session storage
+            encrypted_refresh_token =
+              Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", user_session.refresh_token)
 
-          # Start session manager process with UserSession
-          # TODO Consider if this should be called in `exchange_code`
-          SessionSupervisor.start_user_token(user_session.user_id, user_session)
+            # Start session manager process with UserSession
+            # TODO Consider if this should be called in `exchange_code`
+            SessionSupervisor.start_user_token(user_session.user_id, user_session)
 
-          conn
-          |> put_session(:refresh_token, encrypted_refresh_token)
-          |> put_session(:user_id, user_session.user_id)
-          |> UserAuth.auth_user(user_session.user_id)
+            # Add user ID to span
+            OpenTelemetry.Tracer.set_attributes([{"user_id", user_session.user_id}])
 
-        {:error, _reason} ->
-          conn
-          |> put_flash(:error, "Failed to authenticate with Spotify. Please try again.")
-          |> redirect(to: ~p"/")
+            conn
+            |> put_session(:refresh_token, encrypted_refresh_token)
+            |> put_session(:user_id, user_session.user_id)
+            |> UserAuth.auth_user(user_session.user_id)
+
+          {:error, reason} ->
+            # Record error in the span
+            OpenTelemetry.Tracer.set_attributes([
+              {"error", true},
+              {"error.message", inspect(reason)}
+            ])
+            
+            conn
+            |> put_flash(:error, "Failed to authenticate with Spotify. Please try again.")
+            |> redirect(to: ~p"/")
+        end
+      else
+        # Record state mismatch error in the span
+        OpenTelemetry.Tracer.set_attributes([
+          {"error", true},
+          {"error.type", "state_mismatch"}
+        ])
+        
+        conn
+        |> put_flash(:error, "Response from Spotify did not match. Please try again.")
+        |> redirect(to: ~p"/")
       end
-    else
-      conn
-      |> put_flash(:error, "Response from Spotify did not match. Please try again.")
-      |> redirect(to: ~p"/")
     end
   end
 
   @state_length 10
   def sign_in(conn, %{"provider" => "spotify"} = params) do
-    state =
-      :crypto.strong_rand_bytes(@state_length)
-      |> Base.url_encode64()
-      |> binary_part(0, @state_length)
+    OpenTelemetry.Tracer.with_span "oauth_sign_in", %{attributes: [{"oauth.provider", "spotify"}]} do
+      state =
+        :crypto.strong_rand_bytes(@state_length)
+        |> Base.url_encode64()
+        |> binary_part(0, @state_length)
 
-    uri =
-      "https://accounts.spotify.com/authorize"
-      |> URI.new!()
-      |> URI.append_query(
-        URI.encode_query(%{
-          client_id: Application.fetch_env!(:setlistify, :spotify_client_id),
-          response_type: "code",
-          redirect_uri: url(~p"/oauth/callbacks/spotify"),
-          state: state,
-          scope: "playlist-modify-private",
-          show_dialog: true
-        })
-      )
-      |> URI.to_string()
+      uri =
+        "https://accounts.spotify.com/authorize"
+        |> URI.new!()
+        |> URI.append_query(
+          URI.encode_query(%{
+            client_id: Application.fetch_env!(:setlistify, :spotify_client_id),
+            response_type: "code",
+            redirect_uri: url(~p"/oauth/callbacks/spotify"),
+            state: state,
+            scope: "playlist-modify-private",
+            show_dialog: true
+          })
+        )
+        |> URI.to_string()
 
-    conn
-    |> put_session(:oauth_state, state)
-    |> maybe_put_redirect_to(params)
-    |> redirect(external: uri)
+      # Add state to span for correlation with callback
+      OpenTelemetry.Tracer.set_attributes([{"oauth.state", state}])
+
+      conn
+      |> put_session(:oauth_state, state)
+      |> maybe_put_redirect_to(params)
+      |> redirect(external: uri)
+    end
   end
 
   defp maybe_put_redirect_to(conn, %{"redirect_to" => to}) when to != "" do
@@ -129,16 +156,24 @@ defmodule SetlistifyWeb.OAuthCallbackController do
 
   def sign_out(conn, _) do
     user_id = get_session(conn, :user_id)
+    
+    OpenTelemetry.Tracer.with_span "oauth_sign_out", %{attributes: [
+      {"has_user_id", user_id != nil}
+    ]} do
+      if user_id do
+        OpenTelemetry.Tracer.set_attributes([{"user_id", user_id}])
+      end
 
-    # Log out user (which now handles clearing refresh token and the entire session)
-    conn = UserAuth.log_out_user(conn)
+      # Log out user (which now handles clearing refresh token and the entire session)
+      conn = UserAuth.log_out_user(conn)
 
-    # Stop the session process
-    if user_id do
-      SessionSupervisor.stop_user_token(user_id)
+      # Stop the session process
+      if user_id do
+        SessionSupervisor.stop_user_token(user_id)
+      end
+
+      # Return the updated conn
+      conn
     end
-
-    # Return the updated conn
-    conn
   end
 end

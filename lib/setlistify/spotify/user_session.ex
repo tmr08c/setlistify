@@ -2,6 +2,7 @@ defmodule Setlistify.Spotify.UserSession do
   @moduledoc """
   Represents an authenticated Spotify user session with tokens and profile data.
   """
+  use Setlistify.Trace
 
   @type t :: %__MODULE__{
           access_token: String.t(),

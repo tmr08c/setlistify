@@ -4,9 +4,9 @@
 
 This document outlines the implementation of OpenTelemetry in Setlistify, our Elixir/Phoenix/LiveView application that integrates Setlist.fm and Spotify APIs to create playlists from concert setlists. OpenTelemetry will provide comprehensive observability through traces, logs, and metrics, starting with a local development stack and eventually deploying to Grafana Cloud. This implementation will be rolled out in phases, beginning with local environment setup, followed by core tracing capabilities, log correlation, metrics, and finally cloud deployment.
 
-**Current Status:** Phase 0 completed, Phase 2 partially completed (prioritized for early log visibility), Phase 1 next up.
+**Current Status:** Phase 0 completed, Phase 2 partially completed (prioritized for early log visibility), Phase 1 substantially completed with trace decorator implementation and key module instrumentation.
 
-**Last Updated:** May 19, 2025
+**Last Updated:** May 21, 2025
 
 ## Background
 
@@ -430,102 +430,158 @@ defmodule Setlistify.Trace do
   @moduledoc """
   Provides function decoration for automatic OpenTelemetry tracing.
 
-  Usage:
+  This module implements a `trace` macro that can be placed around function
+  definitions to automatically wrap them in a telemetry span. The span will
+  emit `:start` and `:stop` events that can be handled by telemetry handlers
+  including OpenTelemetry.
+
+  ## Usage
+
       defmodule Setlistify.Spotify.API.ExternalClient do
         use Setlistify.Trace
 
-        @trace
-        def search_tracks(token, artist, track) do
-          # Function body
+        trace def search_tracks(token, artist, track) do
+          # Function body unchanged
         end
       end
+
+  ## Features
+
+  The `trace` decorator:
+  1. Creates telemetry events for function calls
+  2. Generates standardized event names for consistent tracking
+  3. Includes function arguments as metadata in spans
+  4. Tracks function return values for complete visibility
+  5. Preserves function arity and handles default arguments
+  6. Works with both public and private functions
+  7. Captures exceptions and records them as part of the span
+
+  ## Event Names
+
+  Each traced function will emit telemetry events with a standardized naming pattern:
+
+  - `[module_name, function_name, :start]` - When the function starts
+    - Example: `[:spotify_api_external_client, :search_tracks, :start]`
+  - `[module_name, function_name, :stop]` - When the function completes successfully
+    - Example: `[:spotify_api_external_client, :search_tracks, :stop]`
+  - `[module_name, function_name, :exception]` - When the function raises an exception
+    - Example: `[:spotify_api_external_client, :search_tracks, :exception]`
+
+  ## Exception Handling
+
+  When a traced function raises an exception:
+
+  1. The exception is captured along with its type, message, and stacktrace
+  2. A telemetry event is emitted with the `:exception` suffix
+  3. The exception details are added to the span metadata
+  4. The exception is re-raised to maintain the original function behavior
+  5. This follows the OpenTelemetry specification for error handling
   """
 
+  # Simplified implementation showing key concepts
   defmacro __using__(_opts) do
     quote do
       import Setlistify.Trace, only: [trace: 1]
+      Module.register_attribute(__MODULE__, :trace, accumulate: false)
       Module.register_attribute(__MODULE__, :traced_functions, accumulate: true)
+      @on_definition {Setlistify.Trace, :on_definition}
       @before_compile Setlistify.Trace
     end
   end
-
-  defmacro __before_compile__(env) do
-    traced_functions = Module.get_attribute(env.module, :traced_functions)
-
-    # Register these functions in the telemetry registry if one exists
-    if function_exported?(Setlistify.TelemetryEvents, :register_functions, 2) do
-      for {name, arity} <- traced_functions do
-        Setlistify.TelemetryEvents.register_functions(env.module, name)
-      end
-    end
-
-    quote do
+  
+  # This callback runs after each function is defined in the module
+  def on_definition(env, _kind, fun_name, args, _guards, _body) do
+    module = env.module
+    trace = Module.get_attribute(module, :trace)
+    
+    if trace == true do
+      # Store this function to be traced
+      Module.put_attribute(module, :traced_functions, {fun_name, length(args || [])})
     end
   end
 
-  defmacro trace(fun) do
-    quote do
-      @traced_functions {unquote(fun_name(fun)), unquote(fun_arity(fun))}
-      unquote(trace_function(fun))
-    end
+  # The trace macro for decorating functions
+  defmacro trace({func_type, meta, [head | body]}) when func_type in [:def, :defp] do
+    do_trace(func_type, meta, head, body)
   end
-
-  # Helper to extract function name from AST
-  defp fun_name({:def, _, [{name, _, _} | _]}), do: name
-  defp fun_name({:defp, _, [{name, _, _} | _]}), do: name
-
-  # Helper to extract function arity from AST
-  defp fun_arity({:def, _, [{_, _, args} | _]}), do: length(args || [])
-  defp fun_arity({:defp, _, [{_, _, args} | _]}), do: length(args || [])
-
-  # Helper to transform the function with tracing
-  defp trace_function({function_type, meta, [head | body]}) do
-    # Extract function details
+  
+  # Helper function that implements the common tracing logic
+  defp do_trace(func_type, _meta, head, body) do
     {fun_name, head_meta, args} = head
+    
+    # Create a new AST node for the function definition
+    function_definition = {func_type, [], [{fun_name, head_meta, args}, [do: traced_body(fun_name, args, body[:do])]]}
+    
+    quote do
+      @traced_functions {unquote(fun_name), unquote(length(args || []))}
+      unquote(function_definition)
+    end
+  end
+  
+  # Generate the traced function body with exception handling
+  defp traced_body(fun_name, args, original_body) do
+    quote do
+      # Get short module name for event naming
+      short_module = 
+        __MODULE__
+        |> Module.split()
+        |> List.last()
+        |> Macro.underscore()
+        |> String.to_atom()
 
-    # Create new function body with tracing
-    new_body = quote do
-      event_name = [__MODULE__ |> Module.split() |> Enum.map(&String.to_atom/1), unquote(fun_name)]
+      # Create event name as [short_module, function_name]
+      event_prefix = [short_module, unquote(fun_name)]
+      
+      # Prepare metadata with module, function, args
+      args_map = unquote(create_args_map(args))
       metadata = %{
         module: __MODULE__,
         function: unquote(fun_name),
-        args: unquote(args_to_map(args))
+        args: args_map
       }
 
-      :telemetry.span(event_name, metadata, fn ->
-        result = unquote(body[:do])
-        {result, Map.put(metadata, :result, inspect(result))}
+      # Execute function within telemetry span with exception handling
+      :telemetry.span(event_prefix, metadata, fn ->
+        try do
+          # Execute the original function body
+          result = unquote(original_body)
+          
+          # Return the result with enhanced metadata
+          {result, Map.put(metadata, :result, result)}
+        rescue
+          exception ->
+            # Capture the stacktrace
+            stacktrace = __STACKTRACE__
+            
+            # Prepare exception metadata following OpenTelemetry spec
+            exception_type = exception.__struct__
+            exception_message = Exception.message(exception)
+            
+            # Create enhanced metadata with exception details
+            exception_metadata = Map.merge(metadata, %{
+              exception: %{
+                type: exception_type,
+                message: exception_message,
+                stacktrace: stacktrace
+              },
+              error: true
+            })
+            
+            # Add an event to the span for the exception
+            :telemetry.execute(
+              event_prefix ++ [:exception],
+              %{},
+              exception_metadata
+            )
+            
+            # Re-raise the exception to maintain original behavior
+            reraise(exception, stacktrace)
+        end
       end)
     end
-
-    # Construct the function with tracing
-    {function_type, meta, [head, [do: new_body]]}
   end
 
-  # Helper to convert function args to a map for telemetry metadata
-  defp args_to_map(args) do
-    args
-    |> Enum.with_index()
-    |> Enum.map(fn
-      {{:\\, _, [arg, _default]}, idx} ->
-        quote do
-          {"arg_#{unquote(idx)}", inspect(unquote(arg))}
-        end
-      {arg, idx} when is_atom(arg) ->
-        quote do
-          {"arg_#{unquote(idx)}", inspect(unquote(arg))}
-        end
-      _ ->
-        quote do
-          {"args", inspect(unquote(args))}
-        end
-    end)
-    |> then(fn arg_pairs ->
-      quote do
-        %{unquote_splicing(arg_pairs)}
-      end
-    end)
-  end
+  # Other helper functions omitted for brevity
 end
 ```
 
@@ -1879,29 +1935,62 @@ Add the following to your `fly.toml` to ensure proper OTel configuration:
 
 ### Phase 1: Core Tracing Infrastructure (Local)
 
-**Status:** NEXT UP
+**Status:** SUBSTANTIAL COMPLETION
 
-**Tasks:**
-1. Add remaining OpenTelemetry dependencies to mix.exs
-2. Complete local configuration in config/dev.exs
-3. Implement simplified Setlistify.Trace decorator module (runtime wrapping)
-4. Set up telemetry handlers for Phoenix events
-5. Instrument key modules with basic tracing:
-   - `lib/setlistify/spotify/session_manager.ex` - Add spans for session lifecycle
-   - `lib/setlistify/spotify/user_session.ex` - Trace token refresh operations
-   - `lib/setlistify_web/controllers/oauth_callback_controller.ex` - Trace OAuth flows
-6. Add trace context to existing logs in instrumented modules
-7. Create tests for trace decorator functionality
-8. Test locally with docker stack
-9. Verify trace data is flowing to local Grafana
+**Tasks Completed:**
+1. ✅ Implemented the core Setlistify.Trace decorator module with:
+   - Macro-based function decoration using `trace def function_name`
+   - Support for both @trace attribute and direct trace macro 
+   - Function metadata capture (args, result)
+   - Exception handling following OpenTelemetry specs
+   - Comprehensive test suite
+2. ✅ Added detailed exception handling to trace decorator:
+   - Captures exception type, message, and stacktrace
+   - Emits telemetry events with `:exception` suffix
+   - Adds error flag and exception details to span metadata
+   - Re-raises exceptions to maintain original behavior
+   - Unit tests for exception paths
+3. ✅ Added OpenTelemetry dependencies to mix.exs
+   - Added all required dependencies including:
+   - `opentelemetry_exporter`, `opentelemetry`, `opentelemetry_api`
+   - Framework integrations: `opentelemetry_phoenix`, `opentelemetry_telemetry`
+   - Logging: `opentelemetry_logger_metadata`
+4. ✅ Completed local configuration in config/dev.exs
+   - Configured OTLP exporter for local development
+   - Set proper resource attributes
+   - Configured logger to include trace context
+5. ✅ Implemented manual instrumentation for key modules:
+   - **Session Manager**: Instrumented critical lifecycle methods
+     - `get_session`: Traces session retrieval with user attribution
+     - `refresh_session`: Spans for token refresh operations
+     - `do_refresh_token`: Detailed span with token and error attributes
+   - **OAuth Controller**: End-to-end tracing of authentication flow
+     - `new`: Complete OAuth callback handling with error tracking
+     - `sign_in`: Spotify authorization flow with state tracking
+     - `sign_out`: Session termination and cleanup
 
-**Testing Focus:**
-- Unit tests for trace decorator
-- Integration tests for OAuth flow spans
-- Verify trace context propagation across process boundaries
-- Manual testing with local Grafana UI
+**Tasks Remaining:**
+1. ❌ Set up telemetry handlers for automated Phoenix and LiveView events
+2. ❌ Complete instrumentation of remaining modules:
+   - API clients for SetlistFM and Spotify
+   - Application-wide trace decorations using `@trace`
+3. ❌ Test with complete local docker stack
+4. ❌ Verify full trace data is flowing to local Grafana
 
-**Expected Timeline:** 1-2 days
+**Testing Status:**
+- ✅ Unit tests for trace decorator core functionality
+- ✅ Unit tests for exception handling in traced functions
+- ❌ Integration tests for OAuth flow spans
+- ❌ Manual testing with local Grafana UI
+
+**Commits:**
+- 87e42dd - "fix(@trace): update decorator and enable tests"
+- f617e5e - "fix(o11y): remove unused variable warning in trace module"
+- c6405ae - "refactor(o11y): consolidate trace macro implementation"
+- ebed43e - "feat(o11y): add exception handling to trace decorator"
+- xxxxxxx - "feat(o11y): add manual instrumentation to session manager and oauth controller"
+
+**Expected Timeline for Completion:** 1-2 days
 **Dependencies:** Phase 0 completion ✅, Phase 2 partial completion ✅
 **Key Success Metrics:** View traces in local Grafana Tempo, see connected traces for token refresh
 
@@ -2141,7 +2230,7 @@ Priority is given to instrumenting the most critical user flows and error-prone 
 
 ## Implementation Progress Summary
 
-As of May 19, 2025:
+As of May 21, 2025:
 
 **Completed:**
 - Phase 0: Local Development Stack Setup ✅ (100% complete)
@@ -2155,14 +2244,27 @@ As of May 19, 2025:
   - Basic SearchLive instrumentation
   - Using opentelemetry_logger_metadata package
 
+- Phase 1: Core Tracing Infrastructure ✅ (Substantial - ~70% complete)
+  - Trace decorator module with exception handling
+  - Support for both function-level decoration and module attributes
+  - Manual instrumentation of key modules (SessionManager, OAuth flows)
+  - Detailed span attribution for business context
+  - Exception handling and error recording in spans
+  - Comprehensive tests for normal execution and exception paths
+
 **In Progress/Next Up:**
-- Phase 1: Core Tracing Infrastructure
-  - Trace decorator module
+- Complete Phase 1:
   - API client instrumentation
-  - Session management tracing
+  - Setup telemetry handlers for Phoenix events
+  - Verify spans in Grafana Tempo
 
 **Key Achievements:**
 - Development logs now show trace context for better debugging
 - LiveView processes properly create spans despite not inheriting HTTP context
+- Robust trace decorator with exception handling following OTel specifications
+- Function-level tracing with minimal code changes required
+- Manual instrumentation of session management and OAuth flows
+- Detailed span attributes for business context (user_id, token status)
+- Error recording in spans for OAuth failures and token refresh issues
 - Clean implementation using community packages where possible
 - Foundation laid for comprehensive tracing implementation
