@@ -75,9 +75,6 @@ defmodule Setlistify.Trace do
   `opentelemetry_telemetry` to bridge these events to OpenTelemetry spans.
   """
 
-  # Process that receives test events - used only in tests
-  @test_process_name :trace_test_receiver
-
   defmacro __using__(_opts) do
     quote do
       import Setlistify.Trace, only: [trace: 1]
@@ -168,13 +165,6 @@ defmodule Setlistify.Trace do
                         },
                         error: true
                       })
-
-                    # Add an event to the span for the exception
-                    # For test compatibility, send a direct message to the test process
-                    if test_pid = Process.whereis(:trace_test_receiver) do
-                      direct_event = {:direct_exception_event, exception_type, exception_message}
-                      send(test_pid, direct_event)
-                    end
 
                     # Execute the telemetry event
                     :telemetry.execute(
@@ -279,13 +269,6 @@ defmodule Setlistify.Trace do
                 error: true
               })
 
-            # Add an event to the span for the exception
-            # For test compatibility, send a direct message to the test process
-            if test_pid = Process.whereis(:trace_test_receiver) do
-              direct_event = {:direct_exception_event, exception_type, exception_message}
-              send(test_pid, direct_event)
-            end
-
             # Execute the telemetry event
             :telemetry.execute(
               event_prefix ++ [:exception],
@@ -328,127 +311,5 @@ defmodule Setlistify.Trace do
         %{unquote_splicing(arg_pairs)}
       end
     end)
-  end
-
-  @doc """
-  Sets up a process to receive telemetry events for testing.
-
-  This function is only used in tests to verify that telemetry events
-  are properly emitted by traced functions.
-
-  ## Parameters
-
-  - `pid`: The process ID that should receive telemetry events
-
-  ## Usage
-
-      # In a test
-      Setlistify.Trace.set_test_receiver(self())
-
-      # Call a traced function
-      result = MyModule.traced_function(arg)
-
-      # Assert events were received
-      assert_receive {:telemetry_event, [:my_module, :traced_function, :start], metadata}
-  """
-  def set_test_receiver(pid) when is_pid(pid) do
-    # For safety, clear any old handlers or registrations
-    clear_test_receiver()
-
-    # Register the process
-    Process.register(pid, @test_process_name)
-
-    # Set up handlers for telemetry events that match any event
-    handler_id = "test-handler-#{:erlang.unique_integer([:positive])}"
-
-    :telemetry.attach_many(
-      handler_id,
-      [
-        [:*],
-        [:*, :*],
-        [:*, :*, :*],
-        [:*, :*, :*, :*],
-        [:*, :*, :*, :*, :*]
-      ],
-      &handle_test_event/4,
-      %{handler_id: handler_id}
-    )
-
-    :ok
-  end
-
-  @doc """
-  Clears the test event receiver and removes telemetry handlers.
-
-  This should be called at the end of tests to clean up.
-  """
-  def clear_test_receiver do
-    # Try to detach all potential test handlers (use a pattern match)
-    try do
-      # Get all handlers that start with "test-handler"
-      handlers = :telemetry.list_handlers([])
-
-      # Filter handlers that start with "test-handler"
-      test_handlers =
-        Enum.filter(handlers, fn
-          %{id: id} when is_binary(id) -> String.starts_with?(id, "test-handler")
-          _ -> false
-        end)
-
-      # Detach each test handler
-      Enum.each(test_handlers, fn %{id: id} ->
-        :telemetry.detach(id)
-      end)
-
-      # Also try the default handler name just in case
-      :telemetry.detach("test-handler")
-    rescue
-      # Ignore errors when detaching
-      _ -> :ok
-    end
-
-    # Clean up the registered process name if it exists
-    if Process.whereis(@test_process_name) do
-      Process.unregister(@test_process_name)
-    end
-
-    :ok
-  end
-
-  # Handler function for test telemetry events
-  defp handle_test_event(event_name, _measurements, metadata, _config) do
-    # Only forward events if test process is registered
-    if test_pid = Process.whereis(@test_process_name) do
-      # Send complete event details
-      send(test_pid, {:telemetry_event, event_name, metadata})
-
-      # Also send specific events for start/stop/exception based on event naming patterns
-      msg =
-        cond do
-          # Match start events
-          match?([_, _, :start], event_name) or
-            match?([_, :start], event_name) or
-              String.ends_with?(to_string(List.last(event_name)), "start") ->
-            {:start_event, metadata}
-
-          # Match stop events
-          match?([_, _, :stop], event_name) or
-            match?([_, :stop], event_name) or
-              String.ends_with?(to_string(List.last(event_name)), "stop") ->
-            {:stop_event, metadata}
-
-          # Match exception events
-          match?([_, _, :exception], event_name) or
-            match?([_, :exception], event_name) or
-              String.ends_with?(to_string(List.last(event_name)), "exception") ->
-            {:exception_event, metadata}
-
-          # For the arity test and other events
-          true ->
-            {:arity_event, metadata}
-        end
-
-      send(test_pid, msg)
-    end
   end
 end

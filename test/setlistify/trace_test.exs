@@ -2,6 +2,9 @@ defmodule Setlistify.TraceTest do
   use ExUnit.Case, async: false
   require Logger
 
+  # Process that receives test events - used only in tests
+  @test_process_name :trace_test_receiver
+
   describe "@trace decorator" do
     test "creates a function that returns the correct result" do
       # Define our test module with traced function
@@ -115,10 +118,10 @@ defmodule Setlistify.TraceTest do
       end
 
       # Ensure we start with a clean slate
-      Setlistify.Trace.clear_test_receiver()
+      clear_test_receiver()
 
       # Setup the test trace receiver
-      Setlistify.Trace.set_test_receiver(self())
+      set_test_receiver(self())
 
       # First, verify normal execution works correctly
       result = TestExceptionModule.failing_function(:ok)
@@ -159,7 +162,7 @@ defmodule Setlistify.TraceTest do
       end
 
       # Clean up
-      Setlistify.Trace.clear_test_receiver()
+      clear_test_receiver()
     end
 
     @tag :skip
@@ -191,6 +194,103 @@ defmodule Setlistify.TraceTest do
       # Call the mock
       result = TestAPIMock.mocked_function("test")
       assert result == {:ok, "mock: test"}
+    end
+  end
+
+  # Test helper functions for telemetry event testing
+  defp set_test_receiver(pid) when is_pid(pid) do
+    # For safety, clear any old handlers or registrations
+    clear_test_receiver()
+
+    # Register the process
+    Process.register(pid, @test_process_name)
+
+    # Set up handlers for telemetry events that match any event
+    handler_id = "test-handler-#{:erlang.unique_integer([:positive])}"
+
+    :telemetry.attach_many(
+      handler_id,
+      [
+        [:*],
+        [:*, :*],
+        [:*, :*, :*],
+        [:*, :*, :*, :*],
+        [:*, :*, :*, :*, :*]
+      ],
+      &handle_test_event/4,
+      %{handler_id: handler_id}
+    )
+
+    :ok
+  end
+
+  defp clear_test_receiver do
+    # Try to detach all potential test handlers (use a pattern match)
+    try do
+      # Get all handlers that start with "test-handler"
+      handlers = :telemetry.list_handlers([])
+
+      # Filter handlers that start with "test-handler"
+      test_handlers =
+        Enum.filter(handlers, fn
+          %{id: id} when is_binary(id) -> String.starts_with?(id, "test-handler")
+          _ -> false
+        end)
+
+      # Detach each test handler
+      Enum.each(test_handlers, fn %{id: id} ->
+        :telemetry.detach(id)
+      end)
+
+      # Also try the default handler name just in case
+      :telemetry.detach("test-handler")
+    rescue
+      # Ignore errors when detaching
+      _ -> :ok
+    end
+
+    # Clean up the registered process name if it exists
+    if Process.whereis(@test_process_name) do
+      Process.unregister(@test_process_name)
+    end
+
+    :ok
+  end
+
+  # Handler function for test telemetry events
+  defp handle_test_event(event_name, _measurements, metadata, _config) do
+    # Only forward events if test process is registered
+    if test_pid = Process.whereis(@test_process_name) do
+      # Send complete event details
+      send(test_pid, {:telemetry_event, event_name, metadata})
+
+      # Also send specific events for start/stop/exception based on event naming patterns
+      msg =
+        cond do
+          # Match start events
+          match?([_, _, :start], event_name) or
+            match?([_, :start], event_name) or
+              String.ends_with?(to_string(List.last(event_name)), "start") ->
+            {:start_event, metadata}
+
+          # Match stop events
+          match?([_, _, :stop], event_name) or
+            match?([_, :stop], event_name) or
+              String.ends_with?(to_string(List.last(event_name)), "stop") ->
+            {:stop_event, metadata}
+
+          # Match exception events
+          match?([_, _, :exception], event_name) or
+            match?([_, :exception], event_name) or
+              String.ends_with?(to_string(List.last(event_name)), "exception") ->
+            {:exception_event, metadata}
+
+          # For the arity test and other events
+          true ->
+            {:arity_event, metadata}
+        end
+
+      send(test_pid, msg)
     end
   end
 end
