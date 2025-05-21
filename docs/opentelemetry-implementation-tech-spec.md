@@ -4,7 +4,7 @@
 
 This document outlines the implementation of OpenTelemetry in Setlistify, our Elixir/Phoenix/LiveView application that integrates Setlist.fm and Spotify APIs to create playlists from concert setlists. OpenTelemetry will provide comprehensive observability through traces, logs, and metrics, starting with a local development stack and eventually deploying to Grafana Cloud. This implementation will be rolled out in phases, beginning with local environment setup, followed by core tracing capabilities, log correlation, metrics, and finally cloud deployment.
 
-**Current Status:** Phase 0 completed, Phase 2 partially completed (prioritized for early log visibility), Phase 1 substantially completed with trace decorator implementation and key module instrumentation.
+**Current Status:** Phase 0 completed with verified trace pipeline, Phase 2 partially completed (prioritized for early log visibility), Phase 1 substantially completed with trace decorator implementation and key module instrumentation. Local observability stack is fully functional with traces flowing from Elixir application to Grafana via Tempo.
 
 **Last Updated:** May 21, 2025
 
@@ -1882,20 +1882,36 @@ Add the following to your `fly.toml` to ensure proper OTel configuration:
 8. ✅ Tested connectivity and successfully sent traces from Elixir app
 9. ✅ Created basic dashboard for trace visualization
 10. ✅ Documented local setup process in README and phase 0 guide
+11. ✅ **Pipeline Verification:** Resolved Docker and configuration issues
+    - Fixed Loki container startup issues (structured metadata conflicts)
+    - Created missing data directories for volume mounts
+    - Verified end-to-end trace flow from Elixir→OTLP→Tempo→Grafana
+12. ✅ **Testing Infrastructure:** Created comprehensive test task
+    - Added `mix test_otel` command for validating trace pipeline
+    - Tests basic spans, nested spans, exception handling, and session manager
+    - Provides debugging output and trace generation for development
 
 **Testing Accomplishments:**
 - ✅ All containers start correctly with proper networking
 - ✅ Resolved configuration issues (Tempo, Loki configs)
 - ✅ Successfully sent test traces and verified in Grafana
 - ✅ Traces are properly collected and visualized
+- ✅ **Docker Stack Debugging:** Fixed Loki startup failures
+- ✅ **Trace Pipeline Verified:** Confirmed traces appear in Grafana UI
+- ✅ **Test Automation:** Created reliable test harness for development
 
-**Actual Timeline:** 1 session
+**Actual Timeline:** 2 sessions (1 initial setup + 1 debugging/verification)
 **Key Success Metrics Achieved:**
 - Local Grafana stack running with proper Docker networking
 - Successfully viewing traces in Grafana Tempo
 - Test trace function working (OtelTest.trace())
+- ✅ **End-to-end trace pipeline fully operational**
+- ✅ **Reproducible testing with `mix test_otel` command**
 
-**Commit:** 74f4b1d - "feat: add OpenTelemetry local development environment"
+**Commits:**
+- 74f4b1d - "feat: add OpenTelemetry local development environment"
+- e733ba8 - "fix(docker): resolve Loki startup issues in observability stack"
+- 8b6cec6 - "feat(o11y): add comprehensive OpenTelemetry test task"
 
 **Decision Note:** We prioritized Phase 2 (logging with trace context) before Phase 1 to provide immediate visibility into development logs. This allowed us to see trace_id and span_id in console logs during development, which is valuable when implementing the core tracing infrastructure in Phase 1.
 
@@ -2237,6 +2253,8 @@ As of May 21, 2025:
   - Docker compose stack with Grafana, Tempo, Loki, Prometheus
   - Local configuration for OTLP endpoints
   - Basic trace visualization in Grafana
+  - **Pipeline Verification:** Fixed Docker issues and verified end-to-end trace flow
+  - **Testing Infrastructure:** Created `mix test_otel` command for reliable testing
 
 - Phase 2: Enhanced Tracing and Logging ✅ (Partial - ~30% complete)
   - Trace context in logs (trace_id, span_id)
@@ -2256,9 +2274,12 @@ As of May 21, 2025:
 - Complete Phase 1:
   - API client instrumentation
   - Setup telemetry handlers for Phoenix events
-  - Verify spans in Grafana Tempo
+  - ~~Verify spans in Grafana Tempo~~ ✅ **COMPLETED**
 
 **Key Achievements:**
+- **✅ Fully functional observability pipeline:** Traces flow from Elixir app to Grafana
+- **✅ Verified trace visualization:** Can see service "setlistify" traces in Grafana UI
+- **✅ Debugging infrastructure:** Reliable test harness with `mix test_otel` command
 - Development logs now show trace context for better debugging
 - LiveView processes properly create spans despite not inheriting HTTP context
 - Robust trace decorator with exception handling following OTel specifications
@@ -2268,3 +2289,5 @@ As of May 21, 2025:
 - Error recording in spans for OAuth failures and token refresh issues
 - Clean implementation using community packages where possible
 - Foundation laid for comprehensive tracing implementation
+
+**Critical Milestone Achieved:** The OpenTelemetry implementation is now functional and verified. Traces created by the application successfully appear in the Grafana interface, confirming the entire observability stack is working correctly.
