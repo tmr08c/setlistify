@@ -118,7 +118,9 @@ defmodule Setlistify.Spotify.SessionManager do
   """
   @spec refresh_session(binary()) :: {:ok, UserSession.t()} | {:error, atom()}
   def refresh_session(user_id) do
-    OpenTelemetry.Tracer.with_span "spotify_session_refresh", %{attributes: [{"user_id", user_id}]} do
+    OpenTelemetry.Tracer.with_span "spotify_session_refresh", %{
+      attributes: [{"user_id", user_id}]
+    } do
       case lookup(user_id) do
         {:ok, pid} -> GenServer.call(pid, :refresh_session)
         :error -> {:error, :not_found}
@@ -238,7 +240,9 @@ defmodule Setlistify.Spotify.SessionManager do
 
   defp do_refresh_token(%{refresh_token: refresh_token} = state) do
     # Create a span for the token refresh operation
-    OpenTelemetry.Tracer.with_span "spotify_refresh_token", %{attributes: [{"user_id", state.user_id}]} do
+    OpenTelemetry.Tracer.with_span "spotify_refresh_token", %{
+      attributes: [{"user_id", state.user_id}]
+    } do
       case API.refresh_token(refresh_token) do
         {:ok, new_tokens} ->
           schedule_refresh(new_tokens.expires_in - @refresh_threshold)
@@ -266,6 +270,7 @@ defmodule Setlistify.Spotify.SessionManager do
             {"error", true},
             {"error.message", inspect(reason)}
           ])
+
           error
       end
     end

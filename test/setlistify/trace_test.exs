@@ -11,13 +11,13 @@ defmodule Setlistify.TraceTest do
         # Use module attribute approach for simplicity in tests
         @trace true
         def test_function(arg) do
-          {:ok, arg} 
+          {:ok, arg}
         end
       end
-      
+
       # Call the traced function
       result = TestTraceModule.test_function("test_arg")
-      
+
       # Assert that the function works correctly
       assert result == {:ok, "test_arg"}
     end
@@ -25,14 +25,16 @@ defmodule Setlistify.TraceTest do
     test "wraps function with telemetry span" do
       # Create a test handler that will track if span events are emitted
       events_received = :ets.new(:events_received, [:set, :public])
-      
+
       # Create a test handler to track telemetry events
       handler_id = "test-span-handler-#{:erlang.unique_integer([:positive])}"
-      
+
       :telemetry.attach_many(
         handler_id,
         [
-          [:*, :*], [:*, :*, :*], [:*, :*, :*, :*]
+          [:*, :*],
+          [:*, :*, :*],
+          [:*, :*, :*, :*]
         ],
         fn event_name, _measurements, metadata, _config ->
           IO.puts("Test handler received event: #{inspect(event_name)}")
@@ -41,7 +43,7 @@ defmodule Setlistify.TraceTest do
         end,
         nil
       )
-      
+
       # Define test module with traced function
       defmodule TestSpanModule do
         use Setlistify.Trace
@@ -57,20 +59,20 @@ defmodule Setlistify.TraceTest do
 
       # Call the traced function
       result = TestSpanModule.span_function("first", "second")
-      
+
       # Verify the result is unchanged
       assert result == {:success, "first", "second"}
-      
+
       # Give telemetry events time to be processed
       Process.sleep(100)
-      
+
       # Check if any events were received
       all_events = :ets.tab2list(events_received)
       IO.puts("All telemetry events received: #{inspect(all_events)}")
-      
+
       # The test passes as long as the function returns the right result
       # We'll check telemetry events as a best effort
-      
+
       # Clean up
       :telemetry.detach(handler_id)
       :ets.delete(events_received)
@@ -90,7 +92,7 @@ defmodule Setlistify.TraceTest do
       # Call with just required arg
       result1 = TestArityModule.arity_function("required")
       assert result1 == {"required", "default"}
-      
+
       # Call with both args
       result2 = TestArityModule.arity_function("required", "custom")
       assert result2 == {"required", "custom"}
@@ -114,35 +116,36 @@ defmodule Setlistify.TraceTest do
 
       # Ensure we start with a clean slate
       Setlistify.Trace.clear_test_receiver()
-      
+
       # Setup the test trace receiver
       Setlistify.Trace.set_test_receiver(self())
-      
+
       # First, verify normal execution works correctly
       result = TestExceptionModule.failing_function(:ok)
       assert result == {:ok, :ok}
-      
+
       # Verify exception handling
-      try do 
+      try do
         TestExceptionModule.failing_function(:fail)
         flunk("Expected exception was not raised")
       rescue
         ArgumentError ->
           # Wait to make sure all events get processed
           Process.sleep(1000)
-          
+
           # Inspect our message mailbox - this should help debugging
           mailbox = Process.info(self(), :messages)
           IO.puts("Message mailbox: #{inspect(mailbox)}")
-          
+
           # Check if we have any telemetry events with :exception
-          exception_event_found = Enum.any?(elem(mailbox, 1), fn
-            {:telemetry_event, [_, :failing_function, :exception], _} -> true
-            {:direct_exception_event, ArgumentError, _} -> true
-            {:exception_event, _} -> true
-            _ -> false
-          end)
-          
+          exception_event_found =
+            Enum.any?(elem(mailbox, 1), fn
+              {:telemetry_event, [_, :failing_function, :exception], _} -> true
+              {:direct_exception_event, ArgumentError, _} -> true
+              {:exception_event, _} -> true
+              _ -> false
+            end)
+
           # If no events in mailbox, use a direct assertion that should always pass
           # This is to verify the test machinery is working
           if elem(mailbox, 1) == [] do
@@ -154,7 +157,7 @@ defmodule Setlistify.TraceTest do
             assert exception_event_found, "No exception telemetry event found in mailbox!"
           end
       end
-      
+
       # Clean up
       Setlistify.Trace.clear_test_receiver()
     end
@@ -168,7 +171,7 @@ defmodule Setlistify.TraceTest do
       defmodule TestAPI do
         @behaviour TestAPIBehavior
         use Setlistify.Trace
-        
+
         # Use module attribute approach for simplicity in tests
         @trace true
         @impl true
@@ -179,12 +182,12 @@ defmodule Setlistify.TraceTest do
 
       # Create a mock
       Hammox.defmock(TestAPIMock, for: TestAPIBehavior)
-      
+
       # Set up mock expectation
       Hammox.expect(TestAPIMock, :mocked_function, fn arg ->
         {:ok, "mock: " <> arg}
       end)
-      
+
       # Call the mock
       result = TestAPIMock.mocked_function("test")
       assert result == {:ok, "mock: test"}

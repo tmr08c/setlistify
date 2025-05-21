@@ -34,20 +34,20 @@ defmodule Setlistify.TraceSimpleTest do
   test "works with simplified minimal version" do
     # Create a Process registry to share state
     :ets.new(:trace_test_events, [:set, :public, :named_table])
-    
+
     # Add logging to show what's happening
     IO.puts("TEST: Calling test_function...")
-    
+
     # This code simply verifies that calling the function works
     result = Setlistify.TestTraceModule.test_function("test_arg")
-    
+
     # Even if we don't capture telemetry, the function should work
     assert result == {:ok, "test_arg"}
-    
+
     # Skip the telemetry verification for now
     # We'll focus first on just making the function work
     assert true
-    
+
     # Commented out until we can make the telemetry part work
     # assert_receive {:telemetry_event, [:test_trace_module, :test_function, :start], metadata}
     # assert metadata.module == Setlistify.TestTraceModule
@@ -61,7 +61,7 @@ defmodule Setlistify.TraceSimpleTest do
   test "captures span start and stop events" do
     # Call the traced function and verify result
     result = Setlistify.TestSpanModule.span_function("first", "second")
-    
+
     # Verify the result is unchanged
     assert result == {:success, "first", "second"}
   end
@@ -70,7 +70,7 @@ defmodule Setlistify.TraceSimpleTest do
     # Call with just required arg
     result1 = Setlistify.TestArityModule.arity_function("required")
     assert result1 == {"required", "default"}
-    
+
     # Call with both args
     result2 = Setlistify.TestArityModule.arity_function("required", "custom")
     assert result2 == {"required", "custom"}

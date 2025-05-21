@@ -61,11 +61,13 @@ defmodule SetlistifyWeb.OAuthCallbackController do
   require OpenTelemetry.Tracer
 
   def new(conn, %{"provider" => "spotify", "code" => code, "state" => state}) do
-    OpenTelemetry.Tracer.with_span "oauth_callback", %{attributes: [
-      {"oauth.provider", "spotify"}, 
-      {"oauth.has_code", true}, 
-      {"oauth.state_valid", state == get_session(conn, :oauth_state)}
-    ]} do
+    OpenTelemetry.Tracer.with_span "oauth_callback", %{
+      attributes: [
+        {"oauth.provider", "spotify"},
+        {"oauth.has_code", true},
+        {"oauth.state_valid", state == get_session(conn, :oauth_state)}
+      ]
+    } do
       if state == get_session(conn, :oauth_state) do
         # Exchange authorization code for access and refresh tokens
         redirect_uri = url(~p"/oauth/callbacks/spotify")
@@ -94,7 +96,7 @@ defmodule SetlistifyWeb.OAuthCallbackController do
               {"error", true},
               {"error.message", inspect(reason)}
             ])
-            
+
             conn
             |> put_flash(:error, "Failed to authenticate with Spotify. Please try again.")
             |> redirect(to: ~p"/")
@@ -105,7 +107,7 @@ defmodule SetlistifyWeb.OAuthCallbackController do
           {"error", true},
           {"error.type", "state_mismatch"}
         ])
-        
+
         conn
         |> put_flash(:error, "Response from Spotify did not match. Please try again.")
         |> redirect(to: ~p"/")
@@ -156,10 +158,12 @@ defmodule SetlistifyWeb.OAuthCallbackController do
 
   def sign_out(conn, _) do
     user_id = get_session(conn, :user_id)
-    
-    OpenTelemetry.Tracer.with_span "oauth_sign_out", %{attributes: [
-      {"has_user_id", user_id != nil}
-    ]} do
+
+    OpenTelemetry.Tracer.with_span "oauth_sign_out", %{
+      attributes: [
+        {"has_user_id", user_id != nil}
+      ]
+    } do
       if user_id do
         OpenTelemetry.Tracer.set_attributes([{"user_id", user_id}])
       end
