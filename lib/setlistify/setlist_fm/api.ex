@@ -1,4 +1,6 @@
 defmodule Setlistify.SetlistFm.API do
+  require OpenTelemetry.Tracer
+
   @type search_result() :: %{
           artist: String.t(),
           venue: %{
@@ -35,7 +37,19 @@ defmodule Setlistify.SetlistFm.API do
         }
   @callback search(String.t()) :: [search_result()]
   def search(query) do
-    :setlist_fm_search_cache |> Cachex.fetch(query, &impl().search/1) |> elem(1)
+    OpenTelemetry.Tracer.with_span "setlist_fm.api.search" do
+      impl().search(query)
+
+      case Cachex.fetch(:setlist_fm_search_cache, query, &impl().search/1) do
+        {:ok, result} ->
+          OpenTelemetry.Tracer.set_attributes([{:cache_hit, true}])
+          result
+
+        {:commit, result} ->
+          OpenTelemetry.Tracer.set_attributes([{:cache_hit, false}])
+          result
+      end
+    end
   end
 
   @callback get_setlist(String.t()) :: setlist()
