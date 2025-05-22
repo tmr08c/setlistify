@@ -61,7 +61,7 @@ defmodule Setlistify.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:req, "~> 0.3"},
       {:swoosh, "~> 1.3"},
-      {:tailwind, "~> 0.1.8", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.3.1", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
 
