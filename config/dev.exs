@@ -16,7 +16,7 @@ config :setlistify, SetlistifyWeb.Endpoint,
   secret_key_base: "qNJ7lJLK3GcEuONMenwia0XD4sw3J9l2hcJcxQQA6JlF+wNmowANvZ9TtNx25ESU",
   watchers: [
     esbuild: {Esbuild, :install_and_run, [:default, ~w(--sourcemap=inline --watch)]},
-    tailwind: {Tailwind, :install_and_run, [:default, ~w(--watch)]}
+    tailwind: {Tailwind, :install_and_run, [:setlistify, ~w(--watch)]}
   ]
 
 # ## SSL Support
