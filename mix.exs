@@ -44,6 +44,7 @@ defmodule Setlistify.MixProject do
       {:dotenv_parser, "~> 2.0", only: [:dev, :test]},
       {:cachex, "~> 3.6.0"},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:ecto, "~> 3.10"},
       {:esbuild, "~> 0.5", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},
       {:finch, "~> 0.13"},
@@ -60,8 +61,7 @@ defmodule Setlistify.MixProject do
       {:phoenix_live_view, "~> 1.0.0"},
       {:plug_cowboy, "~> 2.5"},
       {:req, "~> 0.3"},
-      {:swoosh, "~> 1.3"},
-      {:tailwind, "~> 0.3.1", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.1.8", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
 
