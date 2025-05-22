@@ -77,7 +77,7 @@ defmodule SetlistifyWeb.SearchLive do
                 ]}
               />
 
-              <div class="w-full max-w-2xl mx-auto mb-8 sm:mb-16">
+              <div class="w-full max-w-lg mx-auto mb-8 sm:mb-16">
                 <.form for={@search} name="search" phx-submit="search" class="w-full flex justify-center">
                   <div class="w-full max-w-full">
                     <div class="relative w-full">
@@ -145,7 +145,7 @@ defmodule SetlistifyWeb.SearchLive do
         </.section_container>
       <% else %>
         <.section_container class="py-10">
-          <div class="max-w-2xl mx-auto mb-10">
+          <div class="max-w-lg mx-auto mb-10">
             <.form for={@search} name="search" phx-submit="search" class="w-full flex justify-center">
               <div class="w-full max-w-full">
                 <div class="relative w-full">
