@@ -39,8 +39,7 @@ module.exports = {
     },
   },
   plugins: [
-    // Note: @tailwindcss/forms may not be compatible with v4 yet
-    // require("@tailwindcss/forms"),
+    require("@tailwindcss/forms"),
     plugin(({addVariant}) => addVariant("phx-no-feedback", [".phx-no-feedback&", ".phx-no-feedback &"])),
     plugin(({addVariant}) => addVariant("phx-click-loading", [".phx-click-loading&", ".phx-click-loading &"])),
     plugin(({addVariant}) => addVariant("phx-submit-loading", [".phx-submit-loading&", ".phx-submit-loading &"])),
