@@ -78,7 +78,12 @@ defmodule SetlistifyWeb.SearchLive do
               />
 
               <div class="w-full max-w-lg mx-auto mb-8 sm:mb-16">
-                <.form for={@search} name="search" phx-submit="search" class="w-full flex justify-center">
+                <.form
+                  for={@search}
+                  name="search"
+                  phx-submit="search"
+                  class="w-full flex justify-center"
+                >
                   <div class="w-full max-w-full">
                     <div class="relative w-full">
                       <input
@@ -86,7 +91,7 @@ defmodule SetlistifyWeb.SearchLive do
                         id="search-query"
                         name="search[query]"
                         value={@search[:query].value}
-                        placeholder="Start typing an artist name..."
+                        placeholder="Search for an artist or band..."
                         autocomplete="off"
                         class={[
                           "w-full px-4 sm:px-6 py-4 sm:py-5 pr-14 sm:pr-16 text-sm sm:text-base text-white bg-gradient-to-r from-gray-900 to-gray-800 border rounded-full placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-opacity-50 focus:border-emerald-500 transition-all duration-200 shadow-lg focus:shadow-emerald-500/25",
@@ -154,7 +159,7 @@ defmodule SetlistifyWeb.SearchLive do
                     id="search-query-results"
                     name="search[query]"
                     value={@search[:query].value}
-                    placeholder="Search for another artist..."
+                    placeholder="Search for an artist or band..."
                     autocomplete="off"
                     class={[
                       "w-full px-4 sm:px-6 py-4 sm:py-5 pr-14 sm:pr-16 text-sm sm:text-base text-white bg-gradient-to-r from-gray-900 to-gray-800 border rounded-full placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-opacity-50 focus:border-emerald-500 transition-all duration-200 shadow-lg focus:shadow-emerald-500/25",
