@@ -1,12 +1,13 @@
+
 # OpenTelemetry Implementation Tech Spec
 
 ## Executive Summary
 
-This document outlines the implementation of OpenTelemetry in Setlistify, our Elixir/Phoenix/LiveView application that integrates Setlist.fm and Spotify APIs to create playlists from concert setlists. OpenTelemetry will provide comprehensive observability through traces, logs, and metrics, starting with a local development stack and eventually deploying to Grafana Cloud. This implementation will be rolled out in phases, beginning with local environment setup, followed by core tracing capabilities, log correlation, metrics, and finally cloud deployment.
+This document outlines the implementation of OpenTelemetry in Setlistify, our Elixir/Phoenix/LiveView application that integrates Setlist.fm and Spotify APIs to create playlists from concert setlists. OpenTelemetry will provide comprehensive observability through traces, logs, and metrics, starting with a local development stack and eventually deploying to Grafana Cloud. This implementation will be rolled out in phases, beginning with local environment setup, followed by telemetry-to-OpenTelemetry integration, enhanced logging, metrics, and finally cloud deployment.
 
 **Current Status:** Phase 0 completed, Phase 2 partially completed (prioritized for early log visibility), Phase 1 next up.
 
-**Last Updated:** May 19, 2025
+**Last Updated:** May 22, 2025
 
 ## Background
 
@@ -21,17 +22,18 @@ Setlistify is built with Elixir, Phoenix, and LiveView. It integrates with two e
 
 ## Technical Approach
 
-After evaluating several options, we've decided to:
+After evaluating several options and initial implementation experimentation, we've decided to:
 
 1. Set up a local development stack with Grafana, Tempo, Loki, and Prometheus
-2. Use `:telemetry` as an abstraction layer for most of our instrumentation
-3. Leverage `opentelemetry_telemetry` to bridge telemetry events to OpenTelemetry spans
-4. Implement the `@trace` decorator pattern for function-level tracing in our API modules and session managers (using runtime wrapping initially)
-5. Add trace context propagation to HTTP requests using our existing Req client setup
-6. Include structured logging with trace context
-7. Instrument LiveView processes for user interaction tracing
-8. Create custom telemetry events for OAuth flows and API operations
-9. Start with local telemetry data collection, then migrate to Grafana Cloud
+2. **Use `:telemetry` as the primary instrumentation layer**, bridging to OpenTelemetry spans via `opentelemetry_telemetry`
+3. Add telemetry events to key modules and operations, then configure handlers to create OpenTelemetry spans
+4. Add trace context propagation to HTTP requests using our existing Req client setup
+5. Include structured logging with trace context
+6. Instrument LiveView processes for user interaction tracing
+7. Create custom telemetry events for OAuth flows and API operations
+8. Start with local telemetry data collection, then migrate to Grafana Cloud
+
+**Note on Decorator Pattern:** We initially explored implementing a `@trace` decorator pattern for function-level tracing but have decided to postpone this approach (see "Post-Implementation Ideas to Consider" section below).
 
 This approach maintains compatibility with our existing Hammox-based testing strategy while providing comprehensive observability. Special attention will be given to tracing across process boundaries, particularly for our SessionManager and UserSession GenServers. The local-first approach allows for rapid development iteration and testing before cloud deployment.
 
@@ -42,7 +44,8 @@ This approach maintains compatibility with our existing Hammox-based testing str
 | Approach | Pros | Cons | Decision |
 |----------|------|------|----------|
 | Direct OpenTelemetry API | Better cross-process context propagation, Full feature access | Tighter coupling to OpenTelemetry | Rejected |
-| `:telemetry` Abstraction | Decoupled from specific backends, Phoenix ecosystem standard | Process boundary limitations, More complex setup | **Selected** |
+| `:telemetry` + `opentelemetry_telemetry` | Decoupled from specific backends, Phoenix ecosystem standard, Process boundary handling | Requires more setup, Event-driven rather than decorator-based | **Selected** |
+| `@trace` Decorator Pattern | Clean syntax, Automatic instrumentation | Implementation complexity, Process boundary limitations, Community concerns | **Deferred** |
 | Custom Tracing Layer | Maximum flexibility | Development overhead, Non-standard | Rejected |
 
 ### Backend Service
@@ -78,35 +81,13 @@ defp deps do
     {:telemetry, "~> 1.2.1"},
     {:telemetry_metrics, "~> 0.6.1"},
 
-    # Logging
-    {:loki_logger, "~> 0.3.0"}
+    # Logging - Phase 2 addition
+    {:opentelemetry_logger_metadata, "~> 0.2.0"}
   ]
 end
 ```
 
-### 2. Setlistify Architecture Considerations
-
-#### GenServer Instrumentation
-- **SessionManager**: Trace supervisor operations and session lifecycle
-- **UserSession**: Instrument token refresh operations and API calls
-- **Registry**: Monitor session lookups and process registration
-
-#### Process Boundaries
-- Use trace context propagation when spawning new processes
-- Ensure parent-child span relationships across GenServer calls
-- Handle async Task instrumentation for concurrent API calls
-
-#### Testing Compatibility
-- Ensure all instrumentation respects Hammox mocks
-- Add telemetry event assertions to existing tests
-- Create separate test configuration that disables OTel exporters
-
-#### API Client Integration
-- Enhance existing Req-based clients with trace propagation
-- Add retry tracking and backoff instrumentation
-- Monitor rate limit headers and adjust accordingly
-
-### 3. Configuration
+### 2. Configuration
 
 #### Development Environment Configuration
 
@@ -139,11 +120,9 @@ config :opentelemetry, :resource,
     name: System.get_env("HOSTNAME", "localhost")
   ]
 
-# Local Loki logger configuration
-config :loki_logger,
-  url: "http://localhost:3100/loki/api/v1/push",
-  level: :info,
-  format: :json,
+# Console logger with trace context (Phase 2)
+config :logger, :console,
+  format: "$time [$level] $message $metadata\n",
   metadata: [:request_id, :trace_id, :span_id]
 ```
 
@@ -203,7 +182,7 @@ if config_env() == :prod do
 end
 ```
 
-### 4. Local Development Stack
+### 3. Local Development Stack
 
 Create a `docker-compose.yml` file in the project root:
 
@@ -1816,353 +1795,271 @@ Add the following to your `fly.toml` to ensure proper OTel configuration:
 2. ✅ Created configuration files for Tempo, Loki, and Prometheus
 3. ✅ Added development environment configuration to config/dev.exs
 4. ✅ Configured OpenTelemetry to send data to local endpoints
-5. ✅ Deferred Loki logger setup to Phase 2 (see reasoning below)
-6. ✅ Created bin/otel-local script for managing docker stack
-7. ✅ Verified services are running:
-   - Grafana UI at http://localhost:3000
-   - Tempo at http://localhost:3200
-   - Loki at http://localhost:3100 (ready for Phase 2)
-   - Prometheus at http://localhost:9090
-8. ✅ Tested connectivity and successfully sent traces from Elixir app
-9. ✅ Created basic dashboard for trace visualization
-10. ✅ Documented local setup process in README and phase 0 guide
-
-**Testing Accomplishments:**
-- ✅ All containers start correctly with proper networking
-- ✅ Resolved configuration issues (Tempo, Loki configs)
-- ✅ Successfully sent test traces and verified in Grafana
-- ✅ Traces are properly collected and visualized
-
-**Actual Timeline:** 1 session
-**Key Success Metrics Achieved:**
-- Local Grafana stack running with proper Docker networking
-- Successfully viewing traces in Grafana Tempo
-- Test trace function working (OtelTest.trace())
+5. ✅ Created bin/otel-local script for managing docker stack
+6. ✅ Verified services are running and accessible
+7. ✅ Tested connectivity and successfully sent traces from Elixir app
+8. ✅ Created basic dashboard for trace visualization
+9. ✅ Documented local setup process
 
 **Commit:** 74f4b1d - "feat: add OpenTelemetry local development environment"
-
-**Decision Note:** We prioritized Phase 2 (logging with trace context) before Phase 1 to provide immediate visibility into development logs. This allowed us to see trace_id and span_id in console logs during development, which is valuable when implementing the core tracing infrastructure in Phase 1.
 
 ### Phase 2: Enhanced Tracing and Logging (Local) ✅ COMPLETED (Partial)
 
 **Implementation Approach:** We started with Phase 2 to gain immediate visibility into trace context in logs, which helps with debugging during Phase 1 implementation.
 
 **Tasks Completed:**
-1. ✅ Implemented logger with trace context correlation
-   - Initially created custom `Setlistify.StructuredLogger`
-   - Refactored to use `opentelemetry_logger_metadata` package (simpler, more maintainable)
+1. ✅ Implemented logger with trace context correlation using `opentelemetry_logger_metadata`
 2. ✅ Added trace context (trace_id and span_id) to development logs
-   - Updated console logger configuration to include metadata
-   - Format: `$time [$level] $message $metadata\n`
 3. ✅ Implemented LiveView process trace propagation
-   - Created `SetlistifyWeb.Telemetry.LiveViewTelemetry` hook
-   - Added to all live sessions in router
-   - Creates new spans for connected LiveView processes
-4. ✅ Basic instrumentation of SearchLive
-   - Added span for `handle_params` operation
-   - Includes query parameters as span attributes
-   - Logs now automatically include trace context
+4. ✅ Basic instrumentation of SearchLive with custom spans
 5. ✅ Added dependency to mix.exs
-   - `opentelemetry_logger_metadata` v0.2.0
-
-**Tasks Remaining:** Loki configuration, exception tracking, HTTP client tracing, API instrumentation, telemetry events, comprehensive LiveView instrumentation, testing
-
-**Actual Timeline:** 1 session (partial implementation)
-**Key Success Metrics Achieved:**
-- All logs now include trace context (trace_id, span_id)
-- LiveView processes create proper spans for trace continuity
-- Basic SearchLive instrumentation working
 
 **Commits:**
 - fb90497 - "feat: implement Phase 2 - add trace context to logs"
 - 455e899 - "refactor: replace custom StructuredLogger with opentelemetry_logger_metadata"
 
-### Phase 1: Core Tracing Infrastructure (Local)
+### Phase 1: Telemetry-to-OpenTelemetry Integration
 
 **Status:** NEXT UP
 
 **Tasks:**
-1. Add remaining OpenTelemetry dependencies to mix.exs
-2. Complete local configuration in config/dev.exs
-3. Implement simplified Setlistify.Trace decorator module (runtime wrapping)
-4. Set up telemetry handlers for Phoenix events
-5. Instrument key modules with basic tracing:
-   - `lib/setlistify/spotify/session_manager.ex` - Add spans for session lifecycle
-   - `lib/setlistify/spotify/user_session.ex` - Trace token refresh operations
-   - `lib/setlistify_web/controllers/oauth_callback_controller.ex` - Trace OAuth flows
-6. Add trace context to existing logs in instrumented modules
-7. Create tests for trace decorator functionality
-8. Test locally with docker stack
-9. Verify trace data is flowing to local Grafana
+1. Complete OpenTelemetry dependencies in mix.exs
+2. Implement Setlistify.TelemetryEvents registry
+3. Create Setlistify.Observability.setup_telemetry_otel_bridges/0
+4. Add `:telemetry.span/3` instrumentation to key modules:
+   - `lib/setlistify/spotify/api/external_client.ex`
+   - `lib/setlistify/setlist_fm/api/external_client.ex` 
+   - `lib/setlistify/spotify/session_manager.ex`
+   - `lib/setlistify/spotify/user_session.ex`
+   - `lib/setlistify_web/controllers/oauth_callback_controller.ex`
+5. Configure telemetry handlers to bridge to OpenTelemetry spans
+6. Enhance existing LiveView instrumentation with more telemetry events
+7. Add telemetry events for critical business operations:
+   - OAuth flows and token refresh
+   - API request patterns and retries
+   - Session lifecycle management
+8. Create integration tests for telemetry-to-OpenTelemetry flow
+9. Test locally with docker stack
+10. Verify connected traces across process boundaries
 
 **Testing Focus:**
-- Unit tests for trace decorator
-- Integration tests for OAuth flow spans
-- Verify trace context propagation across process boundaries
-- Manual testing with local Grafana UI
+- Integration tests for telemetry event emission
+- Verify OpenTelemetry span creation from telemetry events
+- Test trace context propagation across GenServer boundaries
+- Manual validation with local Grafana UI
 
-**Expected Timeline:** 1-2 days
+**Expected Timeline:** 2-3 days
 **Dependencies:** Phase 0 completion ✅, Phase 2 partial completion ✅
-**Key Success Metrics:** View traces in local Grafana Tempo, see connected traces for token refresh
+**Key Success Metrics:** 
+- Connected traces visible in local Grafana showing OAuth flow
+- Trace context properly propagated across SessionManager → UserSession → API calls
+- LiveView interactions create spans linked to business operations
 
-### Phase 2: Enhanced Tracing and Logging (Local) ✅ COMPLETED (Partial)
-
-**Tasks Completed:**
-1. ✅ Implemented logger with trace context correlation
-   - Initially created custom `Setlistify.StructuredLogger` (commit: fb90497)
-   - Refactored to use `opentelemetry_logger_metadata` package (commit: 455e899)
-2. ✅ Added trace context (trace_id and span_id) to development logs
-   - Updated console logger configuration to include metadata
-   - Format: `$time [$level] $message $metadata\n`
-3. ✅ Implemented LiveView process trace propagation
-   - Created `SetlistifyWeb.Telemetry.LiveViewTelemetry` hook
-   - Added to all live sessions in router
-   - Creates new spans for connected LiveView processes
-4. ✅ Basic instrumentation of SearchLive
-   - Added span for `handle_params` operation
-   - Includes query parameters as span attributes
-   - Logs now automatically include trace context
-5. ✅ Added dependency to mix.exs
-   - `opentelemetry_logger_metadata` v0.2.0
+### Phase 2: Enhanced Tracing and Logging (Local) - Complete Remaining Tasks
 
 **Tasks Remaining:**
-1. ❌ Add Loki logger configuration for local development
-2. ❌ Create exception tracking for API errors and OAuth failures
-3. ❌ Implement Setlistify.TracedReq for HTTP client tracing
-4. ❌ Create Setlistify.TelemetryEvents registry
-5. ❌ Instrument API clients with detailed spans:
-   - `lib/setlistify/spotify/api/external_client.ex` - Add @trace to all public functions
-   - `lib/setlistify/setlist_fm/api/external_client.ex` - Add @trace to search and get_setlist
-   - Track retry attempts in `with_token_refresh`
-6. ❌ Complete LiveView instrumentation:
-   - `lib/setlistify_web/live/setlists/show_live.ex` - Trace setlist display
-   - `lib/setlistify_web/live/playlists/show_live.ex` - Trace playlist operations
-7. ❌ Add telemetry events for business operations:
-   - Setlist searches and fetches
-   - Spotify track searches
-   - Playlist creation
-   - Token refresh cycles
-8. ❌ Create structured logger tests (removed when switching to library)
-9. ❌ Test LiveView instrumentation with Phoenix.LiveViewTest
-10. ❌ Verify log correlation is working in local Grafana
+1. Add Loki logger configuration for local development
+2. Create exception tracking for API errors and OAuth failures
+3. Implement HTTP client tracing with Req middleware
+4. Complete comprehensive LiveView instrumentation
+5. Add telemetry events for error scenarios and edge cases
+6. Create structured tests for telemetry instrumentation
+7. Verify log correlation with traces in local Grafana
 
-**Testing Status:**
-- No tests were added for the LiveView instrumentation
-- Logger functionality is handled by the external library
+**Testing Focus:**
+- Exception handling with trace context
+- HTTP client request tracing
+- Log correlation verification in Grafana
+- LiveView event flow testing
 
-**Actual Timeline:** 1 session (partial implementation)
-**Key Achievements:**
-- All logs now include trace context (trace_id, span_id)
-- LiveView processes create proper spans for trace continuity
-- Simplified implementation using community package
-- Basic instrumentation of SearchLive with custom span
-
-**Commits:**
-- fb90497 - "feat: implement Phase 2 - add trace context to logs"
-- 455e899 - "refactor: replace custom StructuredLogger with opentelemetry_logger_metadata"
+**Expected Timeline:** 1-2 days
+**Dependencies:** Phase 1 completion
+**Key Success Metrics:** Complete observability stack with logs correlated to traces
 
 ### Phase 3: Metrics and Dashboards (Local)
-
-**Status:** TO BE STARTED
 
 **Tasks:**
 1. Implement Setlistify.Telemetry metrics collection
 2. Set up metrics reporting to local Prometheus
-3. Add metrics to specific modules:
-   - `lib/setlistify/spotify/api/external_client.ex` - API request durations, error rates
-   - `lib/setlistify/setlist_fm/api/external_client.ex` - Search response times, result counts
-   - `lib/setlistify/spotify/session_manager.ex` - Active sessions, refresh rates
-   - `lib/setlistify_web/auth/live_hooks.ex` - Auth check latencies
-4. Create local Grafana dashboards for:
-   - Application health overview (memory, processes, request rates)
-   - API performance metrics (Setlist.fm and Spotify latencies)
-   - OAuth session metrics (active sessions, refresh rates)
-   - LiveView performance (mount times, event handling)
+3. Create custom telemetry metrics for business operations
+4. Build Grafana dashboards for:
+   - Application health and performance
+   - OAuth session metrics
+   - API performance and error rates
    - Business metrics (searches, playlists created)
-   - Error rates by API and operation type
-5. Set up local alerts for:
-   - Token refresh failures
-   - API response times > 5s
-   - Error rates > 5%
-6. Create custom panels for tracking API rate limits
-7. Test metrics collection with simulated load locally
-8. Validate dashboard accuracy with known operations
-9. Export dashboard definitions for later cloud deployment
-
-**Testing Focus:**
-- Unit tests for metric collectors
-- Local load tests to verify metric accuracy
-- Alert testing with simulated failures
-- Dashboard validation with test data
-- Manual verification in local Grafana
+5. Set up local alerts for key failure scenarios
+6. Create performance baselines with metrics
+7. Test metrics accuracy and dashboard functionality
 
 **Expected Timeline:** 1-2 days
-**Dependencies:** Phase 1 completion, Phase 2 full completion
-**Key Success Metrics:** Operational dashboards in local Grafana with real-time metrics
+**Dependencies:** Phase 1 and Phase 2 completion
+**Key Success Metrics:** Operational dashboards showing real-time application metrics
 
 ### Phase 4: Optimization and Refinement (Local)
 
 **Tasks:**
-1. Analyze performance impact on specific modules:
-   - `lib/setlistify/spotify/session_manager.ex` - GenServer message processing
-   - `lib/setlistify/spotify/user_session.ex` - Token refresh overhead
-   - LiveView handle_event callbacks
-2. Optimize span creation in high-frequency operations:
-   - Token validity checks
-   - Session lookups in Registry
-   - LiveView socket assigns
-3. Implement sampling strategies:
-   - Tail-based sampling for LiveView events
-   - Head-based sampling for health checks
-   - Always sample errors and slow requests
-4. Add custom span attributes for business context:
-   - Artist names in setlist searches
-   - Playlist sizes and track counts
-   - User session states
-5. Enhance authentication instrumentation:
-   - `lib/setlistify_web/plugs/restore_spotify_token.ex` - Trace token restoration
-   - `lib/setlistify_web/controllers/user_auth.ex` - Add auth check spans
-6. Refine local dashboards based on testing patterns
-7. Create SLO definitions for:
-   - API response times (p99 < 2s)
-   - Token refresh success rate (> 99.9%)
-   - Playlist creation success rate (> 95%)
-8. Document the observability system:
-   - Add observability guide to docs/
-   - Document telemetry events in each module
-   - Create architecture diagram with trace flows
-9. Create runbooks for common scenarios:
-   - Investigating OAuth failures
-   - Debugging API timeouts
-   - Monitoring session lifecycle
-   - Tracing user journeys
-10. Performance testing with full instrumentation locally
-
-**Testing Focus:**
-- Benchmark tests for instrumentation overhead
-- Sampling accuracy tests
-- End-to-end trace validation in local environment
-- Documentation review
+1. Analyze performance impact of telemetry instrumentation
+2. Optimize high-frequency telemetry events
+3. Implement sampling strategies for development vs production
+4. Create SLO definitions and tracking
+5. Document observability architecture and patterns
+6. Create operational runbooks
+7. Performance test full instrumentation stack
+8. Refine dashboards based on usage patterns
 
 **Expected Timeline:** 1-2 days
 **Dependencies:** Phase 3 completion
-**Key Success Metrics:** <100ms overhead, comprehensive runbooks, complete documentation
+**Key Success Metrics:** Minimal performance overhead, comprehensive documentation
 
 ### Phase 5: Cloud Deployment
 
 **Tasks:**
-1. Create Grafana Cloud account and obtain credentials
-2. Update configuration in config/runtime.exs for production
-3. Configure Grafana Cloud endpoints:
-   - Tempo for traces
-   - Loki for logs
-   - Prometheus for metrics
-4. Set environment variables in Fly.io:
-   - GRAFANA_API_KEY
-   - GRAFANA_ORG
-   - LOKI_URL
-5. Import dashboards from local environment to Grafana Cloud
-6. Configure cloud alerts and notification channels
-7. Test deployment in staging environment
-8. Deploy to production
-9. Monitor data ingestion and usage
-10. Set up data retention policies
-11. Configure cost alerts for free tier limits
-12. Update documentation with cloud setup
-
-**Testing Focus:**
-- Verify secure credential handling
-- Test failover behavior when cloud is unavailable
-- Validate data appears in all cloud services
-- Monitor data volume and costs
-- End-to-end testing in production
+1. Set up Grafana Cloud account and credentials
+2. Update production configuration for cloud endpoints
+3. Configure Fly.io secrets and environment variables
+4. Import dashboards and configure cloud alerts
+5. Deploy and validate telemetry data flow
+6. Monitor costs and optimize for free tier limits
+7. Update documentation for production setup
 
 **Expected Timeline:** 1 day
 **Dependencies:** Phase 4 completion
-**Key Success Metrics:** Production telemetry flowing to Grafana Cloud, costs within free tier
+**Key Success Metrics:** Production telemetry flowing to Grafana Cloud within free tier limits
 
-## Maintenance Considerations
+## Testing Strategy
 
-1. **Version Updates**:
-   - Regular updates to OpenTelemetry libraries
-   - Compatibility testing with new Phoenix/LiveView releases
-   - API client library updates
+Testing is crucial for ensuring our OpenTelemetry implementation works correctly without breaking existing functionality.
 
-2. **Data Volume Management**:
-   - Monitor data usage in Grafana Cloud free tier (50GB traces/logs)
-   - Implement sampling for high-frequency LiveView events
-   - Archive old traces based on retention policies
+### Integration Tests for Telemetry Events
 
-3. **Performance Monitoring**:
-   - Assess impact on GenServer message processing
-   - Monitor overhead in LiveView handle_event callbacks
-   - Track memory usage of telemetry event handlers
+```elixir
+defmodule Setlistify.TelemetryIntegrationTest do
+  use ExUnit.Case
+  import ExUnit.CaptureLog
 
-4. **Dashboard Evolution**:
-   - Update dashboards as new features are added
-   - Refine alerts based on incident learnings
-   - Add new business metrics as requirements evolve
+  describe "telemetry event emission" do
+    test "Spotify API search emits telemetry events" do
+      # Capture telemetry events
+      ref = make_ref()
+      self = self()
 
-5. **API Integration Changes**:
-   - Update instrumentation when API endpoints change
-   - Maintain service name mappings for new APIs
-   - Adjust error tracking for new failure modes
+      :telemetry.attach_many(
+        "test-handler-#{ref}",
+        [
+          [:setlistify, :spotify, :track, :search, :start],
+          [:setlistify, :spotify, :track, :search, :stop]
+        ],
+        fn event, measurements, metadata, _config ->
+          send(self, {:telemetry_event, ref, event, measurements, metadata})
+        end,
+        nil
+      )
+
+      # Execute the function that should emit events
+      session = %UserSession{user_id: "test", access_token: "token"}
+      _result = Setlistify.Spotify.API.ExternalClient.search_for_track(session, "Radiohead", "Creep")
+
+      # Verify events were emitted
+      assert_receive {:telemetry_event, ^ref, [:setlistify, :spotify, :track, :search, :start], _measurements, metadata}
+      assert metadata.artist == "Radiohead"
+      assert metadata.track == "Creep"
+
+      assert_receive {:telemetry_event, ^ref, [:setlistify, :spotify, :track, :search, :stop], _measurements, _metadata}
+
+      :telemetry.detach("test-handler-#{ref}")
+    end
+
+    test "Session Manager operations emit telemetry events" do
+      ref = make_ref()
+      self = self()
+
+      :telemetry.attach(
+        "session-test-#{ref}",
+        [:setlistify, :session_manager, :create_session, :start],
+        fn event, measurements, metadata, _config ->
+          send(self, {:session_event, ref, event, metadata})
+        end,
+        nil
+      )
+
+      # Test session creation
+      {:ok, _session} = Setlistify.Spotify.SessionManager.create_session("test_user", %{})
+
+      assert_receive {:session_event, ^ref, [:setlistify, :session_manager, :create_session, :start], metadata}
+      assert metadata.user_id == "test_user"
+
+      :telemetry.detach("session-test-#{ref}")
+    end
+  end
+end
+```
+
+### OpenTelemetry Bridge Tests
+
+```elixir
+defmodule Setlistify.OpenTelemetryBridgeTest do
+  use ExUnit.Case
+
+  test "telemetry events create OpenTelemetry spans" do
+    # Start a root span for the test
+    OpenTelemetry.Tracer.with_span "test_span" do
+      # Execute a function that emits telemetry
+      :telemetry.span(
+        [:setlistify, :test, :operation],
+        %{test_data: "value"},
+        fn ->
+          # Verify we're in a span context
+          current_span = OpenTelemetry.Tracer.current_span_ctx()
+          assert current_span != :undefined
+          
+          {:ok, %{result: "success"}}
+        end
+      )
+    end
+  end
+
+  test "exception handling creates error spans" do
+    assert_raise RuntimeError, "Test error", fn ->
+      :telemetry.span(
+        [:setlistify, :test, :error],
+        %{},
+        fn ->
+          raise "Test error"
+        end
+      )
+    end
+
+    # In a real test, you'd verify the span was marked as an error
+  end
+end
+```
 
 ## Success Criteria
 
-1. Complete trace visibility of OAuth token lifecycle (login, refresh, expiry)
-2. End-to-end traces for user flows (search → setlist → playlist creation)
-3. Automatic error tracking for API failures with retry context
-4. Log correlation with trace context across GenServer boundaries
-5. Real-time metrics for API performance and rate limiting
-6. LiveView performance insights (mount times, event latencies)
-7. Operational dashboards for monitoring session health
-8. Business dashboards for usage patterns
-9. Alert configuration for critical failures
+1. **Complete trace visibility of OAuth token lifecycle** (login, refresh, expiry)
+2. **End-to-end traces for user flows** (search → setlist → playlist creation)
+3. **Automatic error tracking for API failures** with retry context
+4. **Log correlation with trace context** across GenServer boundaries
+5. **Real-time metrics for API performance** and rate limiting
+6. **LiveView performance insights** (mount times, event latencies)
+7. **Operational dashboards** for monitoring session health
+8. **Business dashboards** for usage patterns
+9. **Alert configuration** for critical failures
+10. **Cross-process trace continuity** from HTTP requests through GenServers to external APIs
 
 ## Conclusion
 
-This implementation will provide comprehensive observability for Setlistify, with particular focus on OAuth session management and external API integrations. By starting with a local development stack and gradually migrating to Grafana Cloud, we enable rapid iteration and testing while maintaining flexibility.
+This implementation provides comprehensive observability for Setlistify using a telemetry-first approach that integrates cleanly with OpenTelemetry. By focusing on `:telemetry` events as the primary instrumentation mechanism, we:
 
-The implementation is designed to work seamlessly with our existing architecture:
-- Compatible with Hammox-based testing
-- Minimal impact on GenServer performance
-- Clear separation between instrumentation and business logic
-- Support for distributed tracing across process boundaries
-- Local-first development approach for faster iteration
+- Maintain compatibility with existing testing strategies
+- Follow Elixir community best practices
+- Enable flexible instrumentation without tight coupling
+- Support effective cross-process tracing
+- Keep code explicit and maintainable
 
-The phased approach allows for incremental deployment and validation, ensuring that each component is working correctly before proceeding to the next phase. By developing locally first, we can:
-- Test instrumentation without cloud costs
-- Rapidly iterate on dashboard designs
-- Validate performance impact before production deployment
-- Build confidence in the observability system
+The decision to postpone the `@trace` decorator pattern allows us to focus on proven, flexible approaches while keeping the door open for future enhancements. The local-first development approach ensures we can iterate quickly and validate our observability strategy before deploying to production.
 
-Priority is given to instrumenting the most critical user flows and error-prone operations (OAuth management and API integrations). The final cloud deployment phase ensures a smooth transition to production monitoring with all components thoroughly tested.
-
-## Implementation Progress Summary
-
-As of May 19, 2025:
-
-**Completed:**
-- Phase 0: Local Development Stack Setup ✅ (100% complete)
-  - Docker compose stack with Grafana, Tempo, Loki, Prometheus
-  - Local configuration for OTLP endpoints
-  - Basic trace visualization in Grafana
-
-- Phase 2: Enhanced Tracing and Logging ✅ (Partial - ~30% complete)
-  - Trace context in logs (trace_id, span_id)
-  - LiveView process span propagation
-  - Basic SearchLive instrumentation
-  - Using opentelemetry_logger_metadata package
-
-**In Progress/Next Up:**
-- Phase 1: Core Tracing Infrastructure
-  - Trace decorator module
-  - API client instrumentation
-  - Session management tracing
-
-**Key Achievements:**
-- Development logs now show trace context for better debugging
-- LiveView processes properly create spans despite not inheriting HTTP context
-- Clean implementation using community packages where possible
-- Foundation laid for comprehensive tracing implementation
+**Current Progress Summary:**
+- **Phase 0**: ✅ Complete - Local development stack operational
+- **Phase 2**: ✅ Partial - Trace context in logs, LiveView spans working
+- **Phase 1**: 🎯 Next - Telemetry-to-OpenTelemetry integration for core flows
