@@ -1,4 +1,3 @@
-
 # OpenTelemetry Implementation Tech Spec
 
 ## Executive Summary
@@ -22,16 +21,18 @@ Setlistify is built with Elixir, Phoenix, and LiveView. It integrates with two e
 
 ## Technical Approach
 
-After evaluating several options and initial implementation experimentation, we've decided to:
+After evaluating several options and conducting implementation experimentation, we've decided to:
 
 1. Set up a local development stack with Grafana, Tempo, Loki, and Prometheus
-2. **Use `:telemetry` as the primary instrumentation layer**, bridging to OpenTelemetry spans via `opentelemetry_telemetry`
-3. Add telemetry events to key modules and operations, then configure handlers to create OpenTelemetry spans
-4. Add trace context propagation to HTTP requests using our existing Req client setup
-5. Include structured logging with trace context
-6. Instrument LiveView processes for user interaction tracing
-7. Create custom telemetry events for OAuth flows and API operations
+2. **Use OpenTelemetry directly** for instrumentation and observability
+3. Leverage official OpenTelemetry integrations (`opentelemetry_phoenix`, `opentelemetry_ecto`, etc.) for automatic framework instrumentation
+4. Add manual instrumentation using `OpenTelemetry.Tracer.with_span/2` for business logic
+5. Add trace context propagation to HTTP requests using our existing Req client setup
+6. Include structured logging with trace context (already implemented in Phase 2)
+7. Instrument LiveView processes for user interaction tracing
 8. Start with local telemetry data collection, then migrate to Grafana Cloud
+
+**Key Decision: Direct OpenTelemetry over Telemetry Bridge:** We initially explored using `:telemetry` events bridged to OpenTelemetry spans via `opentelemetry_telemetry`, but decided against this approach after research and evaluation (see "Evaluation of Telemetry Bridge Approach" section below).
 
 **Note on Decorator Pattern:** We initially explored implementing a `@trace` decorator pattern for function-level tracing but have decided to postpone this approach (see "Post-Implementation Ideas to Consider" section below).
 
@@ -43,8 +44,8 @@ This approach maintains compatibility with our existing Hammox-based testing str
 
 | Approach | Pros | Cons | Decision |
 |----------|------|------|----------|
-| Direct OpenTelemetry API | Better cross-process context propagation, Full feature access | Tighter coupling to OpenTelemetry | Rejected |
-| `:telemetry` + `opentelemetry_telemetry` | Decoupled from specific backends, Phoenix ecosystem standard, Process boundary handling | Requires more setup, Event-driven rather than decorator-based | **Selected** |
+| Direct OpenTelemetry API | Full feature access, Better cross-process context propagation, Community standard approach, Rich ecosystem | Requires learning OpenTelemetry APIs | **Selected** |
+| `:telemetry` + `opentelemetry_telemetry` | Decoupled from specific backends, Phoenix ecosystem standard | **Critical limitations: spans only correlated within single process, outdated bridge library, community reports issues** | **Rejected** |
 | `@trace` Decorator Pattern | Clean syntax, Automatic instrumentation | Implementation complexity, Process boundary limitations, Community concerns | **Deferred** |
 | Custom Tracing Layer | Maximum flexibility | Development overhead, Non-standard | Rejected |
 
@@ -59,9 +60,159 @@ This approach maintains compatibility with our existing Hammox-based testing str
 | New Relic | Good APM capabilities | Limited free tier, Complex UI | Rejected |
 | Datadog | Comprehensive features | Expensive, Limited OpenTelemetry support | Rejected |
 
+## Evaluation of Telemetry Bridge Approach
+
+During the planning phase, we thoroughly evaluated using `:telemetry` events as the primary instrumentation mechanism, bridging to OpenTelemetry spans via the `opentelemetry_telemetry` library. However, after researching community experiences and reviewing the library's limitations, we decided against this approach.
+
+### Critical Limitations Discovered
+
+**1. Single-Process Span Correlation**
+The `opentelemetry_telemetry` documentation clearly states: *"Span contexts are currently stored in the process dictionary, so spans can only be correlated within a single process at this time."* ([source](https://hexdocs.pm/opentelemetry_telemetry/OpentelemetryTelemetry.html#module-limitations))
+
+This is a fundamental issue for Setlistify's architecture, which involves:
+- HTTP requests → LiveView processes
+- LiveView → SessionManager GenServer
+- SessionManager → UserSession GenServer
+- UserSession → API calls (potentially in separate processes/tasks)
+
+**2. Library Maturity and Community Experience**
+Community reports indicate issues with the bridge library:
+- *"I've found the opentelemetry_telemetry library, but examples there do not work and it looks heavily outdated, without proper documentation"* ([Elixir Forum, 2023](https://elixirforum.com/t/how-to-convert-telemetry-to-opentelemetry/58242))
+- The library itself acknowledges: *"Non-library authors should use opentelemetry directly wherever possible"* ([source](https://hexdocs.pm/opentelemetry_telemetry/OpentelemetryTelemetry.html#module-limitations))
+
+**3. Community Best Practices**
+Research of production Elixir applications and official guides consistently show direct OpenTelemetry usage:
+- Official OpenTelemetry Getting Started guides use direct APIs
+- Framework integrations (Phoenix, Ecto, Cowboy) use OpenTelemetry directly
+- Real-world blog posts and tutorials demonstrate direct usage patterns
+
+### Sources Reviewed
+
+- [Elixir Forum: Telemetry vs OpenTelemetry relationship](https://elixirforum.com/t/what-is-the-relationship-between-telemetry-and-opentelemetry/69068/7)
+- [OpenTelemetry Telemetry Bridge Limitations](https://hexdocs.pm/opentelemetry_telemetry/OpentelemetryTelemetry.html#module-limitations)
+- [Community Experience with Bridge Library](https://elixirforum.com/t/how-to-convert-telemetry-to-opentelemetry/58242)
+- [Official OpenTelemetry Erlang/Elixir Documentation](https://opentelemetry.io/docs/languages/erlang/)
+- Multiple production implementation examples showing direct OTel usage
+
+### Decision Rationale
+
+The telemetry bridge approach would have prevented us from achieving our primary goal: **end-to-end trace visibility across our distributed GenServer architecture**. Since our most critical traces (OAuth token refresh, API calls, session management) all involve multiple processes, the single-process limitation would have fragmented our observability.
+
+Additionally, the community consensus and official recommendation point toward direct OpenTelemetry usage for application developers, reserving the telemetry bridge primarily for library authors who want to emit events without taking a direct OpenTelemetry dependency.
+
 ## Technical Details
 
-### 1. Core Libraries and Dependencies
+### OpenTelemetry Wrapper Module Consideration
+
+We evaluated whether to wrap OpenTelemetry APIs in our own abstraction layer. After careful consideration, we've decided to **start with direct OpenTelemetry usage** but will revisit this decision as patterns emerge in our codebase.
+
+#### Why We're Not Using a Wrapper Initially
+
+**1. Straightforward Use Case**
+Our tracing needs are standard and well-supported by existing OpenTelemetry patterns:
+- API calls to external services (Spotify, Setlist.fm)
+- GenServer operations and lifecycle
+- OAuth authentication flows
+- Database queries (via `opentelemetry_ecto`)
+
+**2. Rich Ecosystem Advantage**
+OpenTelemetry already provides domain-specific instrumentation libraries that we can leverage directly:
+- `opentelemetry_phoenix` for web request tracing
+- `opentelemetry_ecto` for database operation tracing
+- Manual HTTP client instrumentation patterns
+
+**3. Learning Investment**
+Team knowledge of OpenTelemetry APIs is transferable and valuable across projects and organizations.
+
+**4. Community Alignment**
+Research shows that even framework authors typically use OpenTelemetry APIs directly rather than creating abstraction layers.
+
+#### When We Might Add a Wrapper Module
+
+As we develop Setlistify's observability implementation, we should consider adding a minimal wrapper module if we observe these patterns:
+
+**1. Repeated Domain-Specific Tracing Patterns**
+```elixir
+# If we find ourselves repeating this pattern frequently:
+OpenTelemetry.Tracer.with_span "spotify.search_track" do
+  OpenTelemetry.Tracer.set_attributes([
+    {"service.name", "spotify"},
+    {"operation", "search_track"},
+    {"user.id", user_id}
+  ])
+  # business logic
+end
+
+# We might want a helper like:
+Setlistify.Tracing.trace_api_call("spotify", "search_track", %{user_id: user_id}, fn ->
+  # business logic
+end)
+```
+
+**2. Consistent Error Handling Needs**
+```elixir
+# If we repeatedly need error handling with tracing:
+defmodule Setlistify.Tracing do
+  def trace_with_error_handling(name, fun) do
+    OpenTelemetry.Tracer.with_span name do
+      try do
+        result = fun.()
+        OpenTelemetry.Tracer.set_status(:ok)
+        result
+      rescue
+        error ->
+          OpenTelemetry.Tracer.set_status(:error, Exception.message(error))
+          OpenTelemetry.Tracer.record_exception(error)
+          reraise error, __STACKTRACE__
+      end
+    end
+  end
+end
+```
+
+**3. Testing Abstraction Requirements**
+```elixir
+# If we need to disable tracing in tests:
+# config/test.exs
+config :setlistify, :observability_backend, Setlistify.Observability.NoOp
+
+defmodule Setlistify.Observability.NoOp do
+  def trace_span(_name, _metadata, fun), do: fun.()
+  def set_attributes(_attrs), do: :ok
+end
+```
+
+**4. Semantic Convention Enforcement**
+```elixir
+# If we want to enforce OpenTelemetry semantic conventions:
+defmodule Setlistify.Tracing do
+  def set_user_context(user_id) do
+    OpenTelemetry.Tracer.set_attributes([
+      {"user.id", user_id},
+      {"enduser.id", user_id}  # OpenTelemetry semantic convention
+    ])
+  end
+  
+  def set_api_attributes(method, url, status_code) do
+    OpenTelemetry.Tracer.set_attributes([
+      {"http.method", method},
+      {"http.url", url}, 
+      {"http.status_code", status_code}
+    ])
+  end
+end
+```
+
+#### Principles for Future Wrapper Consideration
+
+If we do add wrapper functions, they should:
+- **Complement, not replace** direct OpenTelemetry usage
+- **Be minimal helpers** rather than full abstractions
+- **Follow OpenTelemetry semantic conventions**
+- **Not hide the underlying OpenTelemetry APIs** from the team
+- **Solve actual repeated patterns** we observe in our codebase
+
+This approach allows us to start simple and add abstraction only when we've identified clear value from repeated patterns in our actual implementation.
 
 ```elixir
 # mix.exs
@@ -244,605 +395,50 @@ services:
     restart: unless-stopped
 ```
 
-Create necessary configuration files:
+*Configuration files for Tempo, Loki, Prometheus, and Grafana datasources remain the same as in the original spec.*
 
-```yaml
-# docker/tempo/tempo.yaml
-server:
-  http_listen_port: 3200
+### 1. Core Libraries and Dependencies
 
-distributor:
-  receivers:
-    otlp:
-      protocols:
-        http:
-          endpoint: 0.0.0.0:4318
-        grpc:
-          endpoint: 0.0.0.0:4317
+### 4. Core Implementation Components
 
-ingester:
-  max_block_duration: 5m
-
-compactor:
-  compaction:
-    block_retention: 1h
-
-metrics_generator:
-  registry:
-    external_labels:
-      source: tempo
-      cluster: docker-compose
-  storage:
-    path: /var/tempo/generator/wal
-    remote_write:
-      - url: http://prometheus:9090/api/v1/write
-        send_exemplars: true
-
-storage:
-  trace:
-    backend: local
-    wal:
-      path: /var/tempo/wal
-    local:
-      path: /var/tempo/blocks
-
-overrides:
-  defaults:
-    metrics_generator:
-      processors: [service-graphs, span-metrics]
-```
-
-```yaml
-# docker/loki/loki-config.yaml
-auth_enabled: false
-
-server:
-  http_listen_port: 3100
-
-ingester:
-  lifecycler:
-    address: 127.0.0.1
-    ring:
-      kvstore:
-        store: inmemory
-      replication_factor: 1
-    final_sleep: 0s
-
-schema_config:
-  configs:
-    - from: 2020-10-24
-      store: boltdb-shipper
-      object_store: filesystem
-      schema: v11
-      index:
-        prefix: index_
-        period: 24h
-
-storage_config:
-  boltdb_shipper:
-    active_index_directory: /loki/boltdb-shipper-active
-    cache_location: /loki/boltdb-shipper-cache
-    cache_ttl: 24h
-    shared_store: filesystem
-  filesystem:
-    directory: /loki/chunks
-
-limits_config:
-  enforce_metric_name: false
-  reject_old_samples: true
-  reject_old_samples_max_age: 168h
-```
-
-```yaml
-# docker/prometheus/prometheus.yml
-global:
-  scrape_interval: 15s
-  evaluation_interval: 15s
-
-scrape_configs:
-  - job_name: 'tempo'
-    static_configs:
-      - targets: ['tempo:3200']
-```
-
-```yaml
-# docker/grafana/datasources/datasources.yaml
-apiVersion: 1
-
-datasources:
-  - name: Tempo
-    type: tempo
-    access: proxy
-    url: http://tempo:3200
-    basicAuth: false
-    isDefault: true
-    version: 1
-    editable: true
-    apiVersion: 1
-    uid: tempo
-    jsonData:
-      httpMethod: GET
-      serviceMap:
-        datasourceUid: prometheus
-      tracesToLogs:
-        datasourceUid: loki
-        mapTagNamesEnabled: true
-        mappedTags:
-          - key: service.name
-            value: service
-      tracesToMetrics:
-        datasourceUid: prometheus
-
-  - name: Loki
-    type: loki
-    access: proxy
-    url: http://loki:3100
-    basicAuth: false
-    version: 1
-    editable: true
-    apiVersion: 1
-    uid: loki
-    jsonData:
-      derivedFields:
-        - datasourceUid: tempo
-          matcherRegex: "traceID=(\\w+)"
-          name: TraceID
-          url: '$${__value.raw}'
-
-  - name: Prometheus
-    type: prometheus
-    access: proxy
-    url: http://prometheus:9090
-    basicAuth: false
-    version: 1
-    editable: true
-    apiVersion: 1
-    uid: prometheus
-```
-
-### 5. Core Implementation Components
-
-#### Trace Decorator Module
+#### OpenTelemetry Setup and Configuration
 
 ```elixir
-defmodule Setlistify.Trace do
+defmodule Setlistify.Observability do
   @moduledoc """
-  Provides function decoration for automatic OpenTelemetry tracing.
-
-  Usage:
-      defmodule Setlistify.Spotify.API.ExternalClient do
-        use Setlistify.Trace
-
-        @trace
-        def search_tracks(token, artist, track) do
-          # Function body
-        end
-      end
+  Central module for setting up all observability components using OpenTelemetry directly.
   """
 
-  defmacro __using__(_opts) do
-    quote do
-      import Setlistify.Trace, only: [trace: 1]
-      Module.register_attribute(__MODULE__, :traced_functions, accumulate: true)
-      @before_compile Setlistify.Trace
-    end
-  end
+  def setup do
+    # Set up OpenTelemetry logger metadata (Phase 2 - completed)
+    OpentelemetryLoggerMetadata.setup()
 
-  defmacro __before_compile__(env) do
-    traced_functions = Module.get_attribute(env.module, :traced_functions)
+    # Set up automatic framework instrumentation
+    :opentelemetry_cowboy.setup()
+    OpentelemetryPhoenix.setup(adapter: :cowboy2)
+    # Note: OpentelemetryEcto.setup would go here if we had a database
 
-    # Register these functions in the telemetry registry if one exists
-    if function_exported?(Setlistify.TelemetryEvents, :register_functions, 2) do
-      for {name, arity} <- traced_functions do
-        Setlistify.TelemetryEvents.register_functions(env.module, name)
-      end
-    end
+    # Set up LiveView instrumentation (Phase 2 - completed)
+    # This is handled via the LiveViewTelemetry hook in router
 
-    quote do
-    end
-  end
-
-  defmacro trace(fun) do
-    quote do
-      @traced_functions {unquote(fun_name(fun)), unquote(fun_arity(fun))}
-      unquote(trace_function(fun))
-    end
-  end
-
-  # Helper to extract function name from AST
-  defp fun_name({:def, _, [{name, _, _} | _]}), do: name
-  defp fun_name({:defp, _, [{name, _, _} | _]}), do: name
-
-  # Helper to extract function arity from AST
-  defp fun_arity({:def, _, [{_, _, args} | _]}), do: length(args || [])
-  defp fun_arity({:defp, _, [{_, _, args} | _]}), do: length(args || [])
-
-  # Helper to transform the function with tracing
-  defp trace_function({function_type, meta, [head | body]}) do
-    # Extract function details
-    {fun_name, head_meta, args} = head
-
-    # Create new function body with tracing
-    new_body = quote do
-      event_name = [__MODULE__ |> Module.split() |> Enum.map(&String.to_atom/1), unquote(fun_name)]
-      metadata = %{
-        module: __MODULE__,
-        function: unquote(fun_name),
-        args: unquote(args_to_map(args))
-      }
-
-      :telemetry.span(event_name, metadata, fn ->
-        result = unquote(body[:do])
-        {result, Map.put(metadata, :result, inspect(result))}
-      end)
-    end
-
-    # Construct the function with tracing
-    {function_type, meta, [head, [do: new_body]]}
-  end
-
-  # Helper to convert function args to a map for telemetry metadata
-  defp args_to_map(args) do
-    args
-    |> Enum.with_index()
-    |> Enum.map(fn
-      {{:\\, _, [arg, _default]}, idx} ->
-        quote do
-          {"arg_#{unquote(idx)}", inspect(unquote(arg))}
-        end
-      {arg, idx} when is_atom(arg) ->
-        quote do
-          {"arg_#{unquote(idx)}", inspect(unquote(arg))}
-        end
-      _ ->
-        quote do
-          {"args", inspect(unquote(args))}
-        end
-    end)
-    |> then(fn arg_pairs ->
-      quote do
-        %{unquote_splicing(arg_pairs)}
-      end
-    end)
+    # Future phases: HTTP client tracing, metrics, etc.
   end
 end
 ```
 
-#### Structured Logger with Trace Context
-
-**Note:** In Phase 2, we initially implemented a custom `Setlistify.StructuredLogger` module but later refactored to use the `opentelemetry_logger_metadata` package, which provides a simpler, more maintainable solution.
-
 ```elixir
-# config/dev.exs - Configuration used in Phase 2
+# This is now handled by the opentelemetry_logger_metadata package
+# Configuration in config/dev.exs:
+
 config :logger, :console,
   format: "$time [$level] $message $metadata\n",
   metadata: [:request_id, :trace_id, :span_id]
 
-# lib/setlistify/observability.ex - Setup in Phase 2
-def setup do
-  # Set up OpenTelemetry logger metadata
-  # This adds trace_id and span_id to all log entries
-  OpentelemetryLoggerMetadata.setup()
-
-  # ... rest of setup
-end
+# Setup in Setlistify.Observability.setup/0:
+OpentelemetryLoggerMetadata.setup()
 ```
 
-The original custom implementation is shown below for reference:
-
-```elixir
-defmodule Setlistify.StructuredLogger do
-  @moduledoc """
-  Provides structured logging with OpenTelemetry trace context.
-  (This implementation was replaced with opentelemetry_logger_metadata)
-  """
-
-  require Logger
-
-  def setup do
-    # Add OpenTelemetry Logger metadata handler
-    :logger.add_handler_filter(:default, :add_trace_context, {&add_trace_context/2, []})
-  end
-
-  @doc """
-  Filter function that adds trace context to log metadata.
-  """
-  def add_trace_context(log_event, _config) do
-    # Get current context
-    ctx = OpenTelemetry.Ctx.get_current()
-    span_ctx = OpenTelemetry.Tracer.current_span_ctx()
-
-    metadata = case span_ctx do
-      :undefined -> %{}
-      _ ->
-        # Extract trace and span IDs
-        trace_id = span_ctx |> OpenTelemetry.Span.trace_id() |> Base.encode16(case: :lower)
-        span_id = span_ctx |> OpenTelemetry.Span.span_id() |> Base.encode16(case: :lower)
-        %{trace_id: trace_id, span_id: span_id}
-    end
-
-    # Update the log event metadata
-    %{log_event | meta: Map.merge(log_event.meta || %{}, metadata)}
-  end
-
-  # ... rest of module omitted
-end
-```
-
-#### HTTP Client with Trace Propagation
-
-```elixir
-defmodule Setlistify.TracedReq do
-  @moduledoc """
-  Provides a Req plugin that adds OpenTelemetry trace propagation
-  and instrumentation to all HTTP requests to external APIs.
-  This module enhances our existing API clients for Setlist.fm and Spotify.
-  """
-
-  def attach do
-    # Register the plugin with req
-    Req.update([
-      plugins: [
-        {Setlistify.TracedReq.Plugin, []}
-      ]
-    ])
-  end
-
-  defmodule Plugin do
-    @moduledoc false
-
-    @behaviour Req.Request.Plugin
-
-    @impl true
-    def init(request, options) do
-      # Map external API domains to service names for better tracing
-      service_names = %{
-        "api.setlist.fm" => "setlist-fm-api",
-        "api.spotify.com" => "spotify-api",
-        "accounts.spotify.com" => "spotify-auth"
-      }
-
-      {request, Map.put(options, :service_names, service_names)}
-    end
-
-    @impl true
-    def request(request, options) do
-      # Get the current trace context
-      ctx = OpenTelemetry.Ctx.get_current()
-
-      # Extract service name
-      uri = URI.parse(request.url)
-      service_name = Map.get(options.service_names, uri.host, uri.host || "unknown-service")
-
-      # Create span name from the request
-      path = uri.path || "/"
-      method = request.method || :get
-      span_name = "#{method} #{service_name}#{path}"
-
-      OpenTelemetry.Tracer.with_span span_name do
-        # Set span attributes
-        OpenTelemetry.Tracer.set_attributes([
-          {"http.method", to_string(method)},
-          {"http.url", request.url},
-          {"http.target", path},
-          {"peer.service", service_name}
-        ])
-
-        # Inject trace headers into the request
-        headers = OpenTelemetry.Propagator.text_map_injector().inject(ctx, %{})
-        headers = Enum.map(headers, fn {k, v} -> {to_string(k), v} end)
-
-        # Update request with trace headers
-        request = Req.Request.append_request_headers(request, headers)
-
-        # Execute the request
-        {request, options}
-      end
-    end
-
-    @impl true
-    def response(request, options, response) do
-      # Extract status code
-      status = response.status
-
-      # Record the status in the current span
-      OpenTelemetry.Tracer.set_attribute("http.status_code", status)
-
-      # Mark error if status >= 400
-      if status >= 400 do
-        OpenTelemetry.Tracer.set_status(:error, "HTTP Error #{status}")
-      end
-
-      # Emit telemetry event for metrics
-      uri = URI.parse(request.url)
-      service_name = Map.get(options.service_names, uri.host, uri.host || "unknown-service")
-      path = uri.path || "/"
-      method = request.method || :get
-
-      measurements = %{
-        duration: response.time,
-        response_size: byte_size(to_string(response.body))
-      }
-
-      metadata = %{
-        service: service_name,
-        endpoint: "#{method} #{path}",
-        status: status
-      }
-
-      :telemetry.execute([:my_app, :api_client, :request, :stop], measurements, metadata)
-
-      {request, options, response}
-    end
-
-    @impl true
-    def error(request, options, error) do
-      # Record the error in the current span
-      OpenTelemetry.Tracer.set_status(:error, "HTTP Request Failed: #{inspect(error)}")
-      OpenTelemetry.Tracer.add_event("http.error", %{"error" => inspect(error)})
-
-      # Emit telemetry event for the error
-      uri = URI.parse(request.url)
-      service_name = Map.get(options.service_names, uri.host, uri.host || "unknown-service")
-      path = uri.path || "/"
-      method = request.method || :get
-
-      :telemetry.execute(
-        [:my_app, :api_client, :request, :exception],
-        %{},
-        %{
-          service: service_name,
-          endpoint: "#{method} #{path}",
-          error: error
-        }
-      )
-
-      {request, options, error}
-    end
-  end
-
-  # Convenience helpers
-  def get(url, options \\ []), do: Req.get(url, options)
-  def post(url, body, options \\ []), do: Req.post(url, [{:body, body} | options])
-  def put(url, body, options \\ []), do: Req.put(url, [{:body, body} | options])
-  def delete(url, options \\ []), do: Req.delete(url, options)
-end
-```
-
-#### Telemetry Event Registry
-
-```elixir
-defmodule Setlistify.TelemetryEvents do
-  @moduledoc """
-  Registry of telemetry events for Setlistify application.
-  """
-
-  # Use a module attribute to store the registered events
-  @registered_events []
-
-  # Store the registered events at compile time
-  @before_compile {__MODULE__, :__before_compile__}
-
-  defmacro __before_compile__(_env) do
-    registered_events = Module.get_attribute(__CALLER__.module, :registered_events)
-
-    quote do
-      @doc """
-      Returns all registered telemetry events.
-      """
-      def all_events do
-        unquote(Macro.escape(registered_events))
-      end
-    end
-  end
-
-  @doc """
-  Register a new telemetry event.
-  """
-  defmacro register(name, event_name, doc) do
-    # Add the event to the registry
-    events = Module.get_attribute(__CALLER__.module, :registered_events)
-    event = {name, event_name, doc}
-    Module.put_attribute(__CALLER__.module, :registered_events, [event | events])
-
-    quote do
-      @doc unquote(doc)
-      def unquote(name)() do
-        unquote(event_name)
-      end
-    end
-  end
-
-  # Register events for Spotify OAuth and Session Management
-  register :spotify_auth_login_start, [:setlistify, :spotify, :auth, :login, :start],
-    "Emitted when a Spotify OAuth flow begins"
-
-  register :spotify_auth_callback, [:setlistify, :spotify, :auth, :callback],
-    "Emitted when processing Spotify OAuth callback"
-
-  register :spotify_token_refresh_start, [:setlistify, :spotify, :token_refresh, :start],
-    "Emitted when a Spotify token refresh begins"
-
-  register :spotify_token_refresh_stop, [:setlistify, :spotify, :token_refresh, :stop],
-    "Emitted when a Spotify token refresh completes"
-
-  register :spotify_token_refresh_exception, [:setlistify, :spotify, :token_refresh, :exception],
-    "Emitted when a Spotify token refresh fails with an exception"
-
-  register :spotify_session_created, [:setlistify, :spotify, :session, :created],
-    "Emitted when a new Spotify session is created"
-
-  register :spotify_session_terminated, [:setlistify, :spotify, :session, :terminated],
-    "Emitted when a Spotify session is terminated"
-
-  # Register events for API operations
-  register :setlist_search_start, [:setlistify, :setlist_fm, :search, :start],
-    "Emitted when searching for setlists"
-
-  register :setlist_search_stop, [:setlistify, :setlist_fm, :search, :stop],
-    "Emitted when setlist search completes"
-
-  register :setlist_fetch_start, [:setlistify, :setlist_fm, :fetch, :start],
-    "Emitted when fetching a specific setlist"
-
-  register :spotify_track_search_start, [:setlistify, :spotify, :track, :search, :start],
-    "Emitted when searching for tracks on Spotify"
-
-  register :spotify_playlist_create_start, [:setlistify, :spotify, :playlist, :create, :start],
-    "Emitted when creating a playlist on Spotify"
-
-  # Register LiveView events
-  register :liveview_mount, [:setlistify, :liveview, :mount],
-    "Emitted when a LiveView mounts"
-
-  register :liveview_search_submit, [:setlistify, :liveview, :search, :submit],
-    "Emitted when a user submits a search"
-
-  register :liveview_playlist_create, [:setlistify, :liveview, :playlist, :create],
-    "Emitted when a user creates a playlist from a setlist"
-
-  @doc """
-  Verify at compile time that an event is registered.
-  """
-  defmacro verify_event!(event_name) do
-    registered_events = Module.get_attribute(__CALLER__.module, :registered_events)
-    event_exists = Enum.any?(registered_events, fn {_, event, _} ->
-      event == Macro.expand(event_name, __CALLER__)
-    end)
-
-    unless event_exists do
-      raise CompileError,
-        description: "Telemetry event #{inspect(event_name)} is not registered",
-        file: __CALLER__.file,
-        line: __CALLER__.line
-    end
-
-    quote do
-      unquote(event_name)
-    end
-  end
-
-  @doc """
-  Register functions discovered through the @trace attribute.
-  """
-  def register_functions(module, function_name) do
-    # Convert module name to event path
-    module_path = module
-      |> Module.split()
-      |> Enum.map(&String.to_atom/1)
-
-    # Register the events for start, stop, and exception
-    event_prefix = module_path ++ [function_name]
-
-    # Dynamic registration (runtime)
-    event_name_start = event_prefix ++ [:start]
-    event_name_stop = event_prefix ++ [:stop]
-    event_name_exception = event_prefix ++ [:exception]
-  end
-end
-```
-
-#### LiveView Telemetry (Implemented in Phase 2)
+#### Enhanced Logger with Trace Context (Phase 2 - Completed)
 
 ```elixir
 defmodule SetlistifyWeb.Telemetry.LiveViewTelemetry do
@@ -874,223 +470,11 @@ defmodule SetlistifyWeb.Telemetry.LiveViewTelemetry do
 end
 ```
 
-#### Telemetry Setup
+#### LiveView Telemetry (Phase 2 - Completed)
 
-```elixir
-defmodule Setlistify.Telemetry do
-  use Supervisor
-  import Telemetry.Metrics
+#### 5.1 Key Modules to Instrument
 
-  def start_link(arg) do
-    Supervisor.start_link(__MODULE__, arg, name: __MODULE__)
-  end
-
-  def init(_arg) do
-    children = [
-      # Start the telemetry application poller
-      {:telemetry_poller, measurements: periodic_measurements(), period: 10_000}
-    ]
-
-    Supervisor.init(children, strategy: :one_for_one)
-  end
-
-  def metrics do
-    [
-      # Runtime Metrics
-      last_value("vm.memory.total", unit: :byte),
-      last_value("vm.total_run_queue_lengths.total"),
-      last_value("vm.total_run_queue_lengths.cpu"),
-      last_value("vm.system_counts.process_count"),
-
-      # HTTP Metrics
-      counter("phoenix.endpoint.start.count", tags: [:route]),
-      distribution("phoenix.endpoint.stop.duration",
-        unit: {:native, :millisecond},
-        tags: [:route, :status]
-      ),
-
-      # LiveView Metrics
-      counter("phoenix.live_view.mount.count", tags: [:view, :status]),
-      counter("phoenix.live_view.handle_event.count", tags: [:view, :event]),
-
-      # Spotify OAuth Metrics
-      counter("setlistify.spotify.token_refresh.count", tags: [:status]),
-      distribution("setlistify.spotify.token_refresh.duration",
-        unit: {:native, :millisecond},
-        tags: [:status]
-      ),
-      counter("setlistify.spotify.session.count", tags: [:action]),
-
-      # API Client Metrics
-      counter("setlistify.api_client.request.count",
-        tags: [:service, :endpoint, :status]
-      ),
-      distribution("setlistify.api_client.request.duration",
-        unit: {:native, :millisecond},
-        tags: [:service, :endpoint, :status]
-      ),
-      counter("setlistify.api_client.error.count",
-        tags: [:service, :endpoint, :error_type]
-      ),
-
-      # Business Metrics
-      counter("setlistify.search.count", tags: [:type]),
-      counter("setlistify.playlist.created.count"),
-      distribution("setlistify.playlist.tracks.count"),
-
-      # Error Metrics
-      counter("setlistify.error.count",
-        tags: [:type, :module]
-      )
-    ]
-  end
-
-  defp periodic_measurements do
-    [
-      # VM Measurements
-      {:process_info, :all},
-      {:vm_measurements, [:memory, :total_run_queue_lengths]},
-      {:system_info, [:process_count]}
-    ]
-  end
-end
-```
-
-#### Main Application Setup
-
-```elixir
-defmodule Setlistify.Observability do
-  @moduledoc """
-  Central module for setting up all observability components.
-  """
-
-  def setup do
-    # Set up OpenTelemetry handlers for telemetry events
-    setup_telemetry_handlers()
-
-    # Set up structured logging
-    Setlistify.StructuredLogger.setup()
-
-    # Set up Req with trace propagation
-    Setlistify.TracedReq.attach()
-
-    # Set up telemetry metrics
-    Setlistify.Telemetry.start_link([])
-
-    # Set up exception tracking
-    setup_exception_tracking()
-  end
-
-  defp setup_telemetry_handlers do
-    # Set up handlers for your custom events
-    [
-      {MyApp.TelemetryEvents.auth_login_start(), "user_login"},
-      {MyApp.TelemetryEvents.auth_token_refresh_start(), "token_refresh"}
-      # Add more events as needed
-    ]
-    |> Enum.each(fn {event_prefix, span_name} ->
-      attach_otel_handlers(event_prefix, span_name)
-    end)
-
-    # Add handlers for Phoenix and other framework events
-    OpentelemetryPhoenix.setup(adapter: :cowboy2)
-  end
-
-  defp attach_otel_handlers(event_prefix, span_name) do
-    start_event = event_prefix
-    stop_event = Enum.drop(start_event, -1) ++ [:stop]
-    exception_event = Enum.drop(start_event, -1) ++ [:exception]
-
-    handler_id = "otel-#{Enum.join(event_prefix, "-")}"
-
-    :telemetry.attach(
-      "#{handler_id}-start",
-      start_event,
-      &OpentelemetryTelemetry.start_telemetry_span/4,
-      %{tracer_id: :my_app, span_name: span_name}
-    )
-
-    :telemetry.attach(
-      "#{handler_id}-stop",
-      stop_event,
-      &OpentelemetryTelemetry.end_telemetry_span/4,
-      %{tracer_id: :my_app}
-    )
-
-    :telemetry.attach(
-      "#{handler_id}-exception",
-      exception_event,
-      &OpentelemetryTelemetry.end_telemetry_span/4,
-      %{tracer_id: :my_app}
-    )
-  end
-
-  defp setup_exception_tracking do
-    # Add a custom Logger backend for exception tracking
-    Logger.add_backend(MyApp.ExceptionLogger)
-
-    # Set up a process error handler if using Phoenix
-    if Code.ensure_loaded?(Phoenix) do
-      # Add this to your Router module
-      # use MyApp.ErrorHandler
-    end
-  end
-end
-
-defmodule MyApp.ExceptionLogger do
-  @behaviour :gen_event
-
-  def init(_) do
-    {:ok, %{}}
-  end
-
-  def handle_event({level, _gl, {Logger, msg, timestamp, metadata}}, state)
-      when level in [:error, :critical, :alert, :emergency] do
-    # Create a span for this logged error
-    OpenTelemetry.Tracer.with_span "logged_error" do
-      OpenTelemetry.Tracer.set_attribute("error", true)
-      OpenTelemetry.Tracer.set_attribute("log.level", to_string(level))
-      OpenTelemetry.Tracer.set_attribute("log.message", to_string(msg))
-
-      # Add exception details if available
-      if ex = metadata[:error] do
-        OpenTelemetry.Tracer.set_attribute("error.type", inspect(ex.__struct__))
-        OpenTelemetry.Tracer.set_attribute("error.message", Exception.message(ex))
-      end
-
-      if stack = metadata[:stacktrace] do
-        OpenTelemetry.Tracer.set_attribute("error.stack", inspect(stack))
-      end
-
-      OpenTelemetry.Tracer.set_status(:error, "Logged error")
-
-      # Emit a telemetry event for the error
-      error_type = if ex = metadata[:error], do: inspect(ex.__struct__), else: "unknown"
-      module = metadata[:module] || "unknown"
-
-      :telemetry.execute(
-        [:my_app, :error, :count],
-        %{count: 1},
-        %{type: error_type, module: module}
-      )
-    end
-
-    {:ok, state}
-  end
-
-  def handle_event(_event, state) do
-    {:ok, state}
-  end
-
-  # Implement other callbacks...
-end
-```
-
-### 5. Application-Specific Instrumentation
-
-#### 5.1 Key Modules to Monitor
-
-The following modules represent critical paths in Setlistify and should be instrumented with OpenTelemetry:
+The following modules represent critical paths in Setlistify and should be instrumented with `:telemetry` events:
 
 **API Clients**
 - `lib/setlistify/spotify/api/external_client.ex` - Spotify API integration
@@ -1114,211 +498,224 @@ The following modules represent critical paths in Setlistify and should be instr
 
 #### 5.2 Instrumentation Examples
 
+### 5. Application-Specific Instrumentation
+
 ##### Spotify API Client Instrumentation
 
 ```elixir
 defmodule Setlistify.Spotify.API.ExternalClient do
   @behaviour Setlistify.Spotify.API
-  use Setlistify.Trace
-  alias Setlistify.StructuredLogger, as: Logger
+  require Logger
+  require OpenTelemetry.Tracer
 
-  # Instrument token refresh logic
-  @trace
-  defp with_token_refresh(user_session, request_fn, context) do
-    :telemetry.span(
-      [:setlistify, :spotify, :api, :token_refresh_wrapper],
-      %{user_id: user_session.user_id, context: context},
-      fn ->
-        req = client(user_session)
-
-        case request_fn.(req) do
-          {:ok, %{status: 401} = response} ->
-            # Track token expiration events
-            :telemetry.execute(
-              [:setlistify, :spotify, :token, :expired],
-              %{count: 1},
-              %{user_id: user_session.user_id, context: context}
-            )
-
-            # Existing refresh logic...
-            if authenticate_header && String.contains?(authenticate_value, "invalid_token") do
-              case SessionManager.refresh_session(user_session.user_id) do
-                {:ok, new_session} ->
-                  Logger.info("Token refreshed", %{
-                    user_id: user_session.user_id,
-                    context: context,
-                    trace_id: OpenTelemetry.Tracer.current_span_id()
-                  })
-                  {request_fn.(client(new_session)), %{refreshed: true}}
-
-                {:error, reason} ->
-                  {{:error, :token_refresh_failed}, %{refresh_error: reason}}
-              end
-            else
-              {{:ok, response}, %{refreshed: false}}
-            end
-
-          other ->
-            {other, %{refreshed: false}}
-        end
-      end
-    )
-  end
-
-  # Instrument search operations
-  @trace
   def search_for_track(user_session, artist, track) do
-    Logger.info("Searching for track", %{
-      artist: artist,
-      track: track,
-      user_id: user_session.user_id
-    })
+    OpenTelemetry.Tracer.with_span "spotify.search_track" do
+      # Set span attributes following OpenTelemetry semantic conventions
+      OpenTelemetry.Tracer.set_attributes([
+        {"service.name", "spotify"},
+        {"spotify.operation", "search_track"},
+        {"spotify.artist", artist},
+        {"spotify.track", track},
+        {"user.id", user_session.user_id},
+        {"enduser.id", user_session.user_id}
+      ])
 
-    :telemetry.span(
-      [:setlistify, :spotify, :search, :track],
-      %{artist: artist, track: track, user_id: user_session.user_id},
-      fn ->
-        request_fn = fn req ->
-          Req.get(req,
-            url: "/search",
-            params: %{q: "artist:#{artist} track:#{track}", type: "track"}
-          )
-        end
-
-        case with_token_refresh(user_session, request_fn, "track search") do
-          {:ok, %{status: 200} = resp} ->
-            items = resp.body |> Map.get("tracks", %{}) |> Map.get("items", [])
-
-            result =
-              with nil <- List.first(items) do
-                Logger.warning("No search results", %{artist: artist, track: track})
-                nil
-              else
-                track_info ->
-                  Logger.info("Found match", %{artist: artist, track: track})
-                  %{uri: track_info["uri"], preview_url: track_info["preview_url"]}
-              end
-
-            {result, %{status: :success, results_count: length(items)}}
-
-          {:error, reason} = error ->
-            Logger.error("Search failed", %{
-              artist: artist,
-              track: track,
-              error: reason
-            })
-            {error, %{status: :failed, error: reason}}
-
-          other ->
-            {other, %{status: :unexpected}}
-        end
-      end
-    )
-  end
-
-  # Instrument OAuth code exchange
-  @trace
-  def exchange_code(code, redirect_uri) do
-    :telemetry.span(
-      [:setlistify, :spotify, :oauth, :exchange],
-      %{redirect_uri: redirect_uri},
-      fn ->
-        # Implementation with telemetry metadata...
-      end
-    )
-  end
-end
-```
-
-##### Setlist.fm API Client Instrumentation
-
-```elixir
-defmodule Setlistify.SetlistFm.API.ExternalClient do
-  @behaviour Setlistify.SetlistFm.API
-  use Setlistify.Trace
-  alias Setlistify.StructuredLogger, as: Logger
-
-  @trace
-  def search(query, endpoint \\ @root_endpoint) do
-    :telemetry.span(
-      [:setlistify, :setlist_fm, :search],
-      %{query: query, endpoint: endpoint},
-      fn ->
-        start_time = System.monotonic_time()
-
-        result =
-          Req.get!(request(endpoint),
-            url: "/search/setlists",
-            params: %{"artistName" => query}
-          )
-
-        duration = System.monotonic_time() - start_time
-
-        setlists = result.body["setlist"] || []
-
-        Logger.info("Setlist search completed", %{
-          query: query,
-          results_count: length(setlists),
-          duration_ms: System.convert_time_unit(duration, :native, :millisecond)
-        })
-
-        mapped_results = Enum.map(setlists, &transform_setlist/1)
-
-        {mapped_results, %{
-          status: :success,
-          count: length(setlists),
-          duration_ms: System.convert_time_unit(duration, :native, :millisecond)
-        }}
-      end
-    )
-  rescue
-    error ->
-      Logger.error("Setlist search error", %{
-        query: query,
-        error: error,
-        stacktrace: __STACKTRACE__
+      Logger.info("Searching for track", %{
+        artist: artist,
+        track: track,
+        user_id: user_session.user_id
       })
 
-      :telemetry.execute(
-        [:setlistify, :setlist_fm, :error],
-        %{count: 1},
-        %{operation: :search, error_type: error.__struct__}
-      )
+      request_fn = fn req ->
+        Req.get(req,
+          url: "/search",
+          params: %{q: "artist:#{artist} track:#{track}", type: "track"}
+        )
+      end
 
-      reraise error, __STACKTRACE__
+      case with_token_refresh(user_session, request_fn, "track search") do
+        {:ok, %{status: 200} = resp} ->
+          items = resp.body |> Map.get("tracks", %{}) |> Map.get("items", [])
+
+          result = case List.first(items) do
+            nil ->
+              Logger.warning("No search results", %{artist: artist, track: track})
+              OpenTelemetry.Tracer.set_attribute("spotify.results.count", 0)
+              nil
+            track_info ->
+              Logger.info("Found match", %{artist: artist, track: track})
+              OpenTelemetry.Tracer.set_attributes([
+                {"spotify.results.count", length(items)},
+                {"spotify.track.uri", track_info["uri"]}
+              ])
+              %{uri: track_info["uri"], preview_url: track_info["preview_url"]}
+          end
+
+          OpenTelemetry.Tracer.set_status(:ok)
+          result
+
+        {:error, reason} = error ->
+          Logger.error("Search failed", %{
+            artist: artist,
+            track: track,
+            error: reason
+          })
+          OpenTelemetry.Tracer.set_status(:error, "Search failed: #{inspect(reason)}")
+          error
+
+        other ->
+          OpenTelemetry.Tracer.set_status(:error, "Unexpected response")
+          other
+      end
+    end
   end
 
-  @trace
-  def get_setlist(id, endpoint \\ @root_endpoint) do
-    :telemetry.span(
-      [:setlistify, :setlist_fm, :get_setlist],
-      %{setlist_id: id, endpoint: endpoint},
-      fn ->
-        resp = Req.get!(request(endpoint), url: "/setlist/#{id}")
+  defp with_token_refresh(user_session, request_fn, context) do
+    OpenTelemetry.Tracer.with_span "spotify.token_refresh_wrapper" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", user_session.user_id},
+        {"spotify.context", context}
+      ])
 
-        setlist_data = resp.body
-        artist_name = get_in(setlist_data, ["artist", "name"])
-        sets = get_in(setlist_data, ["sets", "set"]) || []
-        total_songs = Enum.reduce(sets, 0, fn set, acc ->
-          songs = Map.get(set, "song", [])
-          acc + length(songs)
-        end)
+      req = client(user_session)
 
-        result = transform_single_setlist(setlist_data)
+      case request_fn.(req) do
+        {:ok, %{status: 401} = response} ->
+          OpenTelemetry.Tracer.add_event("spotify.token.expired", %{
+            "user.id" => user_session.user_id,
+            "context" => context
+          })
 
-        {result, %{
-          status: :success,
-          artist: artist_name,
-          total_songs: total_songs,
-          sets_count: length(sets)
-        }}
+          # Handle token refresh logic...
+          authenticate_header = Req.Response.get_header(response, "www-authenticate")
+          authenticate_value = List.first(authenticate_header) || ""
+
+          if authenticate_header && String.contains?(authenticate_value, "invalid_token") do
+            case SessionManager.refresh_session(user_session.user_id) do
+              {:ok, new_session} ->
+                Logger.info("Token refreshed", %{
+                  user_id: user_session.user_id,
+                  context: context
+                })
+                OpenTelemetry.Tracer.set_attribute("spotify.token.refreshed", true)
+                request_fn.(client(new_session))
+
+              {:error, reason} ->
+                OpenTelemetry.Tracer.set_status(:error, "Token refresh failed: #{inspect(reason)}")
+                {:error, :token_refresh_failed}
+            end
+          else
+            {:ok, response}
+          end
+
+        other ->
+          OpenTelemetry.Tracer.set_attribute("spotify.token.refreshed", false)
+          other
       end
-    )
+    end
+  end
+
+  def exchange_code(code, redirect_uri) do
+    OpenTelemetry.Tracer.with_span "spotify.oauth.exchange_code" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"oauth.provider", "spotify"},
+        {"oauth.redirect_uri", redirect_uri}
+      ])
+
+      # OAuth code exchange implementation...
+      case perform_token_exchange(code, redirect_uri) do
+        {:ok, tokens} = result ->
+          OpenTelemetry.Tracer.set_status(:ok)
+          Logger.info("OAuth code exchange successful")
+          result
+
+        {:error, reason} = error ->
+          OpenTelemetry.Tracer.set_status(:error, "OAuth exchange failed: #{inspect(reason)}")
+          Logger.error("OAuth code exchange failed", %{error: reason})
+          error
+      end
+    end
   end
 end
 ```
 
-##### LiveView Instrumentation (Partially Implemented in Phase 2)
+##### Session Manager Instrumentation
+
+```elixir
+defmodule Setlistify.Spotify.SessionManager do
+  use GenServer
+  require Logger
+  require OpenTelemetry.Tracer
+
+  def create_session(user_id, tokens) do
+    OpenTelemetry.Tracer.with_span "session_manager.create_session" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", user_id},
+        {"session.operation", "create"}
+      ])
+
+      case GenServer.call(__MODULE__, {:create_session, user_id, tokens}) do
+        {:ok, session} = result ->
+          Logger.info("Session created", %{user_id: user_id})
+          OpenTelemetry.Tracer.set_status(:ok)
+          OpenTelemetry.Tracer.set_attribute("session.created", true)
+          result
+
+        {:error, reason} = error ->
+          Logger.error("Session creation failed", %{user_id: user_id, error: reason})
+          OpenTelemetry.Tracer.set_status(:error, "Session creation failed: #{inspect(reason)}")
+          error
+      end
+    end
+  end
+
+  def refresh_session(user_id) do
+    OpenTelemetry.Tracer.with_span "session_manager.refresh_session" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", user_id},
+        {"session.operation", "refresh"}
+      ])
+
+      case GenServer.call(__MODULE__, {:refresh_session, user_id}) do
+        {:ok, session} = result ->
+          Logger.info("Session refreshed", %{user_id: user_id})
+          OpenTelemetry.Tracer.set_status(:ok)
+          OpenTelemetry.Tracer.set_attribute("session.refreshed", true)
+          result
+
+        {:error, reason} = error ->
+          Logger.error("Session refresh failed", %{user_id: user_id, error: reason})
+          OpenTelemetry.Tracer.set_status(:error, "Session refresh failed: #{inspect(reason)}")
+          error
+      end
+    end
+  end
+
+  # GenServer callbacks can also be instrumented
+  def handle_call({:create_session, user_id, tokens}, _from, state) do
+    # This span will be a child of the span created in create_session/2
+    OpenTelemetry.Tracer.with_span "session_manager.handle_create_session" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"genserver.operation", "handle_call"},
+        {"user.id", user_id}
+      ])
+
+      # Implementation...
+      case do_create_session(user_id, tokens, state) do
+        {:ok, session, new_state} ->
+          OpenTelemetry.Tracer.set_attribute("session.count", map_size(new_state.sessions))
+          {:reply, {:ok, session}, new_state}
+
+        {:error, reason} = error ->
+          OpenTelemetry.Tracer.set_status(:error, inspect(reason))
+          {:reply, error, state}
+      end
+    end
+  end
+end
+```
+
+##### LiveView Instrumentation Enhancement
 
 ```elixir
 defmodule SetlistifyWeb.SearchLive do
@@ -1329,462 +726,219 @@ defmodule SetlistifyWeb.SearchLive do
   require OpenTelemetry.Tracer
 
   def mount(_params, _session, socket) do
-    # Note: Phase 2 implemented LiveViewTelemetry hook that creates spans during mount
+    # LiveView mount span is created by LiveViewTelemetry hook
     {:ok, assign(socket, setlists: [], search: search_form(%{}))}
   end
 
   def handle_params(params, _uri, socket) do
-    # Create a span for the handle_params operation (Added in Phase 2)
     OpenTelemetry.Tracer.with_span "search_live.handle_params" do
       OpenTelemetry.Tracer.set_attributes([
-        {"query", inspect(params)}
+        {"liveview.module", "SearchLive"},
+        {"liveview.function", "handle_params"},
+        {"params", inspect(params)}
       ])
-
-      Logger.info("Log inside custom span looking for #{inspect(params)}")
 
       search_form = search_form(params)
       search_changeset = search_form.source
 
-      setlists =
-        if search_changeset.valid? do
-          search_changeset |> Ecto.Changeset.get_field(:query) |> Setlistify.SetlistFm.API.search()
-        else
-          []
-        end
+      setlists = if search_changeset.valid? do
+        query = Ecto.Changeset.get_field(search_changeset, :query)
+        Logger.info("Performing search", %{query: query})
+        
+        OpenTelemetry.Tracer.set_attribute("search.query", query)
+        
+        # This will create a child span via the API client instrumentation
+        results = Setlistify.SetlistFm.API.search(query)
+        
+        OpenTelemetry.Tracer.set_attribute("search.results_count", length(results))
+        results
+      else
+        OpenTelemetry.Tracer.set_attribute("search.valid", false)
+        []
+      end
 
+      OpenTelemetry.Tracer.set_status(:ok)
       {:noreply, assign(socket, search: search_form, setlists: setlists)}
     end
   end
 
   def handle_event("search", %{"search" => params}, socket) do
-    # TODO: Add telemetry span as shown below
-    # :telemetry.span(
-    #   [:setlistify, :live_view, :handle_event],
-    #   %{event: "search", query: params["q"], view: "SearchLive"},
-    #   fn ->
-        {:noreply, socket |> push_patch(to: "/#{encode_query_string(params)}")}
-    #   end
-    # )
-  end
-end
-```
+    OpenTelemetry.Tracer.with_span "search_live.handle_search_event" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"liveview.event", "search"},
+        {"search.query", params["q"] || ""},
+        {"liveview.module", "SearchLive"}
+      ])
 
-### 6. Testing Strategy
-
-Testing is crucial for ensuring our OpenTelemetry implementation works correctly without breaking existing functionality. Each implementation phase includes specific testing approaches.
-
-#### 6.1 Phase 1 Testing - Core Tracing Infrastructure
-
-**Unit Tests for Trace Decorator**
-```elixir
-defmodule Setlistify.TraceTest do
-  use ExUnit.Case
-  import Hammox
-
-  setup :verify_on_exit!
-
-  describe "@trace decorator" do
-    test "creates telemetry span for traced function" do
-      defmodule TestModule do
-        use Setlistify.Trace
-
-        @trace
-        def test_function(arg) do
-          {:ok, arg}
-        end
-      end
-
-      # Assert telemetry event is emitted
-      self = self()
-
-      :telemetry.attach(
-        "test-handler",
-        [:test_module, :test_function, :start],
-        fn event, measurements, metadata, _config ->
-          send(self, {:telemetry_event, event, measurements, metadata})
-        end,
-        nil
-      )
-
-      TestModule.test_function("test")
-
-      assert_receive {:telemetry_event, [:test_module, :test_function, :start], _, _}
+      Logger.info("Search event received", %{query: params["q"]})
+      
+      result = {:noreply, socket |> push_patch(to: "/#{encode_query_string(params)}")}
+      
+      OpenTelemetry.Tracer.set_attributes([
+        {"liveview.action", "redirect"},
+        {"liveview.redirect_path", "/#{encode_query_string(params)}"}
+      ])
+      
+      result
     end
   end
 end
 ```
 
-**Integration Tests for API Clients**
+##### Setlist.fm API Client Instrumentation
+
 ```elixir
-defmodule Setlistify.Spotify.API.ExternalClientIntegrationTest do
-  use ExUnit.Case
-  import Hammox
+defmodule Setlistify.SetlistFm.API.ExternalClient do
+  @behaviour Setlistify.SetlistFm.API
+  require Logger
+  require OpenTelemetry.Tracer
 
-  setup :verify_on_exit!
+  def search(query, endpoint \\ @root_endpoint) do
+    OpenTelemetry.Tracer.with_span "setlist_fm.search" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"service.name", "setlist_fm"},
+        {"setlist_fm.operation", "search"},
+        {"setlist_fm.query", query},
+        {"setlist_fm.endpoint", endpoint}
+      ])
 
-  describe "with telemetry instrumentation" do
-    test "emits span events for API calls" do
-      # Setup Hammox expectation
-      expect(
-        Setlistify.Spotify.API.MockClient,
-        :search_for_track,
-        fn _session, "artist", "track" ->
-          %{uri: "spotify:track:123", preview_url: nil}
-        end
-      )
+      Logger.info("Searching setlists", %{query: query})
 
-      # Attach telemetry handler
-      self = self()
+      try do
+        result = Req.get!(request(endpoint),
+          url: "/search/setlists",
+          params: %{"artistName" => query}
+        )
 
-      :telemetry.attach_many(
-        "test-handler",
-        [
-          [:setlistify, :spotify, :search, :track, :start],
-          [:setlistify, :spotify, :search, :track, :stop]
-        ],
-        fn event, _measurements, metadata, _config ->
-          send(self, {:telemetry_event, event, metadata})
-        end,
-        nil
-      )
+        setlists = result.body["setlist"] || []
+        mapped_results = Enum.map(setlists, &transform_setlist/1)
 
-      # Execute the function
-      session = %UserSession{user_id: "test", access_token: "token"}
-      result = Setlistify.Spotify.API.MockClient.search_for_track(session, "artist", "track")
+        OpenTelemetry.Tracer.set_attributes([
+          {"setlist_fm.results.count", length(setlists)},
+          {"http.status_code", 200}
+        ])
 
-      # Verify telemetry events
-      assert_receive {:telemetry_event, [:setlistify, :spotify, :search, :track, :start], metadata}
-      assert metadata.artist == "artist"
-      assert metadata.track == "track"
-
-      assert_receive {:telemetry_event, [:setlistify, :spotify, :search, :track, :stop], metadata}
-      assert metadata.status == :success
-    end
-  end
-end
-```
-
-**Testing Token Refresh Instrumentation**
-```elixir
-defmodule Setlistify.Spotify.TokenRefreshTest do
-  use ExUnit.Case, async: true
-
-  test "token refresh emits telemetry events" do
-    # Setup test handlers
-    self = self()
-
-    :telemetry.attach(
-      "refresh-test",
-      [:setlistify, :spotify, :token_refresh, :start],
-      fn _event, _measurements, metadata, _config ->
-        send(self, {:token_refresh_started, metadata})
-      end,
-      nil
-    )
-
-    # Trigger token refresh via SessionManager
-    {:ok, _session} = SessionManager.refresh_session("test_user_id")
-
-    assert_receive {:token_refresh_started, %{user_id: "test_user_id"}}
-  end
-end
-```
-
-#### 6.2 Phase 2 Testing - Enhanced Tracing and Logging
-
-**Structured Logger Tests**
-```elixir
-defmodule Setlistify.StructuredLoggerTest do
-  use ExUnit.Case
-
-  test "adds trace context to log metadata" do
-    # Create a span context
-    OpenTelemetry.Tracer.with_span "test_span" do
-      Setlistify.StructuredLogger.info("Test message", %{key: "value"})
-
-      # Capture logged output
-      assert_receive {:log, level, message, metadata}
-      assert level == :info
-      assert message == "Test message"
-      assert metadata[:trace_id] != nil
-      assert metadata[:span_id] != nil
-      assert metadata[:key] == "value"
-    end
-  end
-
-  test "handles errors with stacktraces" do
-    try do
-      raise "Test error"
-    rescue
-      e ->
-        Setlistify.StructuredLogger.error("Error occurred", %{
-          error: e,
-          stacktrace: __STACKTRACE__
+        Logger.info("Setlist search completed", %{
+          query: query,
+          results_count: length(setlists)
         })
 
-        assert_receive {:log, :error, _, metadata}
-        assert metadata[:error] != nil
-        assert metadata[:stacktrace] != nil
+        OpenTelemetry.Tracer.set_status(:ok)
+        mapped_results
+      rescue
+        error ->
+          Logger.error("Setlist search error", %{
+            query: query,
+            error: error
+          })
+
+          OpenTelemetry.Tracer.set_status(:error, "Search failed: #{Exception.message(error)}")
+          OpenTelemetry.Tracer.record_exception(error)
+
+          # Re-raise to maintain existing error handling
+          reraise error, __STACKTRACE__
+      end
+    end
+  end
+
+  def get_setlist(id, endpoint \\ @root_endpoint) do
+    OpenTelemetry.Tracer.with_span "setlist_fm.get_setlist" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"service.name", "setlist_fm"},
+        {"setlist_fm.operation", "get_setlist"},
+        {"setlist_fm.setlist_id", id},
+        {"setlist_fm.endpoint", endpoint}
+      ])
+
+      try do
+        resp = Req.get!(request(endpoint), url: "/setlist/#{id}")
+        setlist_data = resp.body
+        
+        artist_name = get_in(setlist_data, ["artist", "name"])
+        sets = get_in(setlist_data, ["sets", "set"]) || []
+        total_songs = Enum.reduce(sets, 0, fn set, acc ->
+          songs = Map.get(set, "song", [])
+          acc + length(songs)
+        end)
+
+        OpenTelemetry.Tracer.set_attributes([
+          {"setlist_fm.artist", artist_name},
+          {"setlist_fm.sets.count", length(sets)},
+          {"setlist_fm.songs.total", total_songs},
+          {"http.status_code", 200}
+        ])
+
+        result = transform_single_setlist(setlist_data)
+
+        Logger.info("Setlist fetched", %{
+          setlist_id: id,
+          artist: artist_name,
+          total_songs: total_songs
+        })
+
+        OpenTelemetry.Tracer.set_status(:ok)
+        result
+      rescue
+        error ->
+          Logger.error("Setlist fetch error", %{
+            setlist_id: id,
+            error: error
+          })
+
+          OpenTelemetry.Tracer.set_status(:error, "Fetch failed: #{Exception.message(error)}")
+          OpenTelemetry.Tracer.record_exception(error)
+
+          reraise error, __STACKTRACE__
+      end
     end
   end
 end
 ```
 
-**LiveView Instrumentation Tests**
+### Function Decorator Pattern (`@trace`)
+
+During the initial implementation phases, we experimented with a function decorator pattern that would automatically wrap functions with telemetry spans:
+
 ```elixir
-defmodule SetlistifyWeb.SearchLiveTest do
-  use SetlistifyWeb.ConnCase
-  import Phoenix.LiveViewTest
-
-  test "mount emits telemetry event", %{conn: conn} do
-    self = self()
-
-    :telemetry.attach(
-      "liveview-test",
-      [:setlistify, :live_view, :mount],
-      fn _event, _measurements, metadata, _config ->
-        send(self, {:mount_event, metadata})
-      end,
-      nil
-    )
-
-    {:ok, _view, _html} = live(conn, "/")
-
-    assert_receive {:mount_event, %{view: "SearchLive"}}
-  end
-
-  test "search event creates span", %{conn: conn} do
-    self = self()
-
-    :telemetry.attach(
-      "search-test",
-      [:setlistify, :live_view, :handle_event, :start],
-      fn _event, _measurements, metadata, _config ->
-        send(self, {:search_event, metadata})
-      end,
-      nil
-    )
-
-    {:ok, view, _html} = live(conn, "/")
-
-    view
-    |> form("#search-form", %{q: "Radiohead"})
-    |> render_submit()
-
-    assert_receive {:search_event, %{event: "search", query: "Radiohead"}}
+defmodule MyModule do
+  use Setlistify.Trace
+  
+  @trace
+  def my_function(arg1, arg2) do
+    # Function body
   end
 end
 ```
 
-#### 6.3 Phase 3 Testing - Metrics and Dashboards
+**Why We Postponed This Approach:**
 
-**Metrics Collection Tests**
-```elixir
-defmodule Setlistify.TelemetryTest do
-  use ExUnit.Case
+1. **Implementation Complexity**: The macro implementation proved difficult to get right, particularly around:
+   - AST manipulation for function transformation
+   - Preserving function metadata and documentation
+   - Handling different function arities and default parameters
 
-  test "collects API request metrics" do
-    ref = make_ref()
+2. **Limited Flexibility**: The decorator pattern has inherent limitations:
+   - Difficulty adding dynamic span attributes based on runtime values
+   - Challenges with cross-process tracing (GenServer interfaces)
+   - Limited control over span naming and metadata
 
-    # Subscribe to telemetry events
-    :telemetry_metrics.attach(
-      "test-metrics",
-      [:setlistify, :api_client, :request, :stop],
-      fn _event, measurements, metadata, _config ->
-        send(self(), {:metric, ref, measurements, metadata})
-      end,
-      nil
-    )
+3. **Community Concerns**: The Elixir community has raised valid concerns about function decorators:
+   - They can make code harder to reason about
+   - They hide important behavior (telemetry) from plain sight
+   - They go against Elixir's philosophy of explicit, clear code
+   - Reference: [Elixir Forum Discussion](https://elixirforum.com/t/nicest-way-to-emulate-function-decorators/2050/26)
 
-    # Trigger an API request
-    :telemetry.execute(
-      [:setlistify, :api_client, :request, :stop],
-      %{duration: 100_000_000},  # 100ms in nanoseconds
-      %{service: "spotify-api", endpoint: "GET /search", status: 200}
-    )
+4. **Testing Complications**: Decorators can complicate testing:
+   - Harder to mock individual telemetry events
+   - Less control over test assertions
+   - Potential interference with existing Hammox mocks
 
-    assert_receive {:metric, ^ref, measurements, metadata}
-    assert measurements.duration == 100_000_000
-    assert metadata.service == "spotify-api"
-    assert metadata.status == 200
-  end
+**Future Consideration**: After implementing the telemetry-based approach and gaining experience with observability patterns in our application, we may revisit the decorator approach if:
+- We identify specific use cases where it would add significant value
+- The implementation challenges can be overcome
+- We develop patterns that maintain code clarity and testability
 
-  test "tracks error counts by type" do
-    ref = make_ref()
-
-    :telemetry_metrics.attach(
-      "error-metrics",
-      [:setlistify, :error, :count],
-      fn _event, measurements, metadata, _config ->
-        send(self(), {:error_metric, ref, measurements, metadata})
-      end,
-      nil
-    )
-
-    # Simulate different error types
-    :telemetry.execute(
-      [:setlistify, :error, :count],
-      %{count: 1},
-      %{type: "TokenRefreshError", module: "Setlistify.Spotify.SessionManager"}
-    )
-
-    assert_receive {:error_metric, ^ref, %{count: 1}, metadata}
-    assert metadata.type == "TokenRefreshError"
-    assert metadata.module == "Setlistify.Spotify.SessionManager"
-  end
-end
-```
-
-**End-to-End Observability Tests**
-```elixir
-defmodule Setlistify.ObservabilityE2ETest do
-  use ExUnit.Case
-
-  @tag :integration
-  test "full request flow creates connected traces" do
-    # This test verifies that traces are properly connected
-    # from LiveView -> API client -> external service
-
-    # Start a root span
-    OpenTelemetry.Tracer.with_span "e2e_test" do
-      # Simulate user search
-      {:ok, results} = Setlistify.search_artist("Radiohead")
-
-      # Verify we created child spans
-      current_span = OpenTelemetry.Tracer.current_span_ctx()
-      assert current_span != :undefined
-
-      # In a real test, you would query your telemetry backend
-      # to verify the trace structure
-    end
-  end
-end
-```
-
-#### 6.4 Phase 4 Testing - Optimization
-
-**Performance Impact Tests**
-```elixir
-defmodule Setlistify.PerformanceTest do
-  use ExUnit.Case
-
-  @tag :benchmark
-  test "instrumentation overhead is acceptable" do
-    # Measure baseline without instrumentation
-    {baseline_time, _} = :timer.tc(fn ->
-      Enum.each(1..1000, fn _ ->
-        # Simulate API call without telemetry
-        :timer.sleep(1)
-      end)
-    end)
-
-    # Measure with instrumentation
-    {instrumented_time, _} = :timer.tc(fn ->
-      Enum.each(1..1000, fn _ ->
-        :telemetry.span(
-          [:test, :operation],
-          %{},
-          fn ->
-            :timer.sleep(1)
-            {:ok, %{}}
-          end
-        )
-      end)
-    end)
-
-    overhead_percent = ((instrumented_time - baseline_time) / baseline_time) * 100
-
-    # Assert overhead is less than 5%
-    assert overhead_percent < 5.0,
-      "Instrumentation overhead too high: #{overhead_percent}%"
-  end
-end
-```
-
-#### 6.5 Test Configuration
-
-**Test-Specific Configuration**
-```elixir
-# config/test.exs
-config :setlistify, :telemetry,
-  enabled: false  # Disable telemetry exports in tests by default
-
-config :opentelemetry,
-  traces_exporter: :none  # Disable trace exports
-
-# For integration tests that need telemetry
-config :setlistify, :telemetry_integration_tests,
-  enabled: true
-
-# test/test_helper.exs
-if System.get_env("TELEMETRY_TESTS") == "true" do
-  Application.put_env(:setlistify, :telemetry, enabled: true)
-end
-```
-
-**Mock Setup for API Tests**
-```elixir
-# test/support/telemetry_test_helpers.ex
-defmodule Setlistify.TelemetryTestHelpers do
-  @moduledoc """
-  Helpers for testing telemetry instrumentation
-  """
-
-  def capture_telemetry_events(event_names) do
-    test_pid = self()
-
-    handler_id = "test-handler-#{:erlang.unique_integer()}"
-
-    :telemetry.attach_many(
-      handler_id,
-      event_names,
-      fn event, measurements, metadata, _config ->
-        send(test_pid, {:telemetry_event, event, measurements, metadata})
-      end,
-      nil
-    )
-
-    on_exit(fn -> :telemetry.detach(handler_id) end)
-  end
-
-  def assert_telemetry_event(event_name, timeout \\ 1000) do
-    assert_receive {:telemetry_event, ^event_name, _, _}, timeout
-  end
-end
-```
-
-## Deployment Configuration
-
-### Environment Variables
-
-For Fly.io deployment, you'll need to set the following secrets alongside your existing Spotify and Setlist.fm API keys:
-
-```bash
-# Set Grafana Cloud credentials
-fly secrets set GRAFANA_API_KEY=your_api_key
-fly secrets set GRAFANA_ORG=your_org_name
-
-# Set Loki URL for logs
-fly secrets set LOKI_URL=https://logs-prod-us-central1.grafana.net/loki/api/v1/push
-
-# Your existing secrets remain:
-# - SPOTIFY_CLIENT_ID
-# - SPOTIFY_CLIENT_SECRET
-# - SETLIST_FM_API_SECRET
-```
-
-### Fly.toml Updates
-
-Add the following to your `fly.toml` to ensure proper OTel configuration:
-
-```toml
-[env]
-  OTEL_SERVICE_NAME = "setlistify"
-  OTEL_RESOURCE_ATTRIBUTES = "service.name=setlistify,deployment.environment=production"
-
-[processes]
-  app = "bin/setlistify start"
-```
+The current `:telemetry.span/3` approach provides explicit, flexible instrumentation that aligns well with Elixir conventions and our testing strategy.
 
 ## Implementation Plan
 
@@ -1818,63 +972,63 @@ Add the following to your `fly.toml` to ensure proper OTel configuration:
 - fb90497 - "feat: implement Phase 2 - add trace context to logs"
 - 455e899 - "refactor: replace custom StructuredLogger with opentelemetry_logger_metadata"
 
-### Phase 1: Telemetry-to-OpenTelemetry Integration
+### Phase 1: Core OpenTelemetry Instrumentation
 
 **Status:** NEXT UP
 
 **Tasks:**
 1. Complete OpenTelemetry dependencies in mix.exs
-2. Implement Setlistify.TelemetryEvents registry
-3. Create Setlistify.Observability.setup_telemetry_otel_bridges/0
-4. Add `:telemetry.span/3` instrumentation to key modules:
-   - `lib/setlistify/spotify/api/external_client.ex`
-   - `lib/setlistify/setlist_fm/api/external_client.ex` 
-   - `lib/setlistify/spotify/session_manager.ex`
-   - `lib/setlistify/spotify/user_session.ex`
-   - `lib/setlistify_web/controllers/oauth_callback_controller.ex`
-5. Configure telemetry handlers to bridge to OpenTelemetry spans
-6. Enhance existing LiveView instrumentation with more telemetry events
-7. Add telemetry events for critical business operations:
-   - OAuth flows and token refresh
-   - API request patterns and retries
-   - Session lifecycle management
-8. Create integration tests for telemetry-to-OpenTelemetry flow
-9. Test locally with docker stack
-10. Verify connected traces across process boundaries
+2. Implement Setlistify.Observability.setup/0 for framework integrations
+3. Add `OpenTelemetry.Tracer.with_span/2` instrumentation to key modules:
+   - `lib/setlistify/spotify/api/external_client.ex` - Add spans to all API operations
+   - `lib/setlistify/setlist_fm/api/external_client.ex` - Add spans to search and get_setlist
+   - `lib/setlistify/spotify/session_manager.ex` - Add spans to session lifecycle operations
+   - `lib/setlistify/spotify/user_session.ex` - Add spans to token refresh and API calls
+   - `lib/setlistify_web/controllers/oauth_callback_controller.ex` - Add spans to OAuth flows
+4. Set span attributes following OpenTelemetry semantic conventions
+5. Ensure proper error handling with `OpenTelemetry.Tracer.set_status/2` and `record_exception/1`
+6. Enhance existing LiveView instrumentation with more detailed spans
+7. Add context propagation for cross-process operations (GenServer calls, Tasks)
+8. Create integration tests for OpenTelemetry span creation and attributes
+9. Test locally with docker stack to verify end-to-end traces
+10. Verify connected traces across process boundaries (HTTP → LiveView → GenServer → API calls)
 
 **Testing Focus:**
-- Integration tests for telemetry event emission
-- Verify OpenTelemetry span creation from telemetry events
-- Test trace context propagation across GenServer boundaries
-- Manual validation with local Grafana UI
+- Integration tests for OpenTelemetry span creation and attributes
+- Verify trace context propagation across GenServer boundaries
+- Test error scenarios create proper error spans with exceptions
+- Manual validation with local Grafana UI showing connected traces
+- Performance testing to ensure acceptable overhead
 
 **Expected Timeline:** 2-3 days
 **Dependencies:** Phase 0 completion ✅, Phase 2 partial completion ✅
 **Key Success Metrics:** 
-- Connected traces visible in local Grafana showing OAuth flow
+- End-to-end traces visible in local Grafana showing complete OAuth flow
 - Trace context properly propagated across SessionManager → UserSession → API calls
-- LiveView interactions create spans linked to business operations
+- LiveView interactions linked to business operations via spans
+- Error traces include proper exception details and context
+
+## Post-Implementation Ideas to Consider
 
 ### Phase 2: Enhanced Tracing and Logging (Local) - Complete Remaining Tasks
 
 **Tasks Remaining:**
 1. Add Loki logger configuration for local development
-2. Create exception tracking for API errors and OAuth failures
-3. Implement HTTP client tracing with Req middleware
-4. Complete comprehensive LiveView instrumentation
-5. Add telemetry events for error scenarios and edge cases
-6. Create structured tests for telemetry instrumentation
-7. Verify log correlation with traces in local Grafana
+2. Create comprehensive HTTP client tracing with OpenTelemetry context propagation
+3. Complete LiveView instrumentation for all user flows
+4. Add OpenTelemetry spans for error scenarios and edge cases
+5. Create structured tests for OpenTelemetry instrumentation
+6. Verify log correlation with traces in local Grafana
 
 **Testing Focus:**
-- Exception handling with trace context
-- HTTP client request tracing
+- Exception handling with proper OpenTelemetry error status
+- HTTP client request tracing with context propagation
 - Log correlation verification in Grafana
-- LiveView event flow testing
+- LiveView event flow testing with span hierarchy
 
 **Expected Timeline:** 1-2 days
 **Dependencies:** Phase 1 completion
-**Key Success Metrics:** Complete observability stack with logs correlated to traces
+**Key Success Metrics:** Complete observability stack with logs correlated to traces via trace context
 
 ### Phase 3: Metrics and Dashboards (Local)
 
