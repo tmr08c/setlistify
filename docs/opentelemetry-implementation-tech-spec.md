@@ -226,6 +226,7 @@ defp deps do
     # Framework Integrations
     {:opentelemetry_phoenix, "~> 1.1.0"},
     {:opentelemetry_telemetry, "~> 1.0.0"},
+    {:opentelemetry_req, "~> 1.0.0"},  # For automatic HTTP client instrumentation
     {:opentelemetry_liveview, "~> 1.0.0"},  # For LiveView instrumentation
 
     # Telemetry
@@ -499,6 +500,24 @@ The following modules represent critical paths in Setlistify and should be instr
 #### 5.2 Instrumentation Examples
 
 ### 5. Application-Specific Instrumentation
+
+#### HTTP Client Instrumentation with OpentelemetryReq
+
+We use `opentelemetry_req` to automatically instrument all HTTP requests made with the Req library. This provides automatic tracing for:
+- Request/response timing
+- HTTP method, URL, and status codes
+- Request/response headers (configurable)
+- Error tracking
+
+To enable this, we attach the OpentelemetryReq middleware when creating Req clients:
+
+```elixir
+Req.new()
+|> OpentelemetryReq.attach()
+|> Req.merge(options)
+```
+
+This eliminates the need for manual HTTP-level span creation while still allowing us to add business-level spans for higher-level operations.
 
 ##### Spotify API Client Instrumentation
 

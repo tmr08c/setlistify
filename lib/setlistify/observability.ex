@@ -44,8 +44,8 @@ defmodule Setlistify.Observability do
   end
 
   defp setup_telemetry_handlers do
-    # Set up handlers for Phoenix
-    :ok = OpentelemetryPhoenix.setup()
+    # Set up handlers for Phoenix with the Cowboy adapter
+    :ok = OpentelemetryPhoenix.setup(adapter: :cowboy2)
 
     # Process propagator doesn't need setup - it's used directly in LiveView processes
     # to fetch parent context when needed
