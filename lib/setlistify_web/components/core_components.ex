@@ -736,18 +736,22 @@ defmodule SetlistifyWeb.CoreComponents do
 
   def rotating_text(assigns) do
     # When @text_class is provided, it completely replaces the default text styles
-    text_classes =
-      if assigns[:text_class] do
-        assigns.text_class
-      else
-        "text-emerald-300 text-lg sm:text-xl md:text-2xl font-medium text-center px-4"
-      end
+    assigns =
+      assign(
+        assigns,
+        :computed_text_classes,
+        if assigns[:text_class] do
+          assigns.text_class
+        else
+          "text-emerald-300 text-lg sm:text-xl md:text-2xl font-medium text-center px-4"
+        end
+      )
 
     ~H"""
     <div class={["w-full h-12 flex justify-center items-center", @class]}>
       <div
         id="rotating-text"
-        class={[text_classes]}
+        class={[@computed_text_classes]}
         phx-hook="RotatingText"
         data-texts={Jason.encode!(@texts)}
       >
