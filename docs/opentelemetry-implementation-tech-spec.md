@@ -26,7 +26,7 @@ After evaluating several options, we've decided to:
 1. Set up a local development stack with Grafana, Tempo, Loki, and Prometheus
 2. Use `:telemetry` as an abstraction layer for most of our instrumentation
 3. Leverage `opentelemetry_telemetry` to bridge telemetry events to OpenTelemetry spans
-4. Implement the `@trace` decorator pattern for function-level tracing in our API modules and session managers (using runtime wrapping initially)
+4. Use `:telemetry` directly for function-level tracing in our API modules and session managers
 5. Add trace context propagation to HTTP requests using our existing Req client setup
 6. Include structured logging with trace context
 7. Instrument LiveView processes for user interaction tracing
@@ -423,7 +423,9 @@ datasources:
 
 ### 5. Core Implementation Components
 
-#### Trace Decorator Module
+#### Future Experiment: Trace Decorator Module
+
+**Note:** This decorator approach will be explored after the core observability work is complete. For now, we use `:telemetry` directly.
 
 ```elixir
 defmodule Setlistify.Trace do
@@ -2263,12 +2265,10 @@ As of May 21, 2025:
   - Using opentelemetry_logger_metadata package
 
 - Phase 1: Core Tracing Infrastructure ✅ (Substantial - ~70% complete)
-  - Trace decorator module with exception handling
-  - Support for both function-level decoration and module attributes
+  - **Note: Trace decorator approach deferred** - will use `:telemetry` directly instead
   - Manual instrumentation of key modules (SessionManager, OAuth flows)
   - Detailed span attribution for business context
   - Exception handling and error recording in spans
-  - Comprehensive tests for normal execution and exception paths
 
 **In Progress/Next Up:**
 - Complete Phase 1:

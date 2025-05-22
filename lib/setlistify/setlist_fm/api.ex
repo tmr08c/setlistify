@@ -38,8 +38,6 @@ defmodule Setlistify.SetlistFm.API do
   @callback search(String.t()) :: [search_result()]
   def search(query) do
     OpenTelemetry.Tracer.with_span "setlist_fm.api.search" do
-      impl().search(query)
-
       case Cachex.fetch(:setlist_fm_search_cache, query, &impl().search/1) do
         {:ok, result} ->
           OpenTelemetry.Tracer.set_attributes([{:cache_hit, true}])
