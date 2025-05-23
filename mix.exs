@@ -28,7 +28,7 @@ defmodule Setlistify.MixProject do
   def application do
     [
       mod: {Setlistify.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :opentelemetry_exporter, :opentelemetry]
     ]
   end
 

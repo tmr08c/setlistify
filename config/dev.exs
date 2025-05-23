@@ -80,7 +80,9 @@ config :opentelemetry,
 
 config :opentelemetry_exporter,
   otlp_protocol: :http_protobuf,
-  otlp_endpoint: "http://localhost:4318"
+  otlp_endpoint: "http://localhost:4318",
+  otlp_headers: [],
+  otlp_compression: :gzip
 
 # Resource attributes for local development
 config :opentelemetry, :resource,
