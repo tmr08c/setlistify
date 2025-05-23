@@ -1,6 +1,8 @@
 defmodule SetlistifyWeb.Setlists.ShowLive do
   use SetlistifyWeb, :live_view
 
+  require OpenTelemetry.Tracer
+
   alias Setlistify.{SetlistFm, Spotify}
 
   def mount(%{"id" => id}, _session, socket) do
@@ -9,6 +11,13 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
     setlist =
       if user_session do
+        # Get the current context to propagate to the background process
+        ctx = OpenTelemetry.Ctx.get_current()
+        current_span = OpenTelemetry.Tracer.current_span_ctx(ctx)
+
+        # Map context to something that can be sent between processes
+        # ctx_map = OpenTelemetry.Propagator.text_map_injector().inject(ctx, %{})
+
         sets =
           setlist.sets
           |> Enum.map(fn set ->
@@ -18,7 +27,12 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
             songs =
               Task.async_stream(set.songs, fn song ->
                 spotify_info =
-                  Spotify.API.search_for_track(user_session, setlist.artist, song.title)
+                  Spotify.API.search_for_track(
+                    user_session,
+                    setlist.artist,
+                    song.title,
+                    {ctx, current_span}
+                  )
 
                 Map.put(song, :spotify_info, spotify_info)
               end)

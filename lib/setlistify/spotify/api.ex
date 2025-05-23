@@ -4,10 +4,10 @@ defmodule Setlistify.Spotify.API do
   # TODO Set response type
   @callback search_for_track(UserSession.t(), String.t(), String.t()) ::
               nil | %{uri: String.t(), preview_url: String.t()}
-  def search_for_track(user_session, artist, track) do
+  def search_for_track(user_session, artist, track, ctx \\ nil) do
     :spotify_track_cache
     |> Cachex.fetch({artist, track}, fn {artist, track} ->
-      impl().search_for_track(user_session, artist, track)
+      impl().search_for_track(user_session, artist, track, ctx)
     end)
     |> elem(1)
   end

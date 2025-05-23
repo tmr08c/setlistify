@@ -3,6 +3,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
   require Logger
   require OpenTelemetry.Tracer
+
   alias Setlistify.Spotify.UserSession
   alias Setlistify.Spotify.SessionManager
 
@@ -12,7 +13,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     config_opts = Application.get_env(:setlistify, :spotify_req_options, [])
 
     Req.new()
-    |> OpentelemetryReq.attach()
+    |> OpentelemetryReq.attach(propagate_trace_headers: true)
     |> Req.merge(Keyword.merge(default_opts, config_opts))
   end
 
@@ -69,7 +70,22 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     end
   end
 
-  def search_for_track(user_session, artist, track) do
+  def search_for_track(user_session, artist, track, ctx \\ nil) do
+    if ctx do
+      {parent_ctx, parent_span} = ctx
+      IO.inspect(ctx, label: "Context")
+      # parent_ctx = OpenTelemetry.Propagator.text_map_extractor().extract(ctx_map)
+
+      # Attach the context to this process
+      # OpenTelemetry.Ctx.attach(ctx)
+      # parent_ctx = OpentelemetryProcessPropagator.fetch_parent_ctx()
+
+      OpenTelemetry.Ctx.attach(parent_ctx)
+      OpenTelemetry.Tracer.set_current_span(parent_span)
+    else
+      IO.puts("NO CONTEXT")
+    end
+
     OpenTelemetry.Tracer.with_span "spotify.search_track" do
       # Set span attributes following OpenTelemetry semantic conventions
       OpenTelemetry.Tracer.set_attributes([
