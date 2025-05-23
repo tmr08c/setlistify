@@ -18,6 +18,8 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
         # Map context to something that can be sent between processes
         # ctx_map = OpenTelemetry.Propagator.text_map_injector().inject(ctx, %{})
 
+        # TODO: This current model requires fetching all songs from a set before
+        # we can move onto the next one
         sets =
           setlist.sets
           |> Enum.map(fn set ->
