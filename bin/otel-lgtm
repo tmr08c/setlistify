@@ -90,9 +90,30 @@ case "${1:-start}" in
     fi
     
     # Only show status message for background mode
-    if [ "$1" = "start" ]; then
+    if [ "$1" = "start" ] || [ -z "$1" ]; then
       echo "Waiting for services to be ready..."
-      sleep 5
+      
+      # Wait for the ready message with timeout
+      timeout=30
+      elapsed=0
+      ready=false
+      
+      while [ "$elapsed" -lt "$timeout" ]; do
+        if docker logs "${CONTAINER_NAME}" 2>&1 | grep -q "The OpenTelemetry collector and the Grafana LGTM stack are up and running"; then
+          ready=true
+          break
+        fi
+        sleep 1
+        elapsed=$((elapsed + 1))
+        echo -n "."
+      done
+      echo ""
+      
+      if [ "$ready" = true ]; then
+        echo "✅ Services are ready!"
+      else
+        echo "⚠️  Services may not be fully ready after ${timeout}s timeout"
+      fi
       
       echo ""
       echo "🚀 OTEL-LGTM stack is running:"
