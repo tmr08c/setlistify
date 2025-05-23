@@ -67,32 +67,35 @@ defmodule SetlistifyWeb.SearchLive do
 
               <.rotating_text
                 class="mb-8"
+                text_class="text-gray-300 text-sm sm:text-base font-medium text-center px-4"
                 texts={[
-                  "Relive the concerts you've attended",
-                  "Prepare for your upcoming shows",
-                  "Discover an artist's live performance style"
+                  "Turn concert memories into streaming soundtracks",
+                  "Create the perfect pre-concert playlist",
+                  "Experience setlists from shows you missed",
+                  "Build your music library with authentic live experiences",
+                  "Share iconic concert experiences with friends"
                 ]}
               />
 
-              <div class="w-full max-w-xl mb-8 sm:mb-16">
-                <.simple_form
+              <div class="w-full max-w-lg mx-auto mb-8 sm:mb-16">
+                <.form
                   for={@search}
                   name="search"
                   phx-submit="search"
-                  class="flex justify-center"
+                  class="w-full flex justify-center"
                 >
-                  <div>
+                  <div class="w-full max-w-full">
                     <div class="relative w-full">
                       <input
                         type="text"
                         id="search-query"
                         name="search[query]"
                         value={@search[:query].value}
-                        placeholder="Search for an artist..."
+                        placeholder="Search for an artist or band..."
                         autocomplete="off"
                         class={[
-                          "w-full px-4 sm:px-6 py-3 sm:py-4 pr-14 sm:pr-16 text-sm sm:text-base text-white bg-gray-900 border rounded-full placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent",
-                          @search[:query].errors == [] && "border-gray-800",
+                          "w-full px-4 sm:px-6 py-4 sm:py-5 pr-14 sm:pr-16 text-sm sm:text-base text-white bg-gradient-to-r from-gray-900 to-gray-800 border rounded-full placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-opacity-50 focus:border-emerald-500 transition-all duration-200 shadow-lg focus:shadow-emerald-500/25",
+                          @search[:query].errors == [] && "border-gray-700 hover:border-gray-600",
                           @search[:query].errors != [] && "border-rose-400"
                         ]}
                       />
@@ -109,7 +112,7 @@ defmodule SetlistifyWeb.SearchLive do
                       </.error>
                     </div>
                   </div>
-                </.simple_form>
+                </.form>
               </div>
             </div>
 
@@ -147,9 +150,9 @@ defmodule SetlistifyWeb.SearchLive do
         </.section_container>
       <% else %>
         <.section_container class="py-10">
-          <div class="max-w-2xl mx-auto mb-10">
-            <.simple_form for={@search} name="search" phx-submit="search" class="flex justify-center">
-              <div>
+          <div class="max-w-lg mx-auto mb-10">
+            <.form for={@search} name="search" phx-submit="search" class="w-full flex justify-center">
+              <div class="w-full max-w-full">
                 <div class="relative w-full">
                   <input
                     type="text"
@@ -159,8 +162,8 @@ defmodule SetlistifyWeb.SearchLive do
                     placeholder="Search for an artist or band..."
                     autocomplete="off"
                     class={[
-                      "w-full px-4 sm:px-6 py-3 sm:py-4 pr-14 sm:pr-16 text-sm sm:text-base text-white bg-gray-900 border rounded-full placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent",
-                      @search[:query].errors == [] && "border-gray-800",
+                      "w-full px-4 sm:px-6 py-4 sm:py-5 pr-14 sm:pr-16 text-sm sm:text-base text-white bg-gradient-to-r from-gray-900 to-gray-800 border rounded-full placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-opacity-50 focus:border-emerald-500 transition-all duration-200 shadow-lg focus:shadow-emerald-500/25",
+                      @search[:query].errors == [] && "border-gray-700 hover:border-gray-600",
                       @search[:query].errors != [] && "border-rose-400"
                     ]}
                   />
@@ -177,7 +180,7 @@ defmodule SetlistifyWeb.SearchLive do
                   </.error>
                 </div>
               </div>
-            </.simple_form>
+            </.form>
           </div>
 
           <h2 class="text-3xl font-bold text-center mb-12">Search Results</h2>
