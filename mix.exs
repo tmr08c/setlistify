@@ -65,11 +65,12 @@ defmodule Setlistify.MixProject do
       {:telemetry_poller, "~> 1.0"},
 
       # OpenTelemetry
-      {:opentelemetry_exporter, "~> 1.6.0"},
+      {:opentelemetry_exporter, "~> 1.8.0"},
       {:opentelemetry, "~> 1.3"},
       {:opentelemetry_api, "~> 1.4"},
 
       # Framework Integrations
+      {:opentelemetry_cowboy, "~> 1.0"},
       {:opentelemetry_phoenix, "~> 2.0"},
       {:opentelemetry_telemetry, "~> 1.0"},
       {:opentelemetry_req, "~> 1.0.0"},

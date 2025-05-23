@@ -9,7 +9,7 @@ defmodule Setlistify.Observability do
   def setup do
     # Set up OpenTelemetry logger metadata
     # This adds trace_id and span_id to all log entries
-    OpentelemetryLoggerMetadata.setup()
+    # OpentelemetryLoggerMetadata.setup()
 
     # Set up OpenTelemetry handlers for telemetry events
     setup_telemetry_handlers()
@@ -44,6 +44,7 @@ defmodule Setlistify.Observability do
   end
 
   defp setup_telemetry_handlers do
+    :ok = :opentelemetry_cowboy.setup()
     # Set up handlers for Phoenix with the Cowboy adapter
     :ok = OpentelemetryPhoenix.setup(adapter: :cowboy2)
 
