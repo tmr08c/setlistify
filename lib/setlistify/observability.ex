@@ -4,59 +4,12 @@ defmodule Setlistify.Observability do
   """
 
   require Logger
-  require OpenTelemetry.Tracer
 
   def setup do
-    # Set up OpenTelemetry logger metadata
-    # This adds trace_id and span_id to all log entries
-    # OpentelemetryLoggerMetadata.setup()
-
     # Set up OpenTelemetry handlers for telemetry events
-    setup_telemetry_handlers()
-
-    # Set up exception tracking
-    setup_exception_tracking()
-
-    Logger.info("OpenTelemetry initialized for local development")
-  end
-
-  def test_trace do
-    # Simple test function to verify traces are being sent
-    OpenTelemetry.Tracer.with_span "Setlistify.Observability.test_trace" do
-      OpenTelemetry.Tracer.set_attributes([{"test.type", "manual"}])
-      Logger.info("Executing test trace")
-
-      # Simulate some work
-      Process.sleep(100)
-
-      # Add an event
-      OpenTelemetry.Tracer.add_event("Test event", %{"event.data" => "test data"})
-
-      # Simulate nested span
-      OpenTelemetry.Tracer.with_span "Setlistify.Observability.test_trace.nested" do
-        OpenTelemetry.Tracer.set_attributes([{"operation.type", "nested"}])
-        Process.sleep(50)
-        Logger.info("Nested operation complete")
-      end
-    end
-
-    {:ok, "Test trace completed"}
-  end
-
-  defp setup_telemetry_handlers do
     :ok = :opentelemetry_cowboy.setup()
-    # Set up handlers for Phoenix with the Cowboy adapter
     :ok = OpentelemetryPhoenix.setup(adapter: :cowboy2)
 
-    # Process propagator doesn't need setup - it's used directly in LiveView processes
-    # to fetch parent context when needed
-
-    # Attach to our custom events once we define them
-    # This will be expanded in Phase 1
-  end
-
-  defp setup_exception_tracking do
-    # Will be implemented in Phase 2
-    :ok
+    Logger.debug("OpenTelemetry initialized for local development")
   end
 end
