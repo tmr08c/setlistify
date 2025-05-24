@@ -257,28 +257,44 @@ defmodule Setlistify.Spotify.API.ExternalClient do
   end
 
   def get_embed(url) do
-    default_opts = [
-      base_url: Application.get_env(:setlistify, :oembed_endpoint, "https://open.spotify.com")
-    ]
+    OpenTelemetry.Tracer.with_span "spotify.external_client.get_embed" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"spotify.embed.url", url}
+      ])
 
-    config_opts = Application.get_env(:setlistify, :spotify_req_options, [])
+      default_opts = [
+        base_url: Application.get_env(:setlistify, :oembed_endpoint, "https://open.spotify.com")
+      ]
 
-    req =
-      Req.new()
-      |> OpentelemetryReq.attach()
-      |> Req.merge(Keyword.merge(default_opts, config_opts))
+      config_opts = Application.get_env(:setlistify, :spotify_req_options, [])
 
-    resp = Req.get(req, url: "/oembed?url=#{URI.encode_www_form(url)}")
+      req =
+        Req.new()
+        |> OpentelemetryReq.attach()
+        |> Req.merge(Keyword.merge(default_opts, config_opts))
 
-    case resp do
-      {:ok, %{status: 200} = resp} ->
-        case resp.body do
-          %{"html" => html} -> {:ok, html}
-          _ -> {:error, :invalid_response}
-        end
+      resp = Req.get(req, url: "/oembed?url=#{URI.encode_www_form(url)}")
 
-      _ ->
-        {:error, :failed_to_fetch}
+      case resp do
+        {:ok, %{status: 200} = resp} ->
+          case resp.body do
+            %{"html" => html} ->
+              OpenTelemetry.Tracer.set_status(:ok)
+              {:ok, html}
+
+            _ ->
+              OpenTelemetry.Tracer.set_status(:error, "Invalid response format")
+              {:error, :invalid_response}
+          end
+
+        {:ok, %{status: status}} ->
+          OpenTelemetry.Tracer.set_status(:error, "HTTP #{status}")
+          {:error, :failed_to_fetch}
+
+        {:error, reason} ->
+          OpenTelemetry.Tracer.set_status(:error, "Request failed: #{inspect(reason)}")
+          {:error, :failed_to_fetch}
+      end
     end
   end
 
