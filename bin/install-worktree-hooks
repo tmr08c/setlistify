@@ -1,0 +1,51 @@
+#!/bin/bash
+
+# Script to install git hooks for worktree management
+# This hook automatically copies .env files to new worktrees
+
+set -e
+
+echo "Installing git hooks for worktree management..."
+
+# Get the git hooks directory
+HOOKS_DIR="$(git rev-parse --git-common-dir)/hooks"
+
+# Create post-checkout hook
+cat > "$HOOKS_DIR/post-checkout" << 'EOF'
+#!/bin/bash
+
+# post-checkout hook to copy .env file to new worktrees
+# Arguments: $1 = previous HEAD, $2 = new HEAD, $3 = 1 if checking out a branch, 0 if checking out files
+
+# Only proceed if this is a branch checkout (not file checkout)
+if [ "$3" = "1" ]; then
+    # Get the main worktree directory dynamically
+    MAIN_WORKTREE="$(git worktree list | grep -E '\(bare\)$' -v | head -1 | awk '{print $1}')"
+    
+    # Get current directory
+    CURRENT_DIR="$(pwd)"
+    
+    # Check if we're in a worktree (not the main repo)
+    if [ "$CURRENT_DIR" != "$MAIN_WORKTREE" ]; then
+        # Check if .env doesn't exist in current worktree
+        if [ ! -f "$CURRENT_DIR/.env" ]; then
+            # Check if .env exists in main worktree
+            if [ -f "$MAIN_WORKTREE/.env" ]; then
+                echo "Copying .env file from main repository to worktree..."
+                cp "$MAIN_WORKTREE/.env" "$CURRENT_DIR/.env"
+                echo ".env file copied successfully!"
+            else
+                echo "Warning: No .env file found in main repository at $MAIN_WORKTREE"
+            fi
+        fi
+    fi
+fi
+EOF
+
+# Make hook executable
+chmod +x "$HOOKS_DIR/post-checkout"
+
+echo "✅ Git hooks installed successfully!"
+echo ""
+echo "The post-checkout hook will now automatically copy .env files to new worktrees."
+echo "To test: git worktree add ../test-worktree"
