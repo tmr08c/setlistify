@@ -7,12 +7,6 @@ config :setlistify, SetlistifyWeb.Endpoint,
   secret_key_base: "MyzOQMgQQGIwlRY163PrVylUkcOHi5Sx52W9BLxCZkqkUTURG73ChOidQruPefgm",
   server: false
 
-# In test we don't send emails.
-config :setlistify, Setlistify.Mailer, adapter: Swoosh.Adapters.Test
-
-# Disable swoosh api client as it is only required for production adapters.
-config :swoosh, :api_client, false
-
 # Print only warnings and errors during test
 config :logger, level: :warning
 

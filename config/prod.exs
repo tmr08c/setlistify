@@ -12,9 +12,6 @@ import Config
 config :setlistify, SetlistifyWeb.Endpoint,
   cache_static_manifest: "priv/static/cache_manifest.json"
 
-# Configures Swoosh API Client
-config :swoosh, api_client: Swoosh.ApiClient.Finch, finch_name: Setlistify.Finch
-
 # Do not print debug messages in production
 config :logger, level: :info
 
