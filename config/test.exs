@@ -25,5 +25,4 @@ config :setlistify,
   ]
 
 # Disable PromEx Grafana integration in tests
-config :setlistify, Setlistify.PromEx,
-  grafana: :disabled
+config :setlistify, Setlistify.PromEx, grafana: :disabled
