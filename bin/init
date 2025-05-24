@@ -17,6 +17,9 @@ fi
 
 bin/setup
 
+echo "==> Installing git hooks for worktree management…"
+bin/install-worktree-hooks
+
 if $ENV_FILE_CREATED; then
     echo -e "${YELLOW}\n====================="
     echo -e ".env file created as a part of project initalization.\n"
