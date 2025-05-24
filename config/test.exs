@@ -23,3 +23,6 @@ config :setlistify,
     plug: {Req.Test, MySetlistFmStub},
     retry: false
   ]
+
+# Disable PromEx Grafana integration in tests
+config :setlistify, Setlistify.PromEx, grafana: :disabled

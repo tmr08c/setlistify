@@ -63,6 +63,7 @@ defmodule Setlistify.MixProject do
       {:tailwind, "~> 0.3.1", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
+      {:prom_ex, "~> 1.9"},
 
       # OpenTelemetry
       {:opentelemetry_exporter, "~> 1.6.0"},
