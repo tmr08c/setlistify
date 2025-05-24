@@ -1,15 +1,36 @@
 defmodule Setlistify.Spotify.API do
+  require OpenTelemetry.Tracer
+
   alias Setlistify.Spotify.UserSession
 
   # TODO Set response type
   @callback search_for_track(UserSession.t(), String.t(), String.t()) ::
               nil | %{uri: String.t(), preview_url: String.t()}
-  def search_for_track(user_session, artist, track, ctx \\ nil) do
-    :spotify_track_cache
-    |> Cachex.fetch({artist, track}, fn {artist, track} ->
-      impl().search_for_track(user_session, artist, track, ctx)
-    end)
-    |> elem(1)
+  def search_for_track(user_session, artist, track) do
+    OpenTelemetry.Tracer.with_span "spotify.api.search_for_track" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"service.name", "spotify"},
+        {"spotify.operation", "search_track"},
+        {"spotify.artist", artist},
+        {"spotify.track", track},
+        {"user.id", user_session.user_id},
+        {"enduser.id", user_session.user_id}
+      ])
+
+      # Cachex uses a separate process, so we need to propogate OpenTelemetry context
+      # TODO: If we do this enough we should consider making a helper
+      parent_ctx = OpenTelemetry.Ctx.get_current()
+      parent_span = OpenTelemetry.Tracer.current_span_ctx(parent_ctx)
+
+      :spotify_track_cache
+      |> Cachex.fetch({artist, track}, fn {artist, track} ->
+        OpenTelemetry.Ctx.attach(parent_ctx)
+        OpenTelemetry.Tracer.set_current_span(parent_span)
+
+        impl().search_for_track(user_session, artist, track)
+      end)
+      |> elem(1)
+    end
   end
 
   @callback create_playlist(UserSession.t(), String.t(), String.t()) ::

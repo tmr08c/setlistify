@@ -4,6 +4,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   require OpenTelemetry.Tracer
 
   alias Setlistify.{SetlistFm, Spotify}
+  alias OpentelemetryProcessPropagator.Task
 
   def mount(%{"id" => id}, _session, socket) do
     setlist = SetlistFm.API.get_setlist(id)
@@ -11,39 +12,32 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
     setlist =
       if user_session do
-        # Get the current context to propagate to the background process
-        ctx = OpenTelemetry.Ctx.get_current()
-        current_span = OpenTelemetry.Tracer.current_span_ctx(ctx)
+        # Wrap the track searching in a span so context can be propagated
+        OpenTelemetry.Tracer.with_span "setlist.enrich_with_spotify", %{
+          attributes: [{"setlist.id", id}, {"artist", setlist.artist}]
+        } do
+          # TODO: This current model requires fetching all songs from a set before
+          # we can move onto the next one
+          sets =
+            setlist.sets
+            |> Enum.map(fn set ->
+              # TODO: The workflow of updating UserSession after a refresh (see
+              # SetlistifyWeb.handle_info) probably won't work with this pattern
+              # because the spawned tasks won't receive the message.
+              songs =
+                Task.async_stream(set.songs, fn song ->
+                  spotify_info =
+                    Spotify.API.search_for_track(user_session, setlist.artist, song.title)
 
-        # Map context to something that can be sent between processes
-        # ctx_map = OpenTelemetry.Propagator.text_map_injector().inject(ctx, %{})
+                  Map.put(song, :spotify_info, spotify_info)
+                end)
 
-        # TODO: This current model requires fetching all songs from a set before
-        # we can move onto the next one
-        sets =
-          setlist.sets
-          |> Enum.map(fn set ->
-            # TODO: The workflow of updating UserSession after a refresh (see
-            # SetlistifyWeb.handle_info) probably won't work with this pattern
-            # because the spawned tasks won't receive the message.
-            songs =
-              Task.async_stream(set.songs, fn song ->
-                spotify_info =
-                  Spotify.API.search_for_track(
-                    user_session,
-                    setlist.artist,
-                    song.title,
-                    {ctx, current_span}
-                  )
+              %{set | songs: songs}
+            end)
+            |> Enum.map(fn set -> %{set | songs: Enum.map(set.songs, &elem(&1, 1))} end)
 
-                Map.put(song, :spotify_info, spotify_info)
-              end)
-
-            %{set | songs: songs}
-          end)
-          |> Enum.map(fn set -> %{set | songs: Enum.map(set.songs, &elem(&1, 1))} end)
-
-        %{setlist | sets: sets}
+          %{setlist | sets: sets}
+        end
       else
         setlist
       end

@@ -70,39 +70,8 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     end
   end
 
-  def search_for_track(user_session, artist, track, ctx \\ nil) do
-    if ctx do
-      {parent_ctx, parent_span} = ctx
-      IO.inspect(ctx, label: "Context")
-      # parent_ctx = OpenTelemetry.Propagator.text_map_extractor().extract(ctx_map)
-
-      # Attach the context to this process
-      # OpenTelemetry.Ctx.attach(ctx)
-      # parent_ctx = OpentelemetryProcessPropagator.fetch_parent_ctx()
-
-      OpenTelemetry.Ctx.attach(parent_ctx)
-      OpenTelemetry.Tracer.set_current_span(parent_span)
-    else
-      IO.puts("NO CONTEXT")
-    end
-
-    OpenTelemetry.Tracer.with_span "spotify.search_track" do
-      # Set span attributes following OpenTelemetry semantic conventions
-      OpenTelemetry.Tracer.set_attributes([
-        {"service.name", "spotify"},
-        {"spotify.operation", "search_track"},
-        {"spotify.artist", artist},
-        {"spotify.track", track},
-        {"user.id", user_session.user_id},
-        {"enduser.id", user_session.user_id}
-      ])
-
-      Logger.info("Searching for track", %{
-        artist: artist,
-        track: track,
-        user_id: user_session.user_id
-      })
-
+  def search_for_track(user_session, artist, track) do
+    OpenTelemetry.Tracer.with_span "spotify.external_client.search_for_track" do
       request_fn = fn req ->
         Req.get(req,
           url: "/search",
