@@ -63,7 +63,17 @@ defmodule SetlistifyWeb.Telemetry do
     [
       # A module, function and arguments to be invoked periodically.
       # This function must call :telemetry.execute/3 and a metric must be added above.
-      # {SetlistifyWeb, :count_users, []}
+      {__MODULE__, :measure_system_info, []}
     ]
+  end
+
+  def measure_system_info do
+    # Example: measure system memory usage
+    memory = :erlang.memory()
+    :telemetry.execute([:vm, :memory], %{total: memory[:total]}, %{})
+
+    # Example: measure process count
+    process_count = length(:erlang.processes())
+    :telemetry.execute([:vm, :process], %{count: process_count}, %{})
   end
 end

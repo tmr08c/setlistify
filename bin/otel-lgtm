@@ -64,6 +64,13 @@ case "${1:-start}" in
     
     echo "Starting Grafana OTEL-LGTM container..."
     
+    # Check if custom Prometheus config exists
+    PROMETHEUS_CONFIG=""
+    if [ -f "docker/lgtm-with-scraping/prometheus-config.yaml" ]; then
+      echo "Using custom Prometheus configuration with scraping support..."
+      PROMETHEUS_CONFIG="-v $(pwd)/docker/lgtm-with-scraping/prometheus-config.yaml:/otel-lgtm/prometheus.yaml:ro"
+    fi
+    
     # Determine if running in foreground or background
     if [ "$1" = "fg" ] || [ "$1" = "foreground" ]; then
       echo "Running in foreground mode (Ctrl+C to stop)..."
@@ -74,6 +81,7 @@ case "${1:-start}" in
         -p 4318:4318 \
         -p 3100:3100 \
         -p 9090:9090 \
+        ${PROMETHEUS_CONFIG} \
         --rm \
         -it \
         "${IMAGE_NAME}"
@@ -85,6 +93,7 @@ case "${1:-start}" in
         -p 4318:4318 \
         -p 3100:3100 \
         -p 9090:9090 \
+        ${PROMETHEUS_CONFIG} \
         -d \
         "${IMAGE_NAME}"
     fi

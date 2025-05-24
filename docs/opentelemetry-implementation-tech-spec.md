@@ -968,7 +968,7 @@ The current `:telemetry.span/3` approach provides explicit, flexible instrumenta
 2. ✅ Created configuration files for Tempo, Loki, and Prometheus
 3. ✅ Added development environment configuration to config/dev.exs
 4. ✅ Configured OpenTelemetry to send data to local endpoints
-5. ✅ Created bin/otel-local script for managing docker stack
+5. ✅ Created bin/otel-lgtm script for managing docker stack
 6. ✅ Verified services are running and accessible
 7. ✅ Tested connectivity and successfully sent traces from Elixir app
 8. ✅ Created basic dashboard for trace visualization
