@@ -76,11 +76,13 @@ config :phoenix_live_view, debug_heex_annotations: true
 
 # OpenTelemetry configuration for local development
 config :opentelemetry,
-  traces_exporter: :otlp
+  traces_exporter: :otlp,
+  metrics_exporter: :otlp
 
 config :opentelemetry_exporter,
   otlp_protocol: :http_protobuf,
-  otlp_endpoint: "http://localhost:4318"
+  otlp_endpoint: "http://localhost:4318",
+  otlp_metrics_endpoint: "http://localhost:4318"
 
 # Resource attributes for local development
 config :opentelemetry, :resource,

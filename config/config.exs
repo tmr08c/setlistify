@@ -46,6 +46,18 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
+# PromEx configuration
+config :setlistify, Setlistify.PromEx,
+  # If you have an externally hosted Prometheus comment out this line
+  # and configure the metrics_server config settings as necessary
+  manual_metrics_start_delay: :no_delay,
+  drop_metrics_groups: [],
+  grafana: :disabled,
+  metrics_server: [
+    port: 9568,
+    path: "/metrics"
+  ]
+
 # OpenTelemetry default configuration
 config :opentelemetry,
   # Default to no exporter (tests)
