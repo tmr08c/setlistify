@@ -19,7 +19,6 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
   # Helper function to handle token refresh and retry logic
   defp with_token_refresh(user_session, request_fn, context) do
-    # OpentelemetryReq will handle HTTP-level tracing, so we only need business logic spans
     req = client(user_session)
 
     case request_fn.(req) do
