@@ -12,7 +12,7 @@ defmodule SetlistifyWeb.Telemetry.LiveViewTelemetry do
     # we'll create a new span for each LiveView mount
     if connected?(socket) do
       # For connected LiveView (WebSocket), create a new trace
-      OpenTelemetry.Tracer.with_span "liveview.mount" do
+      OpenTelemetry.Tracer.with_span "SetlistifyWeb.Telemetry.LiveViewTelemetry.on_mount" do
         OpenTelemetry.Tracer.set_attributes([
           {"liveview.module", inspect(socket.view)},
           {"liveview.connected", true}

@@ -13,7 +13,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     setlist =
       if user_session do
         # Wrap the track searching in a span so context can be propagated
-        OpenTelemetry.Tracer.with_span "setlist.enrich_with_spotify", %{
+        OpenTelemetry.Tracer.with_span "SetlistifyWeb.Setlists.ShowLive.enrich_setlist", %{
           attributes: [{"setlist.id", id}, {"artist", setlist.artist}]
         } do
           # TODO: This current model requires fetching all songs from a set before

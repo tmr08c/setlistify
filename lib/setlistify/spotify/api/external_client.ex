@@ -71,7 +71,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
   end
 
   def search_for_track(user_session, artist, track) do
-    OpenTelemetry.Tracer.with_span "spotify.external_client.search_for_track" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.search_for_track" do
       request_fn = fn req ->
         Req.get(req,
           url: "/search",
@@ -137,7 +137,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
   end
 
   def create_playlist(user_session, name, description) do
-    OpenTelemetry.Tracer.with_span "spotify.create_playlist" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.create_playlist" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "spotify"},
         {"spotify.operation", "create_playlist"},
@@ -206,7 +206,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
   def add_tracks_to_playlist(_, _, []), do: {:ok, :no_tracks}
 
   def add_tracks_to_playlist(user_session, playlist_id, tracks) do
-    OpenTelemetry.Tracer.with_span "spotify.add_tracks_to_playlist" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.add_tracks_to_playlist" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "spotify"},
         {"spotify.operation", "add_tracks_to_playlist"},
@@ -257,7 +257,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
   end
 
   def get_embed(url) do
-    OpenTelemetry.Tracer.with_span "spotify.external_client.get_embed" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.get_embed" do
       OpenTelemetry.Tracer.set_attributes([
         {"spotify.embed.url", url}
       ])
@@ -299,7 +299,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
   end
 
   def refresh_token(refresh_token) do
-    OpenTelemetry.Tracer.with_span "spotify.oauth.refresh_token" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.refresh_token" do
       OpenTelemetry.Tracer.set_attributes([
         {"oauth.provider", "spotify"},
         {"oauth.grant_type", "refresh_token"}
@@ -364,7 +364,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
   end
 
   def exchange_code(code, redirect_uri) do
-    OpenTelemetry.Tracer.with_span "spotify.oauth.exchange_code" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.exchange_code" do
       OpenTelemetry.Tracer.set_attributes([
         {"oauth.provider", "spotify"},
         {"oauth.redirect_uri", redirect_uri}
@@ -428,7 +428,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
   # Helper function to fetch user profile and create UserSession from tokens
   defp build_user_session_from_tokens(tokens) do
-    OpenTelemetry.Tracer.with_span "spotify.fetch_user_profile" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.build_user_session_from_tokens" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "spotify"},
         {"spotify.operation", "fetch_user_profile"}

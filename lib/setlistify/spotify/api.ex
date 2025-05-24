@@ -7,7 +7,7 @@ defmodule Setlistify.Spotify.API do
   @callback search_for_track(UserSession.t(), String.t(), String.t()) ::
               nil | %{uri: String.t(), preview_url: String.t()}
   def search_for_track(user_session, artist, track) do
-    OpenTelemetry.Tracer.with_span "spotify.api.search_for_track" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.search_for_track" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "spotify"},
         {"spotify.operation", "search_track"},
@@ -36,7 +36,7 @@ defmodule Setlistify.Spotify.API do
   @callback create_playlist(UserSession.t(), String.t(), String.t()) ::
               {:ok, %{id: String.t(), external_url: String.t()}} | {:error, atom()}
   def create_playlist(user_session, name, description) do
-    OpenTelemetry.Tracer.with_span "spotify.api.create_playlist" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.create_playlist" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "spotify"},
         {"spotify.operation", "create_playlist"},
@@ -52,7 +52,7 @@ defmodule Setlistify.Spotify.API do
   @callback add_tracks_to_playlist(UserSession.t(), String.t(), [String.t()]) ::
               {:ok, atom()} | {:error, atom()}
   def add_tracks_to_playlist(user_session, playlist_id, tracks) do
-    OpenTelemetry.Tracer.with_span "spotify.api.add_tracks_to_playlist" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.add_tracks_to_playlist" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "spotify"},
         {"spotify.operation", "add_tracks_to_playlist"},
@@ -68,7 +68,7 @@ defmodule Setlistify.Spotify.API do
 
   @callback get_embed(String.t()) :: {:ok, String.t()} | {:error, atom()}
   def get_embed(url) do
-    OpenTelemetry.Tracer.with_span "spotify.api.get_embed" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.get_embed" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "spotify"},
         {"spotify.operation", "get_embed"},
@@ -83,7 +83,7 @@ defmodule Setlistify.Spotify.API do
               {:ok, %{access_token: String.t(), refresh_token: String.t(), expires_in: integer()}}
               | {:error, atom()}
   def refresh_token(refresh_token) do
-    OpenTelemetry.Tracer.with_span "spotify.api.refresh_token" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.refresh_token" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "spotify"},
         {"spotify.operation", "refresh_token"},
@@ -98,7 +98,7 @@ defmodule Setlistify.Spotify.API do
               {:ok, Setlistify.Spotify.UserSession.t()}
               | {:error, atom()}
   def exchange_code(code, redirect_uri) do
-    OpenTelemetry.Tracer.with_span "spotify.api.exchange_code" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.exchange_code" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "spotify"},
         {"spotify.operation", "exchange_code"},
@@ -114,7 +114,7 @@ defmodule Setlistify.Spotify.API do
               {:ok, Setlistify.Spotify.UserSession.t()}
               | {:error, atom()}
   def refresh_to_user_session(refresh_token) do
-    OpenTelemetry.Tracer.with_span "spotify.api.refresh_to_user_session" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.refresh_to_user_session" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "spotify"},
         {"spotify.operation", "refresh_to_user_session"},

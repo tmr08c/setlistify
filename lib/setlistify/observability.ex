@@ -22,7 +22,7 @@ defmodule Setlistify.Observability do
 
   def test_trace do
     # Simple test function to verify traces are being sent
-    OpenTelemetry.Tracer.with_span "test_trace" do
+    OpenTelemetry.Tracer.with_span "Setlistify.Observability.test_trace" do
       OpenTelemetry.Tracer.set_attributes([{"test.type", "manual"}])
       Logger.info("Executing test trace")
 
@@ -33,7 +33,7 @@ defmodule Setlistify.Observability do
       OpenTelemetry.Tracer.add_event("Test event", %{"event.data" => "test data"})
 
       # Simulate nested span
-      OpenTelemetry.Tracer.with_span "nested_operation" do
+      OpenTelemetry.Tracer.with_span "Setlistify.Observability.test_trace.nested" do
         OpenTelemetry.Tracer.set_attributes([{"operation.type", "nested"}])
         Process.sleep(50)
         Logger.info("Nested operation complete")

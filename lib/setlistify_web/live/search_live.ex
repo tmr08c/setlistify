@@ -15,7 +15,7 @@ defmodule SetlistifyWeb.SearchLive do
 
   def handle_params(params, _uri, socket) do
     # Create a span for the handle_params operation
-    OpenTelemetry.Tracer.with_span "search_live.handle_params" do
+    OpenTelemetry.Tracer.with_span "SetlistifyWeb.SearchLive.handle_params" do
       OpenTelemetry.Tracer.set_attributes([
         {"query", inspect(params)}
       ])
