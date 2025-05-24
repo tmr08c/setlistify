@@ -12,7 +12,8 @@ defmodule Setlistify.PromEx do
       {Plugins.Phoenix, endpoint: SetlistifyWeb.Endpoint, router: SetlistifyWeb.Router},
       {Plugins.PhoenixLiveView, router: SetlistifyWeb.Router},
       {Plugins.PlugCowboy, routers: [SetlistifyWeb.Router]},
-      {Plugins.PlugRouter, routers: [SetlistifyWeb.Router], event_prefix: [:phoenix, :router_dispatch]}
+      {Plugins.PlugRouter,
+       routers: [SetlistifyWeb.Router], event_prefix: [:phoenix, :router_dispatch]}
 
       # Add your own custom plugins here
       # Setlistify.PromEx.Plugins.CustomPlugin

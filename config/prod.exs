@@ -16,8 +16,7 @@ config :setlistify, SetlistifyWeb.Endpoint,
 config :logger, level: :info
 
 # Disable PromEx Grafana integration in production until monitoring is set up
-config :setlistify, Setlistify.PromEx,
-  grafana: :disabled
+config :setlistify, Setlistify.PromEx, grafana: :disabled
 
 # Runtime production configuration, including reading
 # of environment variables, is done on config/runtime.exs.
