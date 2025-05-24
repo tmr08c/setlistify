@@ -12,32 +12,27 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
     setlist =
       if user_session do
-        # Wrap the track searching in a span so context can be propagated
-        OpenTelemetry.Tracer.with_span "SetlistifyWeb.Setlists.ShowLive.enrich_setlist", %{
-          attributes: [{"setlist.id", id}, {"artist", setlist.artist}]
-        } do
-          # TODO: This current model requires fetching all songs from a set before
-          # we can move onto the next one
-          sets =
-            setlist.sets
-            |> Enum.map(fn set ->
-              # TODO: The workflow of updating UserSession after a refresh (see
-              # SetlistifyWeb.handle_info) probably won't work with this pattern
-              # because the spawned tasks won't receive the message.
-              songs =
-                Task.async_stream(set.songs, fn song ->
-                  spotify_info =
-                    Spotify.API.search_for_track(user_session, setlist.artist, song.title)
+        # TODO: This current model requires fetching all songs from a set before
+        # we can move onto the next one
+        sets =
+          setlist.sets
+          |> Enum.map(fn set ->
+            # TODO: The workflow of updating UserSession after a refresh (see
+            # SetlistifyWeb.handle_info) probably won't work with this pattern
+            # because the spawned tasks won't receive the message.
+            songs =
+              Task.async_stream(set.songs, fn song ->
+                spotify_info =
+                  Spotify.API.search_for_track(user_session, setlist.artist, song.title)
 
-                  Map.put(song, :spotify_info, spotify_info)
-                end)
+                Map.put(song, :spotify_info, spotify_info)
+              end)
 
-              %{set | songs: songs}
-            end)
-            |> Enum.map(fn set -> %{set | songs: Enum.map(set.songs, &elem(&1, 1))} end)
+            %{set | songs: songs}
+          end)
+          |> Enum.map(fn set -> %{set | songs: Enum.map(set.songs, &elem(&1, 1))} end)
 
-          %{setlist | sets: sets}
-        end
+        %{setlist | sets: sets}
       else
         setlist
       end
