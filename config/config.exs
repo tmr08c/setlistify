@@ -52,7 +52,11 @@ config :setlistify, Setlistify.PromEx,
   # and configure the metrics_server config settings as necessary
   manual_metrics_start_delay: :no_delay,
   drop_metrics_groups: [],
-  grafana: :disabled,
+  grafana: [
+    host: "http://localhost:3000",
+    auth_token: "admin:admin",
+    upload_dashboards_on_start: true
+  ],
   metrics_server: [
     port: 9568,
     path: "/metrics"
