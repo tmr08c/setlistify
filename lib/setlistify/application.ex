@@ -9,6 +9,8 @@ defmodule Setlistify.Application do
 
   @impl true
   def start(_type, _args) do
+    Setlistify.Observability.setup()
+
     children = [
       # Start the Telemetry supervisor
       SetlistifyWeb.Telemetry,
@@ -55,7 +57,6 @@ defmodule Setlistify.Application do
     case Supervisor.start_link(children, opts) do
       {:ok, _pid} = result ->
         # Initialize OpenTelemetry after supervisor starts
-        Setlistify.Observability.setup()
         result
 
       error ->

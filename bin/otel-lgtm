@@ -7,7 +7,7 @@ IMAGE_NAME="grafana/otel-lgtm"
 
 # Function to check if Docker is running
 check_docker() {
-  if ! command -v docker &> /dev/null; then
+  if ! command -v docker &>/dev/null; then
     echo "❌ Docker is not installed!"
     echo ""
     echo "Please install Docker Desktop from: https://www.docker.com/products/docker-desktop"
@@ -17,8 +17,8 @@ check_docker() {
     echo ""
     exit 1
   fi
-  
-  if ! docker info &> /dev/null; then
+
+  if ! docker info &>/dev/null; then
     echo "❌ Docker is not running!"
     echo ""
     echo "Please start Docker Desktop or the Docker daemon."
@@ -45,183 +45,183 @@ if [ "${1:-start}" != "help" ]; then
 fi
 
 case "${1:-start}" in
-  start|fg|foreground)
-    echo "✅ Docker is running!"
-    
-    if is_running; then
-      echo "⚠️  OTEL-LGTM container is already running!"
-      echo ""
-      echo "To view logs, run: ./bin/otel-lgtm logs"
-      echo "To restart, run: ./bin/otel-lgtm restart"
-      exit 0
-    fi
-    
-    # Remove old container if it exists but is stopped
-    if container_exists; then
-      echo "Removing stopped container..."
-      docker rm "${CONTAINER_NAME}" > /dev/null
-    fi
-    
-    echo "Starting Grafana OTEL-LGTM container..."
-    
-    # Check if custom Prometheus config exists
-    PROMETHEUS_CONFIG=""
-    if [ -f "docker/lgtm-with-scraping/prometheus-config.yaml" ]; then
-      echo "Using custom Prometheus configuration with scraping support..."
-      PROMETHEUS_CONFIG="-v $(pwd)/docker/lgtm-with-scraping/prometheus-config.yaml:/otel-lgtm/prometheus.yaml:ro"
-    fi
-    
-    # Determine if running in foreground or background
-    if [ "$1" = "fg" ] || [ "$1" = "foreground" ]; then
-      echo "Running in foreground mode (Ctrl+C to stop)..."
-      docker run \
-        --name "${CONTAINER_NAME}" \
-        -p 3000:3000 \
-        -p 4317:4317 \
-        -p 4318:4318 \
-        -p 3100:3100 \
-        -p 9090:9090 \
-        ${PROMETHEUS_CONFIG} \
-        --rm \
-        -it \
-        "${IMAGE_NAME}"
-    else
-      docker run \
-        --name "${CONTAINER_NAME}" \
-        -p 3000:3000 \
-        -p 4317:4317 \
-        -p 4318:4318 \
-        -p 3100:3100 \
-        -p 9090:9090 \
-        ${PROMETHEUS_CONFIG} \
-        -d \
-        "${IMAGE_NAME}"
-    fi
-    
-    # Only show status message for background mode
-    if [ "$1" = "start" ] || [ -z "$1" ]; then
-      echo "Waiting for services to be ready..."
-      
-      # Wait for the ready message with timeout
-      timeout=30
-      elapsed=0
-      ready=false
-      
-      while [ "$elapsed" -lt "$timeout" ]; do
-        if docker logs "${CONTAINER_NAME}" 2>&1 | grep -q "The OpenTelemetry collector and the Grafana LGTM stack are up and running"; then
-          ready=true
-          break
-        fi
-        sleep 1
-        elapsed=$((elapsed + 1))
-        echo -n "."
-      done
-      echo ""
-      
-      if [ "$ready" = true ]; then
-        echo "✅ Services are ready!"
-      else
-        echo "⚠️  Services may not be fully ready after ${timeout}s timeout"
+start | fg | foreground)
+  echo "✅ Docker is running!"
+
+  if is_running; then
+    echo "⚠️  OTEL-LGTM container is already running!"
+    echo ""
+    echo "To view logs, run: ./bin/otel-lgtm logs"
+    echo "To restart, run: ./bin/otel-lgtm restart"
+    exit 0
+  fi
+
+  # Remove old container if it exists but is stopped
+  if container_exists; then
+    echo "Removing stopped container..."
+    docker rm "${CONTAINER_NAME}" >/dev/null
+  fi
+
+  echo "Starting Grafana OTEL-LGTM container..."
+
+  # Check if custom Prometheus config exists
+  PROMETHEUS_CONFIG=""
+  if [ -f "docker/lgtm-with-scraping/prometheus-config.yaml" ]; then
+    echo "Using custom Prometheus configuration with scraping support..."
+    PROMETHEUS_CONFIG="-v $(pwd)/docker/lgtm-with-scraping/prometheus-config.yaml:/otel-lgtm/prometheus.yaml:ro"
+  fi
+
+  # Determine if running in foreground or background
+  if [ "$1" = "fg" ] || [ "$1" = "foreground" ]; then
+    echo "Running in foreground mode (Ctrl+C to stop)..."
+    docker run \
+      --name "${CONTAINER_NAME}" \
+      -p 3000:3000 \
+      -p 4317:4317 \
+      -p 4318:4318 \
+      -p 3100:3100 \
+      -p 9090:9090 \
+      ${PROMETHEUS_CONFIG} \
+      --rm \
+      -it \
+      "${IMAGE_NAME}"
+  else
+    docker run \
+      --name "${CONTAINER_NAME}" \
+      -p 3000:3000 \
+      -p 4317:4317 \
+      -p 4318:4318 \
+      -p 3100:3100 \
+      -p 9090:9090 \
+      ${PROMETHEUS_CONFIG} \
+      -d \
+      "${IMAGE_NAME}"
+  fi
+
+  # Only show status message for background mode
+  if [ "$1" = "start" ] || [ -z "$1" ]; then
+    echo "Waiting for services to be ready..."
+
+    # Wait for the ready message with timeout
+    timeout=30
+    elapsed=0
+    ready=false
+
+    while [ "$elapsed" -lt "$timeout" ]; do
+      if docker logs "${CONTAINER_NAME}" 2>&1 | grep -q "The OpenTelemetry collector and the Grafana LGTM stack are up and running"; then
+        ready=true
+        break
       fi
-      
-      echo ""
-      echo "🚀 OTEL-LGTM stack is running:"
-      echo "  - Grafana UI: http://localhost:3000"
-      echo "  - Prometheus: http://localhost:9090"
-      echo "  - Loki: http://localhost:3100"
-      echo "  - OTLP gRPC: localhost:4317"
-      echo "  - OTLP HTTP: localhost:4318"
-      echo ""
-      echo "Default credentials: admin/admin"
-      echo ""
-      echo "To stop the stack, run: ./bin/otel-lgtm stop"
-    fi
-    ;;
-    
-  stop)
-    if ! is_running; then
-      echo "⚠️  OTEL-LGTM container is not running"
-      exit 0
-    fi
-    
-    echo "Stopping OTEL-LGTM container..."
-    docker stop "${CONTAINER_NAME}"
-    docker rm "${CONTAINER_NAME}"
-    echo "✅ OTEL-LGTM stopped successfully"
-    ;;
-    
-  restart)
-    echo "Restarting OTEL-LGTM container..."
-    $0 stop
-    sleep 2
-    $0 start
-    ;;
-    
-  logs)
-    if ! is_running; then
-      echo "⚠️  OTEL-LGTM container is not running"
-      exit 1
-    fi
-    
-    docker logs -f "${CONTAINER_NAME}"
-    ;;
-    
-  status)
-    if is_running; then
-      echo "✅ OTEL-LGTM container is running"
-      echo ""
-      docker ps --filter "name=${CONTAINER_NAME}" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+      sleep 1
+      elapsed=$((elapsed + 1))
+      echo -n "."
+    done
+    echo ""
+
+    if [ "$ready" = true ]; then
+      echo "✅ Services are ready!"
     else
-      echo "❌ OTEL-LGTM container is not running"
-      
-      if container_exists; then
-        echo ""
-        echo "Container exists but is stopped:"
-        docker ps -a --filter "name=${CONTAINER_NAME}" --format "table {{.Names}}\t{{.Status}}"
-      fi
+      echo "⚠️  Services may not be fully ready after ${timeout}s timeout"
     fi
-    ;;
-    
-  shell)
-    if ! is_running; then
-      echo "⚠️  OTEL-LGTM container is not running"
-      exit 1
-    fi
-    
-    echo "Opening shell in OTEL-LGTM container..."
-    docker exec -it "${CONTAINER_NAME}" /bin/bash
-    ;;
-    
-  help|--help|-h)
-    echo "Grafana OTEL-LGTM Stack Manager"
+
     echo ""
-    echo "Usage: ./bin/otel-lgtm {start|fg|stop|restart|logs|status|shell|help}"
-    echo ""
-    echo "Commands:"
-    echo "  start      - Start the OTEL-LGTM container in background (default)"
-    echo "  fg         - Start the OTEL-LGTM container in foreground"
-    echo "  foreground - Same as 'fg'"
-    echo "  stop       - Stop the OTEL-LGTM container"
-    echo "  restart    - Restart the OTEL-LGTM container"
-    echo "  logs       - Follow logs from the container"
-    echo "  status     - Show container status"
-    echo "  shell      - Open a shell in the container"
-    echo "  help       - Show this help message"
-    echo ""
-    echo "Services exposed:"
+    echo "🚀 OTEL-LGTM stack is running:"
     echo "  - Grafana UI: http://localhost:3000"
     echo "  - Prometheus: http://localhost:9090"
     echo "  - Loki: http://localhost:3100"
     echo "  - OTLP gRPC: localhost:4317"
     echo "  - OTLP HTTP: localhost:4318"
     echo ""
-    echo "Requirements:"
-    echo "  - Docker Desktop or Docker Engine"
-    ;;
-    
-  *)
-    echo "Unknown command: $1"
-    echo "Usage: ./bin/otel-lgtm {start|fg|stop|restart|logs|status|shell|help}"
+    echo "Default credentials: admin/admin"
+    echo ""
+    echo "To stop the stack, run: ./bin/otel-lgtm stop"
+  fi
+  ;;
+
+stop)
+  if ! is_running; then
+    echo "⚠️  OTEL-LGTM container is not running"
+    exit 0
+  fi
+
+  echo "Stopping OTEL-LGTM container..."
+  docker stop "${CONTAINER_NAME}"
+  docker rm "${CONTAINER_NAME}"
+  echo "✅ OTEL-LGTM stopped successfully"
+  ;;
+
+restart)
+  echo "Restarting OTEL-LGTM container..."
+  $0 stop
+  sleep 2
+  $0 start
+  ;;
+
+logs)
+  if ! is_running; then
+    echo "⚠️  OTEL-LGTM container is not running"
     exit 1
-    ;;
+  fi
+
+  docker logs -f "${CONTAINER_NAME}"
+  ;;
+
+status)
+  if is_running; then
+    echo "✅ OTEL-LGTM container is running"
+    echo ""
+    docker ps --filter "name=${CONTAINER_NAME}" --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+  else
+    echo "❌ OTEL-LGTM container is not running"
+
+    if container_exists; then
+      echo ""
+      echo "Container exists but is stopped:"
+      docker ps -a --filter "name=${CONTAINER_NAME}" --format "table {{.Names}}\t{{.Status}}"
+    fi
+  fi
+  ;;
+
+shell)
+  if ! is_running; then
+    echo "⚠️  OTEL-LGTM container is not running"
+    exit 1
+  fi
+
+  echo "Opening shell in OTEL-LGTM container..."
+  docker exec -it "${CONTAINER_NAME}" /bin/bash
+  ;;
+
+help | --help | -h)
+  echo "Grafana OTEL-LGTM Stack Manager"
+  echo ""
+  echo "Usage: ./bin/otel-lgtm {start|fg|stop|restart|logs|status|shell|help}"
+  echo ""
+  echo "Commands:"
+  echo "  start      - Start the OTEL-LGTM container in background (default)"
+  echo "  fg         - Start the OTEL-LGTM container in foreground"
+  echo "  foreground - Same as 'fg'"
+  echo "  stop       - Stop the OTEL-LGTM container"
+  echo "  restart    - Restart the OTEL-LGTM container"
+  echo "  logs       - Follow logs from the container"
+  echo "  status     - Show container status"
+  echo "  shell      - Open a shell in the container"
+  echo "  help       - Show this help message"
+  echo ""
+  echo "Services exposed:"
+  echo "  - Grafana UI: http://localhost:3000"
+  echo "  - Prometheus: http://localhost:9090"
+  echo "  - Loki: http://localhost:3100"
+  echo "  - OTLP gRPC: localhost:4317"
+  echo "  - OTLP HTTP: localhost:4318"
+  echo ""
+  echo "Requirements:"
+  echo "  - Docker Desktop or Docker Engine"
+  ;;
+
+*)
+  echo "Unknown command: $1"
+  echo "Usage: ./bin/otel-lgtm {start|fg|stop|restart|logs|status|shell|help}"
+  exit 1
+  ;;
 esac
