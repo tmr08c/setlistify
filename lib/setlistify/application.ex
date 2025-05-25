@@ -14,8 +14,8 @@ defmodule Setlistify.Application do
     children = [
       # Start the Telemetry supervisor
       SetlistifyWeb.Telemetry,
-      # Start PromEx
-      Setlistify.PromEx,
+      # Start PromEx - temporarily disabled to test Grafana Cloud
+      # Setlistify.PromEx,
       # Start the PubSub system
       {Phoenix.PubSub, name: Setlistify.PubSub},
       # Start Finch

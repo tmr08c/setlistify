@@ -123,3 +123,87 @@ config :setlistify, setlist_fm_api_key: System.fetch_env!("SETLIST_FM_API_SECRET
 ## Spotify API
 config :setlistify, spotify_client_id: System.fetch_env!("SPOTIFY_CLIENT_ID")
 config :setlistify, spotify_client_secret: System.fetch_env!("SPOTIFY_CLIENT_SECRET")
+
+## OpenTelemetry Configuration
+# Determine if we should use Grafana Cloud based on environment variables
+use_grafana_cloud = System.get_env("GRAFANA_CLOUD_API_KEY") != nil
+
+if use_grafana_cloud do
+  # Grafana Cloud configuration
+  grafana_api_key = System.get_env("GRAFANA_CLOUD_API_KEY")
+  grafana_instance_id = System.get_env("GRAFANA_CLOUD_INSTANCE_ID")
+  grafana_region = System.get_env("GRAFANA_CLOUD_REGION", "us-central1")
+  grafana_zone = System.get_env("GRAFANA_CLOUD_ZONE")
+
+  # Construct Grafana Cloud endpoints based on region
+  tempo_endpoint = "tempo-#{grafana_region}.grafana.net"
+  
+  # For Basic auth, we need instance_id:api_key in base64
+  auth_header = "Basic " <> Base.encode64("#{grafana_instance_id}:#{grafana_api_key}")
+
+  config :opentelemetry, :processors,
+    otel_batch_processor: %{
+      exporter: {
+        :opentelemetry_exporter,
+        %{
+          protocol: :grpc,
+          endpoints: [tempo_endpoint],
+          headers: [
+            {"authorization", auth_header}
+          ],
+          compression: :gzip
+        }
+      }
+    }
+
+  # Add zone to resource attributes if provided
+  zone_attrs = if grafana_zone, do: [{"cloud.zone", grafana_zone}], else: []
+  
+  config :opentelemetry, :resource,
+    service: [
+      name: "setlistify",
+      namespace: "setlistify",
+      version: "1.0.0"
+    ],
+    deployment: [
+      environment: config_env() |> to_string()
+    ],
+    host: [
+      name: System.get_env("FLY_ALLOC_ID", "local")
+    ],
+    telemetry: [
+      sdk: [
+        name: "opentelemetry",
+        language: "elixir"
+      ]
+    ],
+    cloud: [
+      provider: "grafana",
+      region: grafana_region
+    ] ++ zone_attrs
+else
+  # Local OTEL-LGTM configuration (default)
+  config :opentelemetry, :processors,
+    otel_batch_processor: %{
+      exporter: {
+        :opentelemetry_exporter,
+        %{
+          endpoints: [http: "http://localhost:4318/v1/traces"],
+          headers: []
+        }
+      }
+    }
+
+  config :opentelemetry, :resource,
+    service: [
+      name: "setlistify",
+      namespace: "setlistify", 
+      version: "1.0.0"
+    ],
+    deployment: [
+      environment: config_env() |> to_string()
+    ],
+    host: [
+      name: System.get_env("HOSTNAME", "localhost")
+    ]
+end
