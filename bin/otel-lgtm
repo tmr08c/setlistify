@@ -71,6 +71,11 @@ case "${1:-start}" in
       PROMETHEUS_CONFIG="-v $(pwd)/docker/lgtm-with-scraping/prometheus-config.yaml:/otel-lgtm/prometheus.yaml:ro"
     fi
     
+    # Create volumes if they don't exist
+    docker volume create setlistify-loki-data 2>/dev/null || true
+    docker volume create setlistify-prometheus-data 2>/dev/null || true
+    docker volume create setlistify-grafana-data 2>/dev/null || true
+    
     # Determine if running in foreground or background
     if [ "$1" = "fg" ] || [ "$1" = "foreground" ]; then
       echo "Running in foreground mode (Ctrl+C to stop)..."
@@ -81,6 +86,10 @@ case "${1:-start}" in
         -p 4318:4318 \
         -p 3100:3100 \
         -p 9090:9090 \
+        -e ENABLE_LOGS_LOKI=true \
+        -v setlistify-loki-data:/data/loki \
+        -v setlistify-prometheus-data:/prometheus \
+        -v setlistify-grafana-data:/var/lib/grafana \
         ${PROMETHEUS_CONFIG} \
         --rm \
         -it \
@@ -93,6 +102,10 @@ case "${1:-start}" in
         -p 4318:4318 \
         -p 3100:3100 \
         -p 9090:9090 \
+        -e ENABLE_LOGS_LOKI=true \
+        -v setlistify-loki-data:/data/loki \
+        -v setlistify-prometheus-data:/prometheus \
+        -v setlistify-grafana-data:/var/lib/grafana \
         ${PROMETHEUS_CONFIG} \
         -d \
         "${IMAGE_NAME}"
@@ -192,21 +205,35 @@ case "${1:-start}" in
     docker exec -it "${CONTAINER_NAME}" /bin/bash
     ;;
     
+  clean-volumes)
+    echo "⚠️  WARNING: This will delete all persisted data (logs, metrics, dashboards)!"
+    echo -n "Are you sure you want to clean all volumes? (y/N) "
+    read -r response
+    if [ "$response" = "y" ] || [ "$response" = "Y" ]; then
+      echo "Removing OTEL-LGTM volumes..."
+      docker volume rm setlistify-loki-data setlistify-prometheus-data setlistify-grafana-data 2>/dev/null || true
+      echo "✅ Volumes cleaned"
+    else
+      echo "Cancelled"
+    fi
+    ;;
+    
   help|--help|-h)
     echo "Grafana OTEL-LGTM Stack Manager"
     echo ""
-    echo "Usage: ./bin/otel-lgtm {start|fg|stop|restart|logs|status|shell|help}"
+    echo "Usage: ./bin/otel-lgtm {start|fg|stop|restart|logs|status|shell|clean-volumes|help}"
     echo ""
     echo "Commands:"
-    echo "  start      - Start the OTEL-LGTM container in background (default)"
-    echo "  fg         - Start the OTEL-LGTM container in foreground"
-    echo "  foreground - Same as 'fg'"
-    echo "  stop       - Stop the OTEL-LGTM container"
-    echo "  restart    - Restart the OTEL-LGTM container"
-    echo "  logs       - Follow logs from the container"
-    echo "  status     - Show container status"
-    echo "  shell      - Open a shell in the container"
-    echo "  help       - Show this help message"
+    echo "  start         - Start the OTEL-LGTM container in background (default)"
+    echo "  fg            - Start the OTEL-LGTM container in foreground"
+    echo "  foreground    - Same as 'fg'"
+    echo "  stop          - Stop the OTEL-LGTM container"
+    echo "  restart       - Restart the OTEL-LGTM container"
+    echo "  logs          - Follow logs from the container"
+    echo "  status        - Show container status"
+    echo "  shell         - Open a shell in the container"
+    echo "  clean-volumes - Remove all persistent data volumes"
+    echo "  help          - Show this help message"
     echo ""
     echo "Services exposed:"
     echo "  - Grafana UI: http://localhost:3000"
@@ -215,13 +242,17 @@ case "${1:-start}" in
     echo "  - OTLP gRPC: localhost:4317"
     echo "  - OTLP HTTP: localhost:4318"
     echo ""
+    echo "Data persistence:"
+    echo "  - Logs, metrics, and dashboards are persisted in Docker volumes"
+    echo "  - Use 'clean-volumes' to reset all data"
+    echo ""
     echo "Requirements:"
     echo "  - Docker Desktop or Docker Engine"
     ;;
     
   *)
     echo "Unknown command: $1"
-    echo "Usage: ./bin/otel-lgtm {start|fg|stop|restart|logs|status|shell|help}"
+    echo "Usage: ./bin/otel-lgtm {start|fg|stop|restart|logs|status|shell|clean-volumes|help}"
     exit 1
     ;;
 esac

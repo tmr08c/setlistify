@@ -79,6 +79,25 @@ if config_env() == :prod do
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
+
+  # Grafana Cloud Loki configuration for production
+  if loki_url = System.get_env("LOKI_URL") do
+    config :logger,
+      backends: [:console, Setlistify.LokiLogger]
+
+    config :logger, Setlistify.LokiLogger,
+      url: loki_url,
+      username: System.get_env("LOKI_USERNAME"),
+      password: System.get_env("LOKI_PASSWORD"),
+      level: :info,
+      metadata: [:request_id, :trace_id, :span_id, :user_id],
+      max_buffer: 100,
+      labels: %{
+        "application" => "setlistify",
+        "environment" => "production",
+        "instance" => System.get_env("FLY_ALLOC_ID", "unknown")
+      }
+  end
 end
 
 # Non-prod specific configuration
