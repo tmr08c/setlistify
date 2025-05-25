@@ -4,9 +4,9 @@
 
 This document outlines the implementation of OpenTelemetry in Setlistify, our Elixir/Phoenix/LiveView application that integrates Setlist.fm and Spotify APIs to create playlists from concert setlists. OpenTelemetry will provide comprehensive observability through traces, logs, and metrics, starting with a local development stack and eventually deploying to Grafana Cloud. This implementation will be rolled out in phases, beginning with local environment setup, followed by telemetry-to-OpenTelemetry integration, enhanced logging, metrics, and finally cloud deployment.
 
-**Current Status:** Phase 0 completed, Phase 2 partially completed (prioritized for early log visibility), Phase 1 next up.
+**Current Status:** Phase 0 completed, Phase 2 partially completed, Phase 1 in progress - Direct OpenTelemetry instrumentation implemented for Spotify API.
 
-**Last Updated:** May 22, 2025
+**Last Updated:** May 24, 2025
 
 ## Background
 
@@ -990,27 +990,38 @@ The current `:telemetry.span/3` approach provides explicit, flexible instrumenta
 **Commits:**
 - fb90497 - "feat: implement Phase 2 - add trace context to logs"
 - 455e899 - "refactor: replace custom StructuredLogger with opentelemetry_logger_metadata"
+- 9b15a31 - "feat(o11y): add OpenTelemetry tracing to Spotify API client"
+- 05d0074 - "fix(o11y): fix OTel set up" (moved initialization to application start)
+- 76c2fb8 - "set up proper propagation for Spotify.search_for_track" (Cachex context fix)
+- 1a98507 - "feat(tracing): add comprehensive OpenTelemetry tracing to Spotify API"
+- 08610af - "refactor(tracing): use full module and function names for spans"
+- ebac97b - "fix(tracing): fix dialyzer errors for OpenTelemetry set_status calls"
 
 ### Phase 1: Core OpenTelemetry Instrumentation
 
-**Status:** NEXT UP
+**Status:** IN PROGRESS
 
-**Tasks:**
-1. Complete OpenTelemetry dependencies in mix.exs
-2. Implement Setlistify.Observability.setup/0 for framework integrations
-3. Add `OpenTelemetry.Tracer.with_span/2` instrumentation to key modules:
-   - `lib/setlistify/spotify/api/external_client.ex` - Add spans to all API operations
+**Tasks Completed:**
+1. ✅ Complete OpenTelemetry dependencies in mix.exs
+2. ✅ Implement Setlistify.Observability.setup/0 for framework integrations
+3. ✅ Add `OpenTelemetry.Tracer.with_span/2` instrumentation to Spotify API:
+   - ✅ `lib/setlistify/spotify/api.ex` - Added spans to all API operations with context propagation
+   - ✅ `lib/setlistify/spotify/api/external_client.ex` - Added spans to all operations
+4. ✅ Set span attributes following OpenTelemetry semantic conventions
+5. ✅ Ensure proper error handling with `OpenTelemetry.Tracer.set_status/2`
+6. ✅ Add context propagation for cross-process operations (Cachex)
+7. ✅ Fixed critical initialization order - OpenTelemetry setup must happen at application start
+8. ✅ Implemented trace context propagation across process boundaries using OpentelemetryProcessPropagator
+9. ✅ Established consistent span naming convention using full module and function names
+
+**Tasks Remaining:**
+1. Add instrumentation to remaining modules:
    - `lib/setlistify/setlist_fm/api/external_client.ex` - Add spans to search and get_setlist
    - `lib/setlistify/spotify/session_manager.ex` - Add spans to session lifecycle operations
    - `lib/setlistify/spotify/user_session.ex` - Add spans to token refresh and API calls
    - `lib/setlistify_web/controllers/oauth_callback_controller.ex` - Add spans to OAuth flows
-4. Set span attributes following OpenTelemetry semantic conventions
-5. Ensure proper error handling with `OpenTelemetry.Tracer.set_status/2` and `record_exception/1`
-6. Enhance existing LiveView instrumentation with more detailed spans
-7. Add context propagation for cross-process operations (GenServer calls, Tasks)
-8. Create integration tests for OpenTelemetry span creation and attributes
-9. Test locally with docker stack to verify end-to-end traces
-10. Verify connected traces across process boundaries (HTTP → LiveView → GenServer → API calls)
+2. Create integration tests for OpenTelemetry span creation and attributes
+3. Verify connected traces across process boundaries (HTTP → LiveView → GenServer → API calls)
 
 **Testing Focus:**
 - Integration tests for OpenTelemetry span creation and attributes
@@ -1232,7 +1243,73 @@ This implementation provides comprehensive observability for Setlistify using a 
 
 The decision to postpone the `@trace` decorator pattern allows us to focus on proven, flexible approaches while keeping the door open for future enhancements. The local-first development approach ensures we can iterate quickly and validate our observability strategy before deploying to production.
 
+## Key Implementation Findings and Decisions
+
+### 1. Application Startup Order
+**Finding:** OpenTelemetry setup must happen at the very beginning of the application startup, not after the supervisor starts.
+
+**Solution:** Moved `Setlistify.Observability.setup()` to the first line of `Application.start/2` to ensure proper initialization.
+
+### 2. Cross-Process Context Propagation
+**Finding:** Cachex spawns its own process for cache operations, breaking OpenTelemetry context propagation.
+
+**Solution:** Implemented explicit context capture and reattachment:
+```elixir
+parent_ctx = OpenTelemetry.Ctx.get_current()
+parent_span = OpenTelemetry.Tracer.current_span_ctx(parent_ctx)
+
+Cachex.fetch(cache, key, fn ->
+  OpenTelemetry.Ctx.attach(parent_ctx)
+  OpenTelemetry.Tracer.set_current_span(parent_span)
+  # Execute operation with context
+end)
+```
+
+### 3. Span Naming Convention
+**Decision:** Use full module and function names for spans (e.g., `Setlistify.Spotify.API.search_for_track`) instead of abbreviated names.
+
+**Benefits:**
+- Direct mapping between span names and code locations
+- Easier debugging - can search for span name to find exact function
+- No mental translation needed between traces and code
+
+### 4. OpenTelemetry Status API
+**Finding:** Dialyzer revealed that `set_status(:ok)` is incorrect - must use `set_status(:ok, "")`.
+
+**Reason:** The `set_status/1` function expects an OpenTelemetry status struct, not a simple atom. The two-argument form constructs the proper status internally.
+
+### 5. Process Propagation Library
+**Finding:** OpentelemetryProcessPropagator.Task works well for automatic context propagation in async operations.
+
+**Usage:** Replace `Task` with `OpentelemetryProcessPropagator.Task` for automatic trace context propagation.
+
+## Additional Work Identified
+
+### 1. Helper Module for Common Patterns
+Consider creating a helper module for repeated patterns:
+- Context propagation for Cachex operations
+- Standard attribute setting (user context, service name)
+- Error handling with proper status setting
+
+### 2. Testing Strategy
+Need to develop:
+- Integration tests that verify span creation
+- Tests for context propagation across process boundaries
+- Mocks/stubs for OpenTelemetry in test environment
+
+### 3. Performance Monitoring
+Should add:
+- Benchmarks to measure tracing overhead
+- Sampling configuration for high-volume operations
+- Performance dashboards in Grafana
+
+### 4. Documentation
+Create:
+- Tracing conventions guide for team (started with `docs/tracing-conventions.md`)
+- Troubleshooting guide for common tracing issues
+- Examples of how to add tracing to new features
+
 **Current Progress Summary:**
 - **Phase 0**: ✅ Complete - Local development stack operational
 - **Phase 2**: ✅ Partial - Trace context in logs, LiveView spans working
-- **Phase 1**: 🎯 Next - Telemetry-to-OpenTelemetry integration for core flows
+- **Phase 1**: 🚧 In Progress - Direct OpenTelemetry instrumentation (Spotify API complete, others pending)
