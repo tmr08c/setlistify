@@ -1,7 +1,10 @@
 defmodule SetlistifyWeb.Setlists.ShowLive do
   use SetlistifyWeb, :live_view
 
+  require OpenTelemetry.Tracer
+
   alias Setlistify.{SetlistFm, Spotify}
+  alias OpentelemetryProcessPropagator.Task
 
   def mount(%{"id" => id}, _session, socket) do
     setlist = SetlistFm.API.get_setlist(id)
@@ -9,6 +12,8 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
     setlist =
       if user_session do
+        # TODO: This current model requires fetching all songs from a set before
+        # we can move onto the next one
         sets =
           setlist.sets
           |> Enum.map(fn set ->

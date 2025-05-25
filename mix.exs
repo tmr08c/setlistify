@@ -28,7 +28,7 @@ defmodule Setlistify.MixProject do
   def application do
     [
       mod: {Setlistify.Application, []},
-      extra_applications: [:logger, :runtime_tools]
+      extra_applications: [:logger, :runtime_tools, :opentelemetry_exporter, :opentelemetry]
     ]
   end
 
@@ -66,13 +66,15 @@ defmodule Setlistify.MixProject do
       {:prom_ex, "~> 1.9"},
 
       # OpenTelemetry
-      {:opentelemetry_exporter, "~> 1.6.0"},
-      {:opentelemetry, "~> 1.3.0"},
-      {:opentelemetry_api, "~> 1.2.0"},
+      {:opentelemetry_exporter, "~> 1.8.0"},
+      {:opentelemetry, "~> 1.3"},
+      {:opentelemetry_api, "~> 1.4"},
 
       # Framework Integrations
-      {:opentelemetry_phoenix, "~> 1.1.0"},
-      {:opentelemetry_telemetry, "~> 1.0.0"},
+      {:opentelemetry_cowboy, "~> 1.0"},
+      {:opentelemetry_phoenix, "~> 2.0"},
+      {:opentelemetry_telemetry, "~> 1.0"},
+      {:opentelemetry_req, "~> 1.0.0"},
 
       # Telemetry
       {:telemetry, "~> 1.2.1"},
