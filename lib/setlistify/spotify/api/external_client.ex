@@ -100,7 +100,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
                 %{uri: track_info["uri"], preview_url: track_info["preview_url"]}
             end
 
-          OpenTelemetry.Tracer.set_status(:ok)
+          OpenTelemetry.Tracer.set_status(:ok, "")
           result
 
         {:error, reason} = error ->
@@ -171,7 +171,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
             {"spotify.playlist.url", external_url}
           ])
 
-          OpenTelemetry.Tracer.set_status(:ok)
+          OpenTelemetry.Tracer.set_status(:ok, "")
 
           Logger.info("Playlist created successfully", %{
             playlist_id: playlist_id,
@@ -235,7 +235,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
             track_count: length(tracks)
           })
 
-          OpenTelemetry.Tracer.set_status(:ok)
+          OpenTelemetry.Tracer.set_status(:ok, "")
           {:ok, :tracks_added}
 
         {:ok, response} ->
@@ -278,7 +278,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
         {:ok, %{status: 200} = resp} ->
           case resp.body do
             %{"html" => html} ->
-              OpenTelemetry.Tracer.set_status(:ok)
+              OpenTelemetry.Tracer.set_status(:ok, "")
               {:ok, html}
 
             _ ->
@@ -329,7 +329,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
       case result do
         {:ok, %{status: 200, body: body}} ->
           Logger.info("Successfully refreshed token")
-          OpenTelemetry.Tracer.set_status(:ok)
+          OpenTelemetry.Tracer.set_status(:ok, "")
 
           {:ok,
            %{
@@ -398,7 +398,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
       case result do
         {:ok, %{status: 200, body: body}} ->
           Logger.info("Successfully exchanged code for Spotify tokens")
-          OpenTelemetry.Tracer.set_status(:ok)
+          OpenTelemetry.Tracer.set_status(:ok, "")
 
           body |> Spotify.API.Types.TokenResponse.from_json!() |> build_user_session_from_tokens()
 
@@ -468,7 +468,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
           }
 
           Logger.info("User profile fetched successfully", %{user_id: user_id})
-          OpenTelemetry.Tracer.set_status(:ok)
+          OpenTelemetry.Tracer.set_status(:ok, "")
           {:ok, user_session}
 
         {:ok, %{status: status, body: body}} ->
