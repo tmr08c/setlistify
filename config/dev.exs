@@ -55,15 +55,15 @@ config :setlistify, SetlistifyWeb.Endpoint,
 # Enable dev routes for dashboard and mailbox
 config :setlistify, dev_routes: true
 
-# Logger configuration - Loki will be added in Phase 2
+# Logger configuration with Loki backend
 config :logger,
-  backends: [:console],
+  backends: [:console, Setlistify.LokiLogger],
   level: :debug
 
 # Console logger configuration - include trace context
 config :logger, :console,
   format: "$time [$level] $message $metadata\n",
-  metadata: [:request_id, :trace_id, :span_id]
+  metadata: [:request_id, :trace_id, :span_id, :user_id, :module, :function]
 
 # Set a higher stacktrace during development. Avoid configuring such
 # in production as building large stacktraces may be expensive.
@@ -100,9 +100,13 @@ config :opentelemetry, :resource,
     name: System.get_env("HOSTNAME", "localhost")
   ]
 
-# Local Loki logger configuration - will be enabled in Phase 2
-# config :loki_logger,
-#   url: "http://localhost:3100/loki/api/v1/push",
-#   level: :info,
-#   format: :json,
-#   metadata: [:request_id, :trace_id, :span_id]
+# Loki logger backend configuration
+config :logger, Setlistify.LokiLogger,
+  url: "http://localhost:3100/loki/api/v1/push",
+  level: :info,
+  metadata: [:request_id, :trace_id, :span_id, :user_id],
+  max_buffer: 50,
+  labels: %{
+    "application" => "setlistify",
+    "environment" => "development"
+  }

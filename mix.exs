@@ -81,9 +81,6 @@ defmodule Setlistify.MixProject do
 
       # Logging - enabled in Phase 2
       {:opentelemetry_logger_metadata, "~> 0.2.0"}
-
-      # Phase 2 Future Enhancement (not yet enabled)
-      # {:loki_logger, "~> 0.3.0"}
     ]
   end
 
