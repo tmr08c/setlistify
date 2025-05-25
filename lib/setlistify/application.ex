@@ -9,9 +9,9 @@ defmodule Setlistify.Application do
 
   @impl true
   def start(_type, _args) do
-    Setlistify.Observability.setup()
-
     children = [
+      # Start OpenTelemetry SDK first
+      Setlistify.Observability.SDKStarter,
       # Start the Telemetry supervisor
       SetlistifyWeb.Telemetry,
       # Start PromEx - temporarily disabled to test Grafana Cloud
@@ -54,14 +54,7 @@ defmodule Setlistify.Application do
     opts = [strategy: :one_for_one, name: Setlistify.Supervisor]
 
     # Start the supervisor
-    case Supervisor.start_link(children, opts) do
-      {:ok, _pid} = result ->
-        # Initialize OpenTelemetry after supervisor starts
-        result
-
-      error ->
-        error
-    end
+    Supervisor.start_link(children, opts)
   end
 
   # Tell Phoenix to update the endpoint configuration

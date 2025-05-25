@@ -136,15 +136,24 @@ if use_grafana_cloud do
   grafana_zone = System.get_env("GRAFANA_CLOUD_ZONE")
 
   # Construct Grafana Cloud endpoints based on region
-  tempo_endpoint = "tempo-#{grafana_region}.grafana.net"
+  tempo_endpoint = "tempo-prod-26-prod-#{grafana_region}.grafana.net"
   
-  # For Basic auth, we need instance_id:api_key in base64
-  auth_header = "Basic " <> Base.encode64("#{grafana_instance_id}:#{grafana_api_key}")
+  # For Basic auth, we need user_id:api_key in base64  
+  # Use specific user ID from Grafana Cloud Tempo configuration
+  grafana_user_id = System.get_env("GRAFANA_CLOUD_USER_ID", "1219955")
+  auth_header = "Basic " <> Base.encode64("#{grafana_user_id}:#{grafana_api_key}")
 
-  config :opentelemetry, :processors,
+  # Use debug exporter in development to troubleshoot
+  exporter_module = if config_env() == :dev do
+    Setlistify.Observability.DebugExporter
+  else
+    :opentelemetry_exporter
+  end
+
+  config :opentelemetry, :processors, [
     otel_batch_processor: %{
       exporter: {
-        :opentelemetry_exporter,
+        exporter_module,
         %{
           protocol: :grpc,
           endpoints: [tempo_endpoint],
@@ -155,6 +164,7 @@ if use_grafana_cloud do
         }
       }
     }
+  ]
 
   # Add zone to resource attributes if provided
   zone_attrs = if grafana_zone, do: [{"cloud.zone", grafana_zone}], else: []
@@ -183,7 +193,7 @@ if use_grafana_cloud do
     ] ++ zone_attrs
 else
   # Local OTEL-LGTM configuration (default)
-  config :opentelemetry, :processors,
+  config :opentelemetry, :processors, [
     otel_batch_processor: %{
       exporter: {
         :opentelemetry_exporter,
@@ -193,6 +203,7 @@ else
         }
       }
     }
+  ]
 
   config :opentelemetry, :resource,
     service: [
