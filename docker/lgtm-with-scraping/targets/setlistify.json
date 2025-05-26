@@ -1,8 +1,0 @@
-[
-  {
-    "targets": ["host.docker.internal:9568"],
-    "labels": {
-      "instance": "default"
-    }
-  }
-]
