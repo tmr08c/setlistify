@@ -131,40 +131,23 @@ use_grafana_cloud = System.get_env("GRAFANA_CLOUD_API_KEY") != nil
 if use_grafana_cloud do
   # Grafana Cloud configuration
   grafana_api_key = System.get_env("GRAFANA_CLOUD_API_KEY")
-  grafana_instance_id = System.get_env("GRAFANA_CLOUD_INSTANCE_ID")
   grafana_region = System.get_env("GRAFANA_CLOUD_REGION", "us-central1")
   grafana_zone = System.get_env("GRAFANA_CLOUD_ZONE")
 
   # Construct Grafana Cloud endpoints based on region
-  tempo_endpoint = "tempo-prod-26-prod-#{grafana_region}.grafana.net"
+  # Following the Silbernagel.dev example that works
+  tempo_endpoint = "https://tempo-prod-26-prod-#{grafana_region}.grafana.net/tempo"
   
   # For Basic auth, we need user_id:api_key in base64  
   # Use specific user ID from Grafana Cloud Tempo configuration
   grafana_user_id = System.get_env("GRAFANA_CLOUD_USER_ID", "1219955")
-  auth_header = "Basic " <> Base.encode64("#{grafana_user_id}:#{grafana_api_key}")
+  otel_auth = Base.encode64("#{grafana_user_id}:#{grafana_api_key}")
 
-  # Use debug exporter in development to troubleshoot
-  exporter_module = if config_env() == :dev do
-    Setlistify.Observability.DebugExporter
-  else
-    :opentelemetry_exporter
-  end
-
-  config :opentelemetry, :processors, [
-    otel_batch_processor: %{
-      exporter: {
-        exporter_module,
-        %{
-          protocol: :grpc,
-          endpoints: [tempo_endpoint],
-          headers: [
-            {"authorization", auth_header}
-          ],
-          compression: :gzip
-        }
-      }
-    }
-  ]
+  # Configure OpenTelemetry exporter following the working example
+  config :opentelemetry_exporter,
+    otlp_protocol: :grpc,
+    otlp_traces_endpoint: tempo_endpoint,
+    otlp_headers: [{"Authorization", "Basic #{otel_auth}"}]
 
   # Add zone to resource attributes if provided
   zone_attrs = if grafana_zone, do: [{"cloud.zone", grafana_zone}], else: []
@@ -193,17 +176,10 @@ if use_grafana_cloud do
     ] ++ zone_attrs
 else
   # Local OTEL-LGTM configuration (default)
-  config :opentelemetry, :processors, [
-    otel_batch_processor: %{
-      exporter: {
-        :opentelemetry_exporter,
-        %{
-          endpoints: [http: "http://localhost:4318/v1/traces"],
-          headers: []
-        }
-      }
-    }
-  ]
+  config :opentelemetry_exporter,
+    otlp_protocol: :http_protobuf,
+    otlp_traces_endpoint: "http://localhost:4318/v1/traces",
+    otlp_headers: []
 
   config :opentelemetry, :resource,
     service: [
