@@ -24,9 +24,10 @@ config :setlistify,
     retry: false
   ]
 
-# Disable PromEx in tests by not starting the metrics server
+# Configure PromEx for tests with a different port to avoid conflicts
 config :setlistify, Setlistify.PromEx,
-  disabled: true,
-  manual_metrics_start_delay: :no_delay,
-  drop_metrics_groups: [],
-  grafana: :disabled
+  grafana: :disabled,
+  metrics_server: [
+    port: 9590,
+    path: "/metrics"
+  ]
