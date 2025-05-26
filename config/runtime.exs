@@ -137,7 +137,7 @@ if use_grafana_cloud do
   # Construct Grafana Cloud endpoints based on region
   # Following the Silbernagel.dev example that works
   tempo_endpoint = "https://tempo-prod-26-prod-#{grafana_region}.grafana.net/tempo"
-  
+
   # For Basic auth, we need user_id:api_key in base64  
   # Use specific user ID from Grafana Cloud Tempo configuration
   grafana_user_id = System.get_env("GRAFANA_CLOUD_USER_ID", "1219955")
@@ -151,7 +151,7 @@ if use_grafana_cloud do
 
   # Add zone to resource attributes if provided
   zone_attrs = if grafana_zone, do: [{"cloud.zone", grafana_zone}], else: []
-  
+
   config :opentelemetry, :resource,
     service: [
       name: "setlistify",
@@ -170,10 +170,11 @@ if use_grafana_cloud do
         language: "elixir"
       ]
     ],
-    cloud: [
-      provider: "grafana",
-      region: grafana_region
-    ] ++ zone_attrs
+    cloud:
+      [
+        provider: "grafana",
+        region: grafana_region
+      ] ++ zone_attrs
 else
   # Local OTEL-LGTM configuration (default)
   config :opentelemetry_exporter,
@@ -184,7 +185,7 @@ else
   config :opentelemetry, :resource,
     service: [
       name: "setlistify",
-      namespace: "setlistify", 
+      namespace: "setlistify",
       version: "1.0.0"
     ],
     deployment: [
