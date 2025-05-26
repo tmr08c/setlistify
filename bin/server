@@ -17,7 +17,7 @@ is_port_available() {
 find_available_port() {
     local port=$1
     while ! is_port_available $port; do
-        echo "Port $port is in use, trying next port..."
+        echo "Port $port is in use, trying next port..." >&2
         ((port++))
     done
     echo $port
