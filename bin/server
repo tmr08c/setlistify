@@ -23,6 +23,19 @@ find_available_port() {
     echo $port
 }
 
+# Find available Phoenix port starting from 4000
+DEFAULT_PORT=4000
+if [ -z "$PORT" ]; then
+    echo "==> Finding available Phoenix port..."
+    PORT=$(find_available_port $DEFAULT_PORT)
+    echo "==> Using Phoenix port: $PORT"
+else
+    echo "==> Using specified Phoenix port: $PORT"
+fi
+
+# Export the port for Phoenix
+export PORT
+
 # Find available PromEx port starting from 9568
 DEFAULT_PROM_EX_PORT=9568
 if [ -z "$PROM_EX_PORT" ]; then
@@ -41,13 +54,18 @@ PROMETHEUS_TARGET_SCRIPT="docker/lgtm-with-scraping/add-prometheus-target.sh"
 if [ -f "$PROMETHEUS_TARGET_SCRIPT" ] && [ -x "$PROMETHEUS_TARGET_SCRIPT" ]; then
     # Determine instance name based on port or git worktree
     INSTANCE_NAME="default"
-    if [ "$PROM_EX_PORT" != "$DEFAULT_PROM_EX_PORT" ]; then
+    if [ "$PORT" != "$DEFAULT_PORT" ] || [ "$PROM_EX_PORT" != "$DEFAULT_PROM_EX_PORT" ]; then
         # Try to get worktree name
         WORKTREE_NAME=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "")
         if [ -n "$WORKTREE_NAME" ] && [ "$WORKTREE_NAME" != "setlistify" ]; then
             INSTANCE_NAME="$WORKTREE_NAME"
         else
-            INSTANCE_NAME="port-$PROM_EX_PORT"
+            # Include Phoenix port in name if not default
+            if [ "$PORT" != "$DEFAULT_PORT" ]; then
+                INSTANCE_NAME="phoenix-$PORT"
+            else
+                INSTANCE_NAME="port-$PROM_EX_PORT"
+            fi
         fi
     fi
     
@@ -59,6 +77,8 @@ if [ -f "$PROMETHEUS_TARGET_SCRIPT" ] && [ -x "$PROMETHEUS_TARGET_SCRIPT" ]; the
     fi
 fi
 
-echo "==> Running server on PromEx port $PROM_EX_PORT..."
-echo "==> Metrics available at: http://localhost:$PROM_EX_PORT/metrics"
+echo "==> Starting Phoenix server..."
+echo "    Web interface: http://localhost:$PORT"
+echo "    Metrics endpoint: http://localhost:$PROM_EX_PORT/metrics"
+echo ""
 iex -S mix phx.server
