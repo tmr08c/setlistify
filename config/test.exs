@@ -24,5 +24,9 @@ config :setlistify,
     retry: false
   ]
 
-# Disable PromEx Grafana integration in tests
-config :setlistify, Setlistify.PromEx, grafana: :disabled
+# Disable PromEx in tests by not starting the metrics server
+config :setlistify, Setlistify.PromEx,
+  disabled: true,
+  manual_metrics_start_delay: :no_delay,
+  drop_metrics_groups: [],
+  grafana: :disabled

@@ -1,0 +1,14 @@
+# Example Docker Compose override for custom PromEx port
+# Copy this to docker-compose.override.yml and adjust as needed
+
+# If you're running Setlistify with a custom PROM_EX_PORT, 
+# you'll need to update the Prometheus target accordingly.
+#
+# Example: If you run with PROM_EX_PORT=9569
+version: "3.8"
+
+services:
+  prometheus:
+    volumes:
+      # Mount a custom prometheus config with your port
+      - ./prometheus-config-custom.yaml:/etc/prometheus/prometheus.yml

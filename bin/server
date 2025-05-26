@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# script/server: Run local server
+# script/server: Run local server with automatic PromEx port assignment
 
 set -e
 
@@ -8,5 +8,57 @@ cd "$(dirname "$0")/.."
 
 bin/setup
 
-echo "==> Running server…"
+# Function to check if a port is available
+is_port_available() {
+    ! lsof -i:$1 >/dev/null 2>&1
+}
+
+# Function to find an available port starting from a base port
+find_available_port() {
+    local port=$1
+    while ! is_port_available $port; do
+        echo "Port $port is in use, trying next port..."
+        ((port++))
+    done
+    echo $port
+}
+
+# Find available PromEx port starting from 9568
+DEFAULT_PROM_EX_PORT=9568
+if [ -z "$PROM_EX_PORT" ]; then
+    echo "==> Finding available PromEx port..."
+    PROM_EX_PORT=$(find_available_port $DEFAULT_PROM_EX_PORT)
+    echo "==> Using PromEx port: $PROM_EX_PORT"
+else
+    echo "==> Using specified PromEx port: $PROM_EX_PORT"
+fi
+
+# Export the port for the application
+export PROM_EX_PORT
+
+# Update Prometheus targets if the script exists
+PROMETHEUS_TARGET_SCRIPT="docker/lgtm-with-scraping/add-prometheus-target.sh"
+if [ -f "$PROMETHEUS_TARGET_SCRIPT" ] && [ -x "$PROMETHEUS_TARGET_SCRIPT" ]; then
+    # Determine instance name based on port or git worktree
+    INSTANCE_NAME="default"
+    if [ "$PROM_EX_PORT" != "$DEFAULT_PROM_EX_PORT" ]; then
+        # Try to get worktree name
+        WORKTREE_NAME=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null || echo "")
+        if [ -n "$WORKTREE_NAME" ] && [ "$WORKTREE_NAME" != "setlistify" ]; then
+            INSTANCE_NAME="$WORKTREE_NAME"
+        else
+            INSTANCE_NAME="port-$PROM_EX_PORT"
+        fi
+    fi
+    
+    echo "==> Updating Prometheus target (instance: $INSTANCE_NAME)..."
+    if "$PROMETHEUS_TARGET_SCRIPT" "$PROM_EX_PORT" "$INSTANCE_NAME" >/dev/null 2>&1; then
+        echo "==> Prometheus target updated successfully"
+    else
+        echo "==> Warning: Could not update Prometheus target (Prometheus might not be running)"
+    fi
+fi
+
+echo "==> Running server on PromEx port $PROM_EX_PORT..."
+echo "==> Metrics available at: http://localhost:$PROM_EX_PORT/metrics"
 iex -S mix phx.server

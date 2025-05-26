@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+# script/list-instances: List running Setlistify instances and their PromEx ports
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+echo "==> Running Setlistify instances:"
+echo ""
+
+# Find all processes listening on ports starting from 9568
+for port in $(seq 9568 9580); do
+    if lsof -i:$port >/dev/null 2>&1; then
+        PID=$(lsof -ti:$port | head -1)
+        if ps -p $PID -o comm= | grep -q "beam"; then
+            echo "  Port $port: Elixir/Phoenix instance (PID: $PID)"
+            
+            # Try to find the working directory
+            if command -v pwdx >/dev/null 2>&1; then
+                PWD_INFO=$(pwdx $PID 2>/dev/null | cut -d' ' -f2- || echo "unknown")
+                echo "    Working directory: $PWD_INFO"
+            fi
+        fi
+    fi
+done
+
+# Check Prometheus targets if available
+TARGETS_FILE="docker/lgtm-with-scraping/targets/setlistify.json"
+if [ -f "$TARGETS_FILE" ]; then
+    echo ""
+    echo "==> Prometheus targets:"
+    jq -r '.[] | "  - Instance: " + .labels.instance + " -> " + .targets[0]' "$TARGETS_FILE" 2>/dev/null || echo "  (Unable to read targets file)"
+fi
+
+echo ""
+echo "==> Phoenix main port status:"
+lsof -i:4000 >/dev/null 2>&1 && echo "  Port 4000: In use" || echo "  Port 4000: Available"

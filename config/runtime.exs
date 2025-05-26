@@ -123,3 +123,12 @@ config :setlistify, setlist_fm_api_key: System.fetch_env!("SETLIST_FM_API_SECRET
 ## Spotify API
 config :setlistify, spotify_client_id: System.fetch_env!("SPOTIFY_CLIENT_ID")
 config :setlistify, spotify_client_secret: System.fetch_env!("SPOTIFY_CLIENT_SECRET")
+
+## PromEx metrics server port configuration
+if prom_ex_port = System.get_env("PROM_EX_PORT") do
+  config :setlistify, Setlistify.PromEx,
+    metrics_server: [
+      port: String.to_integer(prom_ex_port),
+      path: "/metrics"
+    ]
+end
