@@ -46,3 +46,7 @@ npm-debug.log
 docker/tempo-data/
 docker/loki-data/
 docker/prometheus-data/
+
+# Runtime configuration files
+targets/setlistify.json
+docker/lgtm-with-scraping/targets/setlistify.json
