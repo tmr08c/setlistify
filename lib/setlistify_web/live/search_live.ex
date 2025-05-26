@@ -39,13 +39,22 @@ defmodule SetlistifyWeb.SearchLive do
   end
 
   def handle_event("search", %{"search" => params}, socket) do
-    search_changeset = search_changeset(params) |> Map.put(:action, :validate)
-    search_form = to_form(search_changeset, as: :search)
+    OpenTelemetry.Tracer.with_span "SetlistifyWeb.SearchLive.handle_event" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"event", "search"},
+        {"params", inspect(params)}
+      ])
 
-    if search_changeset.valid? do
-      {:noreply, push_patch(socket, to: ~p"/?#{params}")}
-    else
-      {:noreply, assign(socket, search: search_form)}
+      search_changeset = search_changeset(params) |> Map.put(:action, :validate)
+      search_form = to_form(search_changeset, as: :search)
+
+      OpenTelemetry.Tracer.set_attribute("search.valid", search_changeset.valid?)
+
+      if search_changeset.valid? do
+        {:noreply, push_patch(socket, to: ~p"/?#{params}")}
+      else
+        {:noreply, assign(socket, search: search_form)}
+      end
     end
   end
 
