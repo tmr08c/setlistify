@@ -20,9 +20,18 @@ check_phoenix_port() {
             echo "  $port_type port $port: PID $PID"
             
             # Try to find the working directory
-            if command -v pwdx >/dev/null 2>&1; then
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                # macOS: use lsof to find the working directory
+                PWD_INFO=$(lsof -p $PID | grep " cwd " | awk '{print $NF}' 2>/dev/null || echo "unknown")
+                if [ -n "$PWD_INFO" ] && [ "$PWD_INFO" != "unknown" ]; then
+                    echo "    Working directory: $PWD_INFO"
+                fi
+            elif command -v pwdx >/dev/null 2>&1; then
+                # Linux: use pwdx
                 PWD_INFO=$(pwdx $PID 2>/dev/null | cut -d' ' -f2- || echo "unknown")
-                echo "    Working directory: $PWD_INFO"
+                if [ -n "$PWD_INFO" ] && [ "$PWD_INFO" != "unknown" ]; then
+                    echo "    Working directory: $PWD_INFO"
+                fi
             fi
             
             # Try to find the related Phoenix port by checking common combinations
