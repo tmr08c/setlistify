@@ -124,6 +124,13 @@ config :setlistify, setlist_fm_api_key: System.fetch_env!("SETLIST_FM_API_SECRET
 config :setlistify, spotify_client_id: System.fetch_env!("SPOTIFY_CLIENT_ID")
 config :setlistify, spotify_client_secret: System.fetch_env!("SPOTIFY_CLIENT_SECRET")
 
+## PromEx metrics server port configuration
+if prom_ex_port = System.get_env("PROM_EX_PORT") do
+  config :setlistify, Setlistify.PromEx,
+    port: String.to_integer(prom_ex_port),
+    path: "/metrics"
+end
+
 ## OpenTelemetry Configuration
 # Determine if we should use Grafana Cloud based on environment variables
 use_grafana_cloud = System.get_env("GRAFANA_CLOUD_API_KEY") != nil
