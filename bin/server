@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-# script/server: Run local server with automatic PromEx port assignment
+# script/server: Run local server
 
 set -e
 
@@ -8,12 +8,10 @@ cd "$(dirname "$0")/.."
 
 bin/setup
 
-# Function to check if a port is available
 is_port_available() {
     ! lsof -i:$1 >/dev/null 2>&1
 }
 
-# Function to find an available port starting from a base port
 find_available_port() {
     local port=$1
     while ! is_port_available $port; do
