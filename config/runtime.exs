@@ -156,6 +156,38 @@ if use_grafana_cloud do
     otlp_traces_endpoint: tempo_endpoint,
     otlp_headers: [{"Authorization", "Basic #{otel_auth}"}]
 
+  # Configure PromEx for Grafana Cloud metrics
+  # Grafana Cloud Prometheus/Mimir configuration
+  prometheus_endpoint = System.get_env("GRAFANA_CLOUD_PROMETHEUS_ENDPOINT")
+
+  if prometheus_endpoint do
+    config :setlistify, Setlistify.PromEx,
+      manual_metrics_start_delay: :no_delay,
+      drop_metrics_groups: [],
+      grafana_agent: [
+        version: "0.42.0",
+        working_directory: "/tmp/prom_ex",
+        config_opts: [
+          # Local metrics server config
+          metrics_server_path: "/metrics",
+          metrics_server_port: 9568,
+          metrics_server_scheme: "http",
+          metrics_server_host: "localhost",
+
+          # Grafana Cloud remote write config
+          prometheus_url: prometheus_endpoint,
+          prometheus_username: grafana_user_id,
+          prometheus_password: grafana_api_key,
+
+          # Instance identification
+          instance: System.get_env("FLY_APP_NAME") || "setlistify",
+          job: "setlistify",
+          agent_port: 12345,
+          scrape_interval: "15s"
+        ]
+      ]
+  end
+
   # Add zone to resource attributes if provided
   # TODO: Should this actually be from Fly
   zone_attrs = if grafana_zone, do: [{"cloud.zone", grafana_zone}], else: []
