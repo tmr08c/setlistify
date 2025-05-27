@@ -136,11 +136,11 @@ if use_grafana_cloud do
 
   # Construct Grafana Cloud endpoints based on region
   # Following the Silbernagel.dev example that works
-  tempo_endpoint = "https://tempo-prod-26-prod-#{grafana_region}.grafana.net/tempo"
+  tempo_endpoint = System.get_env("GRAFANA_CLOUD_TEMPO_ENDPOINT")
 
-  # For Basic auth, we need user_id:api_key in base64  
+  # For Basic auth, we need user_id:api_key in base64
   # Use specific user ID from Grafana Cloud Tempo configuration
-  grafana_user_id = System.get_env("GRAFANA_CLOUD_USER_ID", "1219955")
+  grafana_user_id = System.get_env("GRAFANA_CLOUD_USER_ID")
   otel_auth = Base.encode64("#{grafana_user_id}:#{grafana_api_key}")
 
   # Configure OpenTelemetry exporter following the working example
@@ -150,6 +150,7 @@ if use_grafana_cloud do
     otlp_headers: [{"Authorization", "Basic #{otel_auth}"}]
 
   # Add zone to resource attributes if provided
+  # TODO: Should this actually be from Fly
   zone_attrs = if grafana_zone, do: [{"cloud.zone", grafana_zone}], else: []
 
   config :opentelemetry, :resource,
