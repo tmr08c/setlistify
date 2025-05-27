@@ -26,3 +26,8 @@ config :setlistify,
 
 # Disable PromEx Grafana integration in tests
 config :setlistify, Setlistify.PromEx, grafana: :disabled
+
+# OpenTelemetry default configuration
+config :opentelemetry,
+  # Default to no exporter (tests)
+  traces_exporter: :none
