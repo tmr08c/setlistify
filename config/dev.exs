@@ -74,7 +74,6 @@ config :phoenix, :plug_init_mode, :runtime
 
 config :phoenix_live_view, debug_heex_annotations: true
 
-
 # Loki logger backend configuration
 config :logger, Setlistify.LokiLogger,
   url: "http://localhost:3100/loki/api/v1/push",
