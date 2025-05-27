@@ -62,11 +62,6 @@ config :setlistify, Setlistify.PromEx,
     path: "/metrics"
   ]
 
-# OpenTelemetry default configuration
-config :opentelemetry,
-  # Default to no exporter (tests)
-  traces_exporter: :none
-
 # This will be overridden in dev/prod
 config :opentelemetry, :resource,
   service: [

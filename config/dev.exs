@@ -74,32 +74,6 @@ config :phoenix, :plug_init_mode, :runtime
 
 config :phoenix_live_view, debug_heex_annotations: true
 
-# OpenTelemetry configuration for local development
-config :opentelemetry,
-  traces_exporter: :otlp,
-  metrics_exporter: :otlp
-
-config :opentelemetry_exporter,
-  otlp_protocol: :http_protobuf,
-  otlp_endpoint: "http://localhost:4318",
-  otlp_metrics_endpoint: "http://localhost:4318",
-  otlp_headers: [],
-  otlp_compression: :gzip
-
-# Resource attributes for local development
-config :opentelemetry, :resource,
-  service: [
-    name: "setlistify",
-    namespace: "setlistify",
-    version: Mix.Project.config()[:version] || "dev"
-  ],
-  deployment: [
-    environment: "development"
-  ],
-  host: [
-    name: System.get_env("HOSTNAME", "localhost")
-  ]
-
 # Loki logger backend configuration
 config :logger, Setlistify.LokiLogger,
   url: "http://localhost:3100/loki/api/v1/push",
