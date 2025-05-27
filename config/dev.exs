@@ -74,9 +74,6 @@ config :phoenix, :plug_init_mode, :runtime
 
 config :phoenix_live_view, debug_heex_annotations: true
 
-# OpenTelemetry configuration
-# NOTE: This is overridden by runtime.exs if GRAFANA_CLOUD_API_KEY is set
-# Keeping minimal config here for local development fallback
 
 # Loki logger backend configuration
 config :logger, Setlistify.LokiLogger,
