@@ -83,6 +83,14 @@ Required environment variables:
 - `SPOTIFY_CLIENT_ID` - OAuth client ID for Spotify
 - `SPOTIFY_CLIENT_SECRET` - OAuth client secret for Spotify
 
+Optional environment variables for Grafana Cloud observability:
+- `GRAFANA_CLOUD_API_KEY` - API key for Grafana Cloud
+- `GRAFANA_CLOUD_USER_ID` - User ID from Grafana Cloud
+- `GRAFANA_CLOUD_TEMPO_ENDPOINT` - Tempo endpoint for traces
+- `GRAFANA_CLOUD_LOKI_ENDPOINT` - Loki endpoint for logs
+- `GRAFANA_CLOUD_REGION` - Cloud region (defaults to "us-central1")
+- `GRAFANA_CLOUD_ZONE` - Cloud zone (optional)
+
 These values are automatically loaded from `.env` in development. You can copy `.env.example` to `.env` and fill in the values.
 
 ## Development Reminders

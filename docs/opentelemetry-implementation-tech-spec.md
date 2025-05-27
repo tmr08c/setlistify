@@ -8,9 +8,12 @@ This document outlines the implementation of OpenTelemetry in Setlistify, our El
 - Phase 0 completed (local development stack)
 - Phase 1 in progress (Direct OpenTelemetry instrumentation implemented for Spotify API)
 - Phase 2 partially completed (trace context in logs)
-- **Grafana Cloud Integration:** Traces are successfully configured and sending to Grafana Cloud Tempo. Logs (Loki) and metrics (Prometheus) integration still pending.
+- **Grafana Cloud Integration:** 
+  - ✅ Traces (Tempo) - Successfully configured and working
+  - ✅ Logs (Loki) - Successfully configured with LokiLogger backend
+  - ❌ Metrics (Prometheus/Mimir) - Still pending
 
-**Last Updated:** May 27, 2025
+**Last Updated:** May 28, 2025
 
 ## Background
 
@@ -322,24 +325,39 @@ if use_grafana_cloud do
 end
 ```
 
-**Future Configuration Needed (Logs and Metrics):**
+**Loki Configuration (IMPLEMENTED):**
 
 ```elixir
-# Loki configuration for logs (NOT YET IMPLEMENTED)
-if loki_url = System.get_env("LOKI_URL") do
+# Configure Loki logging for Grafana Cloud
+loki_endpoint = System.get_env("GRAFANA_CLOUD_LOKI_ENDPOINT")
+
+if loki_endpoint do
   config :logger,
     backends: [:console, Setlistify.LokiLogger]
 
   config :logger, Setlistify.LokiLogger,
-    url: loki_url,
-    username: System.get_env("LOKI_USERNAME"),
-    password: System.get_env("LOKI_PASSWORD"),
+    url: loki_endpoint,
+    username: grafana_user_id,
+    password: grafana_api_key,
     level: :info,
-    metadata: [:request_id, :trace_id, :span_id, :user_id]
+    metadata: [:request_id, :trace_id, :span_id, :user_id],
+    max_buffer: 100,
+    labels: %{
+      "application" => "setlistify",
+      "environment" => config_env() |> to_string(),
+      "instance" => System.get_env("FLY_ALLOC_ID", "unknown"),
+      "fly_app" => System.get_env("FLY_APP_NAME", "setlistify"),
+      "fly_region" => System.get_env("FLY_REGION", "unknown")
+    }
 end
+```
 
+**Future Configuration Needed (Metrics Only):**
+
+```elixir
 # Prometheus/Mimir configuration for metrics (NOT YET IMPLEMENTED)
 # This will require additional setup with PromEx or similar
+# Expected to use a similar pattern with GRAFANA_CLOUD_PROMETHEUS_ENDPOINT
 ```
 
 ### 3. Local Development Stack
@@ -1112,19 +1130,24 @@ The current `:telemetry.span/3` approach provides explicit, flexible instrumenta
 2. ✅ Update production configuration for Tempo (traces) endpoint
 3. ✅ Configure environment variables for Grafana Cloud
 4. ✅ Successfully deployed and validated trace data flow to Grafana Cloud Tempo
+5. ✅ Configure Loki for cloud logging with LokiLogger backend
+6. ✅ Add GRAFANA_CLOUD_LOKI_ENDPOINT environment variable support
+7. ✅ Update documentation with Loki configuration details
 
 **Tasks Remaining:**
-1. Configure Loki for cloud logging (separate from traces)
-2. Configure Prometheus/Mimir for metrics collection (separate from traces)
-3. Configure Fly.io secrets for production deployment
-4. Import dashboards and configure cloud alerts
-5. Monitor costs and optimize for free tier limits
-6. Update documentation for complete production setup
+1. Configure Prometheus/Mimir for metrics collection (separate from traces and logs)
+2. Configure Fly.io secrets for production deployment (including LOKI_ENDPOINT)
+3. Import dashboards and configure cloud alerts
+4. Monitor costs and optimize for free tier limits
+5. Create correlation queries between traces and logs in Grafana
 
 **Notes:**
-- Traces are successfully sending to Grafana Cloud Tempo using the configuration from Silbernagel.dev blog
-- Logs and metrics require separate configuration as they use different endpoints and authentication
-- Each telemetry signal (traces, logs, metrics) has its own endpoint and configuration in Grafana Cloud
+- Traces and logs are now both successfully configured for Grafana Cloud
+- Using the same authentication (user_id and API key) for both Tempo and Loki
+- Each telemetry signal has its own endpoint:
+  - Traces: `GRAFANA_CLOUD_TEMPO_ENDPOINT` (e.g., `https://tempo-prod-26-prod-us-east-2.grafana.net/tempo`)
+  - Logs: `GRAFANA_CLOUD_LOKI_ENDPOINT` (e.g., `https://logs-prod-012.grafana.net/loki/api/v1/push`)
+  - Metrics: TBD (will be Prometheus/Mimir endpoint)
 
 **Expected Timeline:** 2-3 days for remaining tasks
 **Dependencies:** Phase 4 completion for full observability
@@ -1352,4 +1375,7 @@ Create:
 - **Phase 0**: ✅ Complete - Local development stack operational
 - **Phase 1**: 🚧 In Progress - Direct OpenTelemetry instrumentation (Spotify API complete, others pending)
 - **Phase 2**: ✅ Partial - Trace context in logs, LiveView spans working
-- **Phase 5**: ✅ Partial - Grafana Cloud integration for traces only (logs and metrics pending)
+- **Phase 5**: ✅ Partial - Grafana Cloud integration for traces and logs (metrics pending)
+  - Traces (Tempo): ✅ Working
+  - Logs (Loki): ✅ Working with trace correlation
+  - Metrics (Prometheus/Mimir): ❌ Not implemented

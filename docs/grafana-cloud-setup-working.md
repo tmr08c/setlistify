@@ -7,12 +7,22 @@ This configuration is based on the working example from [Silbernagel.dev](https:
 ```bash
 # Required
 export GRAFANA_CLOUD_API_KEY="your-api-key-here"
-export GRAFANA_CLOUD_USER_ID="1219955"  # Your Tempo user ID from Grafana Cloud
+export GRAFANA_CLOUD_USER_ID="1219955"  # Your user ID from Grafana Cloud
 export GRAFANA_CLOUD_REGION="us-east-2"  # Your region
+
+# Tempo (Traces) - Working
+export GRAFANA_CLOUD_TEMPO_ENDPOINT="https://tempo-prod-26-prod-us-east-2.grafana.net/tempo"
+
+# Loki (Logs) - New
+export GRAFANA_CLOUD_LOKI_ENDPOINT="https://logs-prod-012.grafana.net/loki/api/v1/push"
 
 # Optional
 export GRAFANA_CLOUD_ZONE="prod-us-east-0"
 ```
+
+**Important**: Find your specific endpoints in your Grafana Cloud portal:
+- For Tempo: Look in the Tempo data source configuration
+- For Loki: Look in the Loki data source configuration or "Details" page
 
 ## Configuration (config/runtime.exs)
 
@@ -88,14 +98,46 @@ else
 end
 ```
 
+## Loki Configuration (Logs)
+
+The Loki configuration is added alongside the Tempo configuration:
+
+```elixir
+# Configure Loki logging for Grafana Cloud
+loki_endpoint = System.get_env("GRAFANA_CLOUD_LOKI_ENDPOINT")
+
+if loki_endpoint do
+  config :logger,
+    backends: [:console, Setlistify.LokiLogger]
+
+  config :logger, Setlistify.LokiLogger,
+    url: loki_endpoint,
+    username: grafana_user_id,
+    password: grafana_api_key,
+    level: :info,
+    metadata: [:request_id, :trace_id, :span_id, :user_id],
+    max_buffer: 100,
+    labels: %{
+      "application" => "setlistify",
+      "environment" => config_env() |> to_string(),
+      "instance" => System.get_env("FLY_ALLOC_ID", "unknown"),
+      "fly_app" => System.get_env("FLY_APP_NAME", "setlistify"),
+      "fly_region" => System.get_env("FLY_REGION", "unknown")
+    }
+end
+```
+
 ## Key Differences from Previous Attempts
 
 1. **Use `otlp_traces_endpoint` not `otlp_endpoint`** - This is crucial!
 2. **Include `/tempo` in the endpoint URL** for Grafana Cloud
 3. **Use the full HTTPS URL** for gRPC protocol
 4. **Authorization header format**: `"Basic #{otel_auth}"` not `"Basic " <> otel_auth`
+5. **Loki uses the same authentication** as Tempo (user_id and API key)
 
 ## Testing
+
+### Testing Traces (Tempo)
 
 1. Start your application:
    ```bash
@@ -120,11 +162,49 @@ end
    - Search for traces
    - Try an empty query `{}` first to see all traces
 
+### Testing Logs (Loki)
+
+1. Generate test logs in IEx:
+   ```elixir
+   require Logger
+   
+   # Generate a log with trace context
+   OpenTelemetry.Tracer.with_span "test.loki_logging" do
+     Logger.info("Test log from Grafana Cloud integration")
+     Logger.error("Test error log with trace context")
+   end
+   
+   # Force flush the logger
+   :gen_event.sync_notify(Logger, :flush)
+   ```
+
+2. Check Grafana Cloud:
+   - Go to https://setlistify.grafana.net/explore
+   - Select your Loki data source
+   - Try queries like:
+     - `{application="setlistify"}`
+     - `{application="setlistify", level="error"}`
+     - `{application="setlistify"} |= "test"`
+
 ## Troubleshooting
 
-If traces don't appear:
+### If traces don't appear:
 
 1. Check the logs for "OTLP exporter successfully initialized"
 2. Verify environment variables are loaded (check with `System.get_env/1` in IEx)
 3. Make sure you're using the Tempo user ID, not the instance ID
 4. Check that the region in your endpoint matches your Grafana Cloud setup
+
+### If logs don't appear:
+
+1. Check for any stderr output from LokiLogger: `[LokiLogger] Failed to send logs`
+2. Verify the Loki endpoint includes `/loki/api/v1/push`
+3. Test authentication with curl:
+   ```bash
+   curl -v -H "Content-Type: application/json" \
+     -u "$GRAFANA_CLOUD_USER_ID:$GRAFANA_CLOUD_API_KEY" \
+     -X POST "$GRAFANA_CLOUD_LOKI_ENDPOINT" \
+     -d '{"streams": [{"stream": {"application": "test"}, "values": [["1234567890000000000", "test log"]]}]}'
+   ```
+4. Make sure timestamps are strings (nanoseconds)
+5. Check that your labels don't contain invalid characters
