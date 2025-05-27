@@ -123,3 +123,76 @@ config :setlistify, setlist_fm_api_key: System.fetch_env!("SETLIST_FM_API_SECRET
 ## Spotify API
 config :setlistify, spotify_client_id: System.fetch_env!("SPOTIFY_CLIENT_ID")
 config :setlistify, spotify_client_secret: System.fetch_env!("SPOTIFY_CLIENT_SECRET")
+
+## OpenTelemetry Configuration
+# Determine if we should use Grafana Cloud based on environment variables
+use_grafana_cloud = System.get_env("GRAFANA_CLOUD_API_KEY") != nil
+
+if use_grafana_cloud do
+  # Grafana Cloud configuration
+  grafana_api_key = System.get_env("GRAFANA_CLOUD_API_KEY")
+  grafana_region = System.get_env("GRAFANA_CLOUD_REGION", "us-central1")
+  grafana_zone = System.get_env("GRAFANA_CLOUD_ZONE")
+
+  # Construct Grafana Cloud endpoints based on region
+  # Following the Silbernagel.dev example that works
+  tempo_endpoint = System.get_env("GRAFANA_CLOUD_TEMPO_ENDPOINT")
+
+  # For Basic auth, we need user_id:api_key in base64
+  # Use specific user ID from Grafana Cloud Tempo configuration
+  grafana_user_id = System.get_env("GRAFANA_CLOUD_USER_ID")
+  otel_auth = Base.encode64("#{grafana_user_id}:#{grafana_api_key}")
+
+  # Configure OpenTelemetry exporter following the working example
+  config :opentelemetry_exporter,
+    otlp_protocol: :grpc,
+    otlp_traces_endpoint: tempo_endpoint,
+    otlp_headers: [{"Authorization", "Basic #{otel_auth}"}]
+
+  # Add zone to resource attributes if provided
+  # TODO: Should this actually be from Fly
+  zone_attrs = if grafana_zone, do: [{"cloud.zone", grafana_zone}], else: []
+
+  config :opentelemetry, :resource,
+    service: [
+      name: "setlistify",
+      namespace: "setlistify",
+      version: "1.0.0"
+    ],
+    deployment: [
+      environment: config_env() |> to_string()
+    ],
+    host: [
+      name: System.get_env("FLY_ALLOC_ID", "local")
+    ],
+    telemetry: [
+      sdk: [
+        name: "opentelemetry",
+        language: "elixir"
+      ]
+    ],
+    cloud:
+      [
+        provider: "grafana",
+        region: grafana_region
+      ] ++ zone_attrs
+else
+  # Local OTEL-LGTM configuration (default)
+  config :opentelemetry_exporter,
+    otlp_protocol: :http_protobuf,
+    otlp_traces_endpoint: "http://localhost:4318/v1/traces",
+    otlp_headers: []
+
+  config :opentelemetry, :resource,
+    service: [
+      name: "setlistify",
+      namespace: "setlistify",
+      version: "1.0.0"
+    ],
+    deployment: [
+      environment: config_env() |> to_string()
+    ],
+    host: [
+      name: System.get_env("HOSTNAME", "localhost")
+    ]
+end
