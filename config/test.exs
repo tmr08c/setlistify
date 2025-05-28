@@ -24,9 +24,14 @@ config :setlistify,
     retry: false
   ]
 
-# Disable PromEx Grafana integration in tests
-config :setlistify, Setlistify.PromEx, grafana: :disabled
-
 # Disable OpenTelemetry exports in test
 config :opentelemetry,
   traces_exporter: :none
+
+# Configure PromEx for tests with a different port to avoid conflicts
+config :setlistify, Setlistify.PromEx,
+  grafana: :disabled,
+  metrics_server: [
+    port: 9590,
+    path: "/metrics"
+  ]

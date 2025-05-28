@@ -58,7 +58,7 @@ config :setlistify, Setlistify.PromEx,
     upload_dashboards_on_start: true
   ],
   metrics_server: [
-    port: 9568,
+    port: String.to_integer(System.get_env("PROM_EX_PORT", "9568")),
     path: "/metrics"
   ]
 

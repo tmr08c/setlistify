@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+# script/list-instances: List running Setlistify instances and their PromEx ports
+
+set -e
+
+cd "$(dirname "$0")/.."
+
+echo "==> Running Setlistify instances:"
+echo ""
+
+# Function to check if a port belongs to a Phoenix/Elixir instance
+check_phoenix_port() {
+    local port=$1
+    local port_type=$2
+    
+    if lsof -i:$port >/dev/null 2>&1; then
+        PID=$(lsof -ti:$port | head -1)
+        if ps -p $PID -o comm= | grep -q "beam"; then
+            echo "  $port_type port $port: PID $PID"
+            
+            # Try to find the working directory
+            if [[ "$OSTYPE" == "darwin"* ]]; then
+                # macOS: use lsof to find the working directory
+                PWD_INFO=$(lsof -p $PID | grep " cwd " | awk '{print $NF}' 2>/dev/null || echo "unknown")
+                if [ -n "$PWD_INFO" ] && [ "$PWD_INFO" != "unknown" ]; then
+                    echo "    Working directory: $PWD_INFO"
+                fi
+            elif command -v pwdx >/dev/null 2>&1; then
+                # Linux: use pwdx
+                PWD_INFO=$(pwdx $PID 2>/dev/null | cut -d' ' -f2- || echo "unknown")
+                if [ -n "$PWD_INFO" ] && [ "$PWD_INFO" != "unknown" ]; then
+                    echo "    Working directory: $PWD_INFO"
+                fi
+            fi
+            
+            # Try to find the related Phoenix port by checking common combinations
+            if [ "$port_type" = "PromEx" ]; then
+                # Calculate likely Phoenix port (offset of -5568)
+                LIKELY_PHOENIX_PORT=$((port - 5568))
+                if lsof -i:$LIKELY_PHOENIX_PORT >/dev/null 2>&1; then
+                    OTHER_PID=$(lsof -ti:$LIKELY_PHOENIX_PORT | head -1)
+                    if [ "$PID" = "$OTHER_PID" ]; then
+                        echo "    Phoenix port: $LIKELY_PHOENIX_PORT"
+                    fi
+                fi
+            fi
+            
+            return 0
+        fi
+    fi
+    return 1
+}
+
+# Group instances by PID to avoid duplicates
+declare -A seen_pids
+
+# Check Phoenix ports (4000-4010)
+echo "Phoenix Web Servers:"
+for port in $(seq 4000 4010); do
+    if check_phoenix_port $port "Phoenix"; then
+        PID=$(lsof -ti:$port | head -1)
+        seen_pids[$PID]=1
+    fi
+done
+
+echo ""
+echo "PromEx Metrics Servers:"
+# Check PromEx ports (9568-9580)
+for port in $(seq 9568 9580); do
+    if check_phoenix_port $port "PromEx"; then
+        PID=$(lsof -ti:$port | head -1)
+        if [ -z "${seen_pids[$PID]}" ]; then
+            seen_pids[$PID]=1
+        fi
+    fi
+done
+
+# Check Prometheus targets if available
+TARGETS_FILE="docker/lgtm-with-scraping/targets/setlistify.json"
+if [ -f "$TARGETS_FILE" ]; then
+    echo ""
+    echo "==> Prometheus targets:"
+    jq -r '.[] | "  - Instance: " + .labels.instance + " -> " + .targets[0]' "$TARGETS_FILE" 2>/dev/null || echo "  (Unable to read targets file)"
+fi
