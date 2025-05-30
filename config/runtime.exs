@@ -161,31 +161,66 @@ if use_grafana_cloud do
   prometheus_endpoint = System.get_env("GRAFANA_CLOUD_PROMETHEUS_ENDPOINT")
 
   if prometheus_endpoint do
-    config :setlistify, Setlistify.PromEx,
+    # Prometheus might need a different username format than Tempo
+    prometheus_username = System.get_env("GRAFANA_CLOUD_PROMETHEUS_USERNAME") || grafana_user_id
+
+    # Build the base PromEx configuration
+    prom_ex_config = [
       manual_metrics_start_delay: :no_delay,
       drop_metrics_groups: [],
+      metrics_server: [
+        port: String.to_integer(System.get_env("PROM_EX_PORT", "9568")),
+        path: "/metrics"
+      ],
       grafana_agent: [
-        version: "0.42.0",
+        # version: "0.42.0",
         working_directory: "/tmp/prom_ex",
         config_opts: [
           # Local metrics server config
           metrics_server_path: "/metrics",
-          metrics_server_port: 9568,
+          metrics_server_port: String.to_integer(System.get_env("PROM_EX_PORT", "9568")),
           metrics_server_scheme: "http",
           metrics_server_host: "localhost",
 
           # Grafana Cloud remote write config
           prometheus_url: prometheus_endpoint,
-          prometheus_username: grafana_user_id,
+          prometheus_username: prometheus_username,
           prometheus_password: grafana_api_key,
 
           # Instance identification
           instance: System.get_env("FLY_APP_NAME") || "setlistify",
           job: "setlistify",
-          agent_port: 12345,
+          # agent_port: 12345,
           scrape_interval: "15s"
         ]
       ]
+    ]
+
+    # Add Grafana dashboard configuration with dedicated dashboard API key
+    # Prefer dedicated dashboard key (service account) over the OTLP key
+    grafana_dashboard_key = System.get_env("GRAFANA_DASHBOARD_API_KEY") || grafana_api_key
+    
+    prom_ex_config = if grafana_dashboard_key do
+      # Get Grafana host from environment or construct from zone
+      grafana_host = System.get_env("GRAFANA_HOST") || 
+                     (if grafana_zone, do: "https://#{grafana_zone}.grafana.net", else: nil)
+      
+      if grafana_host do
+        Keyword.put(prom_ex_config, :grafana, [
+          host: grafana_host,
+          auth_token: grafana_dashboard_key,  # Use dashboard key with Editor permissions
+          upload_dashboards_on_start: true,
+          folder_name: "Setlistify Dashboards",
+          annotate_app_lifecycle: true
+        ])
+      else
+        prom_ex_config
+      end
+    else
+      prom_ex_config
+    end
+
+    config :setlistify, Setlistify.PromEx, prom_ex_config
   end
 
   # Add zone to resource attributes if provided

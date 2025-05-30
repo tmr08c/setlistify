@@ -46,21 +46,21 @@ config :logger, :console,
 # Use Jason for JSON parsing in Phoenix
 config :phoenix, :json_library, Jason
 
-# PromEx configuration
-config :setlistify, Setlistify.PromEx,
-  # If you have an externally hosted Prometheus comment out this line
-  # and configure the metrics_server config settings as necessary
-  manual_metrics_start_delay: :no_delay,
-  drop_metrics_groups: [],
-  grafana: [
-    host: "http://localhost:3000",
-    auth_token: "admin:admin",
-    upload_dashboards_on_start: true
-  ],
-  metrics_server: [
-    port: String.to_integer(System.get_env("PROM_EX_PORT", "9568")),
-    path: "/metrics"
-  ]
+# # PromEx configuration
+# config :setlistify, Setlistify.PromEx,
+#   # If you have an externally hosted Prometheus comment out this line
+#   # and configure the metrics_server config settings as necessary
+#   manual_metrics_start_delay: :no_delay,
+#   drop_metrics_groups: [],
+#   grafana: [
+#     host: "http://localhost:3000",
+#     auth_token: "admin:admin",
+#     upload_dashboards_on_start: true
+#   ],
+#   metrics_server: [
+#     port: String.to_integer(System.get_env("PROM_EX_PORT", "9568")),
+#     path: "/metrics"
+#   ]
 
 # This will be overridden in dev/prod
 config :opentelemetry, :resource,
