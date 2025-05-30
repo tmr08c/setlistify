@@ -22,8 +22,13 @@ defmodule Setlistify.PromEx do
 
   @impl true
   def dashboard_assigns do
+    # Allow configurable datasource for different environments
+    # Dev: prometheus (default)
+    # Grafana Cloud: grafanacloud-setlistify-prom
+    datasource_id = System.get_env("GRAFANA_DATASOURCE_ID", "prometheus")
+    
     [
-      datasource_id: "prometheus",
+      datasource_id: datasource_id,
       default_selected_interval: "30s"
     ]
   end

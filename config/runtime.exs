@@ -159,6 +159,11 @@ if use_grafana_cloud do
   # Configure PromEx for Grafana Cloud metrics
   # Grafana Cloud Prometheus/Mimir configuration
   prometheus_endpoint = System.get_env("GRAFANA_CLOUD_PROMETHEUS_ENDPOINT")
+  
+  # Set Grafana datasource ID for dashboard uploads
+  # Default format: grafanacloud-{stackname}-prom
+  grafana_stack_name = System.get_env("GRAFANA_CLOUD_STACK_NAME", "setlistify")
+  System.put_env("GRAFANA_DATASOURCE_ID", "grafanacloud-#{grafana_stack_name}-prom")
 
   if prometheus_endpoint do
     # Prometheus might need a different username format than Tempo
