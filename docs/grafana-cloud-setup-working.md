@@ -7,14 +7,15 @@ This configuration is based on the working example from [Silbernagel.dev](https:
 ```bash
 # Required
 export GRAFANA_CLOUD_API_KEY="your-api-key-here"
-export GRAFANA_CLOUD_USER_ID="1219955"  # Your user ID from Grafana Cloud
+export GRAFANA_CLOUD_USER_ID="1219955"  # Your Tempo user ID from Grafana Cloud
 export GRAFANA_CLOUD_REGION="us-east-2"  # Your region
 
 # Tempo (Traces) - Working
 export GRAFANA_CLOUD_TEMPO_ENDPOINT="https://tempo-prod-26-prod-us-east-2.grafana.net/tempo"
 
-# Loki (Logs) - New
+# Loki (Logs) - Working
 export GRAFANA_CLOUD_LOKI_ENDPOINT="https://logs-prod-012.grafana.net/loki/api/v1/push"
+export GRAFANA_CLOUD_LOKI_USER_ID="1225644"  # Different from Tempo! Check Loki Details page
 
 # Optional
 export GRAFANA_CLOUD_ZONE="prod-us-east-0"
@@ -133,7 +134,8 @@ end
 2. **Include `/tempo` in the endpoint URL** for Grafana Cloud
 3. **Use the full HTTPS URL** for gRPC protocol
 4. **Authorization header format**: `"Basic #{otel_auth}"` not `"Basic " <> otel_auth`
-5. **Loki uses the same authentication** as Tempo (user_id and API key)
+5. **Loki requires its own user ID** - Found in Grafana Cloud > Loki > Details
+6. **Loki endpoint must include full path**: `/loki/api/v1/push`
 
 ## Testing
 
