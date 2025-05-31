@@ -26,7 +26,7 @@ defmodule Setlistify.PromEx do
     # Dev: prometheus (default)
     # Grafana Cloud: grafanacloud-setlistify-prom
     datasource_id = System.get_env("GRAFANA_DATASOURCE_ID", "prometheus")
-    
+
     [
       datasource_id: datasource_id,
       default_selected_interval: "30s"

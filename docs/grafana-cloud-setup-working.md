@@ -7,7 +7,7 @@ This configuration is based on the working example from [Silbernagel.dev](https:
 ```bash
 # Required
 export GRAFANA_CLOUD_API_KEY="your-api-key-here"
-export GRAFANA_CLOUD_USER_ID="1219955"  # Your Tempo user ID from Grafana Cloud
+export GRAFANA_CLOUD_TEMPO_USER_ID="1219955"  # Your Tempo user ID from Grafana Cloud
 export GRAFANA_CLOUD_REGION="us-east-2"  # Your region
 
 # Optional
@@ -25,7 +25,7 @@ export GRAFANA_DATASOURCE_ID="grafanacloud-setlistify-prom"  # Prometheus dataso
    - Create a new access policy with metrics:write and traces:write scopes
    - Generate a new token
 
-2. **GRAFANA_CLOUD_USER_ID**: 
+2. **GRAFANA_CLOUD_TEMPO_USER_ID**: 
    - Go to Grafana Cloud Console → Tempo → Details
    - Look for "User" field (numeric ID like "1219955")
 
@@ -63,8 +63,8 @@ if use_grafana_cloud do
   
   # For Basic auth, we need user_id:api_key in base64  
   # Use specific user ID from Grafana Cloud Tempo configuration
-  grafana_user_id = System.get_env("GRAFANA_CLOUD_USER_ID", "1219955")
-  otel_auth = Base.encode64("#{grafana_user_id}:#{grafana_api_key}")
+  grafana_tempo_user_id = System.get_env("GRAFANA_CLOUD_TEMPO_USER_ID", "1219955")
+  otel_auth = Base.encode64("#{grafana_tempo_user_id}:#{grafana_api_key}")
 
   # Configure OpenTelemetry exporter following the working example
   config :opentelemetry_exporter,
