@@ -1,4 +1,6 @@
 defmodule Setlistify.SetlistFm.API do
+  require OpenTelemetry.Tracer
+
   @type search_result() :: %{
           artist: String.t(),
           venue: %{
@@ -35,12 +37,50 @@ defmodule Setlistify.SetlistFm.API do
         }
   @callback search(String.t()) :: [search_result()]
   def search(query) do
-    :setlist_fm_search_cache |> Cachex.fetch(query, &impl().search/1) |> elem(1)
+    OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.search" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"service.name", "setlist_fm"},
+        {"setlist_fm.operation", "search"},
+        {"setlist_fm.search.query", query}
+      ])
+
+      # Cachex uses a separate process, so we need to propagate OpenTelemetry context
+      parent_ctx = OpenTelemetry.Ctx.get_current()
+      parent_span = OpenTelemetry.Tracer.current_span_ctx(parent_ctx)
+
+      :setlist_fm_search_cache
+      |> Cachex.fetch(query, fn query ->
+        OpenTelemetry.Ctx.attach(parent_ctx)
+        OpenTelemetry.Tracer.set_current_span(parent_span)
+
+        impl().search(query)
+      end)
+      |> elem(1)
+    end
   end
 
   @callback get_setlist(String.t()) :: setlist()
   def get_setlist(id) do
-    :setlist_fm_setlist_cache |> Cachex.fetch(id, &impl().get_setlist/1) |> elem(1)
+    OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.get_setlist" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"service.name", "setlist_fm"},
+        {"setlist_fm.operation", "get_setlist"},
+        {"setlist_fm.setlist.id", id}
+      ])
+
+      # Cachex uses a separate process, so we need to propagate OpenTelemetry context
+      parent_ctx = OpenTelemetry.Ctx.get_current()
+      parent_span = OpenTelemetry.Tracer.current_span_ctx(parent_ctx)
+
+      :setlist_fm_setlist_cache
+      |> Cachex.fetch(id, fn id ->
+        OpenTelemetry.Ctx.attach(parent_ctx)
+        OpenTelemetry.Tracer.set_current_span(parent_span)
+
+        impl().get_setlist(id)
+      end)
+      |> elem(1)
+    end
   end
 
   defp impl do

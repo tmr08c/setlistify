@@ -1,70 +1,133 @@
 defmodule Setlistify.SetlistFm.API.ExternalClient do
   @behaviour Setlistify.SetlistFm.API
 
+  require Logger
+  require OpenTelemetry.Tracer
+
   @root_endpoint "https://api.setlist.fm/rest/1.0"
 
   def search(query, endpoint \\ @root_endpoint) do
-    %{"setlist" => setlists} =
-      Req.get!(request(endpoint), url: "/search/setlists", params: %{"artistName" => query}).body
+    OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.ExternalClient.search" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"service.name", "setlist_fm"},
+        {"setlist_fm.operation", "search"},
+        {"setlist_fm.search.query", query},
+        {"http.url", "#{endpoint}/search/setlists"}
+      ])
 
-    Enum.map(setlists, fn setlist ->
-      %{
-        "artist" => %{"name" => artist_name},
-        "eventDate" => date,
-        "id" => id,
-        "venue" => %{
-          "name" => venue_name,
-          "city" => city_data
-        },
-        "sets" => %{"set" => sets}
-      } = setlist
+      response =
+        Req.get!(request(endpoint), url: "/search/setlists", params: %{"artistName" => query})
 
-      song_count =
-        sets
-        |> Enum.flat_map(&Map.get(&1, "song", []))
-        |> length()
+      OpenTelemetry.Tracer.set_attributes([
+        {"http.status_code", response.status}
+      ])
 
-      location = build_location(city_data)
+      %{"setlist" => setlists} = response.body
 
-      %{
-        artist: artist_name,
-        date: format_date(date),
-        id: id,
-        venue: %{name: venue_name, location: location},
-        song_count: song_count
-      }
-    end)
+      results =
+        Enum.map(setlists, fn setlist ->
+          %{
+            "artist" => %{"name" => artist_name},
+            "eventDate" => date,
+            "id" => id,
+            "venue" => %{
+              "name" => venue_name,
+              "city" => city_data
+            },
+            "sets" => %{"set" => sets}
+          } = setlist
+
+          song_count =
+            sets
+            |> Enum.flat_map(&Map.get(&1, "song", []))
+            |> length()
+
+          location = build_location(city_data)
+
+          %{
+            artist: artist_name,
+            date: format_date(date),
+            id: id,
+            venue: %{name: venue_name, location: location},
+            song_count: song_count
+          }
+        end)
+
+      OpenTelemetry.Tracer.set_attributes([
+        {"setlist_fm.results.count", length(results)}
+      ])
+
+      OpenTelemetry.Tracer.set_status(:ok, "")
+      results
+    end
+  rescue
+    error ->
+      Logger.error("Exception during Setlist.fm search: #{inspect(error)}")
+      OpenTelemetry.Tracer.record_exception(error)
+      OpenTelemetry.Tracer.set_status(:error, "Exception: #{Exception.message(error)}")
+      []
   end
 
   def get_setlist(id, endpoint \\ @root_endpoint) do
-    resp = Req.get!(request(endpoint), url: "/setlist/#{id}").body
+    OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.ExternalClient.get_setlist" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"service.name", "setlist_fm"},
+        {"setlist_fm.operation", "get_setlist"},
+        {"setlist_fm.setlist.id", id},
+        {"http.url", "#{endpoint}/setlist/#{id}"}
+      ])
 
-    %{
-      "artist" => %{"name" => artist_name},
-      "venue" => %{"name" => venue_name, "city" => city_data},
-      "eventDate" => date,
-      # The [docs](https://api.setlist.fm/docs/1.0/json_Setlist.html) do not
-      # indicate there is a "sets" key, but only a "set" key which is an array
-      # of set resources. For now, I am going to assume this is essentially an
-      # extraneous key and we can dig into the sub-"set" array and not miss out
-      # on anything.
-      "sets" => %{"set" => sets}
-    } = resp
+      response = Req.get!(request(endpoint), url: "/setlist/#{id}")
 
-    sets =
-      Enum.map(sets, fn set ->
-        songs = set |> Map.get("song", []) |> Enum.map(&%{title: Map.get(&1, "name")})
-        %{name: set["name"], encore: set["encore"], songs: songs}
-      end)
+      OpenTelemetry.Tracer.set_attributes([
+        {"http.status_code", response.status}
+      ])
 
-    location = build_location(city_data)
+      resp = response.body
 
-    %{
-      artist: artist_name,
-      venue: %{name: venue_name, location: location},
-      date: format_date(date),
-      sets: sets
-    }
+      %{
+        "artist" => %{"name" => artist_name},
+        "venue" => %{"name" => venue_name, "city" => city_data},
+        "eventDate" => date,
+        # The [docs](https://api.setlist.fm/docs/1.0/json_Setlist.html) do not
+        # indicate there is a "sets" key, but only a "set" key which is an array
+        # of set resources. For now, I am going to assume this is essentially an
+        # extraneous key and we can dig into the sub-"set" array and not miss out
+        # on anything.
+        "sets" => %{"set" => sets}
+      } = resp
+
+      sets =
+        Enum.map(sets, fn set ->
+          songs = set |> Map.get("song", []) |> Enum.map(&%{title: Map.get(&1, "name")})
+          %{name: set["name"], encore: set["encore"], songs: songs}
+        end)
+
+      location = build_location(city_data)
+
+      result = %{
+        artist: artist_name,
+        venue: %{name: venue_name, location: location},
+        date: format_date(date),
+        sets: sets
+      }
+
+      OpenTelemetry.Tracer.set_attributes([
+        {"setlist_fm.artist", artist_name},
+        {"setlist_fm.venue", venue_name},
+        {"setlist_fm.sets.count", length(sets)},
+        {"setlist_fm.songs.count", sets |> Enum.flat_map(& &1.songs) |> length()}
+      ])
+
+      OpenTelemetry.Tracer.set_status(:ok, "")
+      result
+    end
+  rescue
+    error ->
+      Logger.error("Exception during Setlist.fm get_setlist: #{inspect(error)}")
+      OpenTelemetry.Tracer.record_exception(error)
+      OpenTelemetry.Tracer.set_status(:error, "Exception: #{Exception.message(error)}")
+      raise error
   end
 
   defp request(endpoint) do
@@ -77,7 +140,9 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
 
     config_opts = Application.get_env(:setlistify, :setlist_fm_req_options, [])
 
-    Req.new(Keyword.merge(default_opts, config_opts))
+    Req.new()
+    |> OpentelemetryReq.attach(propagate_trace_headers: true)
+    |> Req.merge(Keyword.merge(default_opts, config_opts))
   end
 
   @date_regex ~r/(?<day>\d{2})-(?<month>\d{2})-(?<year>\d{4})/
