@@ -7,12 +7,43 @@ This configuration is based on the working example from [Silbernagel.dev](https:
 ```bash
 # Required
 export GRAFANA_CLOUD_API_KEY="your-api-key-here"
-export GRAFANA_CLOUD_USER_ID="1219955"  # Your Tempo user ID from Grafana Cloud
+export GRAFANA_CLOUD_TEMPO_USER_ID="1219955"  # Your Tempo user ID from Grafana Cloud
 export GRAFANA_CLOUD_REGION="us-east-2"  # Your region
 
 # Optional
 export GRAFANA_CLOUD_ZONE="prod-us-east-0"
+
+# PromEx Dashboard Configuration
+export GRAFANA_CLOUD_STACK_NAME="setlistify"  # Your Grafana Cloud stack name
+export GRAFANA_DATASOURCE_ID="grafanacloud-setlistify-prom"  # Prometheus datasource name for dashboards
 ```
+
+### Where to Find These Values
+
+1. **GRAFANA_CLOUD_API_KEY**: 
+   - Go to Grafana Cloud Console → Administration → Access Policies
+   - Create a new access policy with metrics:write and traces:write scopes
+   - Generate a new token
+
+2. **GRAFANA_CLOUD_TEMPO_USER_ID**: 
+   - Go to Grafana Cloud Console → Tempo → Details
+   - Look for "User" field (numeric ID like "1219955")
+
+3. **GRAFANA_CLOUD_REGION**: 
+   - Visible in your Grafana Cloud Console URL or instance details
+   - Examples: "us-east-2", "us-central1", "eu-west-0"
+
+4. **GRAFANA_CLOUD_ZONE**: 
+   - Go to Grafana Cloud Console → instance details
+   - Examples: "prod-us-east-0", "prod-eu-west-0"
+
+5. **GRAFANA_CLOUD_STACK_NAME**: 
+   - This is your Grafana Cloud stack name (usually your organization/project name)
+   - Visible in your Grafana URL: `https://{stack-name}.grafana.net`
+
+6. **GRAFANA_DATASOURCE_ID**: 
+   - Automatically follows the pattern: `grafanacloud-{stack-name}-prom`
+   - Used by PromEx for dashboard uploads to reference the correct Prometheus datasource
 
 ## Configuration (config/runtime.exs)
 
@@ -32,8 +63,8 @@ if use_grafana_cloud do
   
   # For Basic auth, we need user_id:api_key in base64  
   # Use specific user ID from Grafana Cloud Tempo configuration
-  grafana_user_id = System.get_env("GRAFANA_CLOUD_USER_ID", "1219955")
-  otel_auth = Base.encode64("#{grafana_user_id}:#{grafana_api_key}")
+  grafana_tempo_user_id = System.get_env("GRAFANA_CLOUD_TEMPO_USER_ID", "1219955")
+  otel_auth = Base.encode64("#{grafana_tempo_user_id}:#{grafana_api_key}")
 
   # Configure OpenTelemetry exporter following the working example
   config :opentelemetry_exporter,
