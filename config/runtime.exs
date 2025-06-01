@@ -224,8 +224,7 @@ if use_grafana_cloud do
 
   if loki_endpoint do
     # Loki may use different credentials than Tempo
-    loki_user_id = System.get_env("GRAFANA_CLOUD_LOKI_USER_ID") || grafana_user_id
-    loki_api_key = System.get_env("GRAFANA_CLOUD_LOKI_API_KEY") || grafana_api_key
+    loki_user_id = System.get_env("GRAFANA_CLOUD_LOKI_USER_ID")
 
     config :logger,
       backends: [:console, Setlistify.LokiLogger]
@@ -233,7 +232,7 @@ if use_grafana_cloud do
     config :logger, Setlistify.LokiLogger,
       url: loki_endpoint,
       username: loki_user_id,
-      password: loki_api_key,
+      password: grafana_api_key,
       level: :info,
       metadata: [:request_id, :trace_id, :span_id, :user_id],
       max_buffer: 100,
@@ -245,7 +244,8 @@ if use_grafana_cloud do
         "fly_region" => System.get_env("FLY_REGION", "unknown")
       }
   end
-# Local OTEL-LGTM configuration (default)
+
+  # Local OTEL-LGTM configuration (default)
 else
   # OpenTelemetry / Tempo
   config :opentelemetry_exporter,
@@ -281,4 +281,15 @@ else
       port: String.to_integer(System.get_env("PROM_EX_PORT", "9568")),
       path: "/metrics"
     ]
+
+  # Local Loki configuration
+  config :logger, Setlistify.LokiLogger,
+    url: "http://localhost:3100/loki/api/v1/push",
+    level: :info,
+    metadata: [:request_id, :trace_id, :span_id, :user_id],
+    max_buffer: 50,
+    labels: %{
+      "application" => "setlistify",
+      "environment" => "development"
+    }
 end
