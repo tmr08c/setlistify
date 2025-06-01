@@ -141,7 +141,7 @@ if use_grafana_cloud do
   grafana_region = System.get_env("GRAFANA_CLOUD_REGION", "us-central1")
   grafana_zone = System.get_env("GRAFANA_CLOUD_ZONE")
 
-  # OpenTelemetry / Temp
+  # OpenTelemetry / Tempo
   tempo_endpoint = System.get_env("GRAFANA_CLOUD_TEMPO_ENDPOINT")
   grafana_tempo_user_id = System.get_env("GRAFANA_CLOUD_TEMPO_USER_ID")
   otel_auth = Base.encode64("#{grafana_tempo_user_id}:#{grafana_api_key}")
