@@ -88,6 +88,7 @@ defmodule Setlistify.Spotify.SessionManager do
 
   use GenServer
   require Logger
+  require OpenTelemetry.Tracer
   alias Setlistify.Spotify.API
   alias Setlistify.Spotify.UserSession
 
@@ -98,17 +99,60 @@ defmodule Setlistify.Spotify.SessionManager do
   # Client API
 
   def start_link({user_id, initial_tokens_or_session}) do
-    name = via_tuple(user_id)
-    GenServer.start_link(__MODULE__, {user_id, initial_tokens_or_session}, name: name)
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.start_link" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", user_id},
+        {"enduser.id", user_id},
+        {"session.operation", "start"}
+      ])
+
+      name = via_tuple(user_id)
+
+      case GenServer.start_link(__MODULE__, {user_id, initial_tokens_or_session}, name: name) do
+        {:ok, pid} = result ->
+          Logger.info("Session manager started", %{user_id: user_id, pid: inspect(pid)})
+          OpenTelemetry.Tracer.set_status(:ok, "")
+          result
+
+        {:error, reason} = error ->
+          Logger.error("Failed to start session manager", %{user_id: user_id, error: reason})
+
+          OpenTelemetry.Tracer.set_status(
+            :error,
+            "Failed to start session manager: #{inspect(reason)}"
+          )
+
+          error
+      end
+    end
   end
 
   def get_token(user_id) do
-    case lookup(user_id) do
-      {:ok, pid} ->
-        GenServer.call(pid, :get_token)
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.get_token" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", user_id},
+        {"enduser.id", user_id},
+        {"session.operation", "get_token"}
+      ])
 
-      :error ->
-        {:error, :not_found}
+      case lookup(user_id) do
+        {:ok, pid} ->
+          result = GenServer.call(pid, :get_token)
+
+          case result do
+            {:ok, _token} ->
+              OpenTelemetry.Tracer.set_status(:ok, "")
+              result
+
+            {:error, reason} ->
+              OpenTelemetry.Tracer.set_status(:error, "Failed to get token: #{inspect(reason)}")
+              result
+          end
+
+        :error ->
+          OpenTelemetry.Tracer.set_status(:error, "Session not found")
+          {:error, :not_found}
+      end
     end
   end
 
@@ -117,26 +161,90 @@ defmodule Setlistify.Spotify.SessionManager do
   """
   @spec refresh_session(binary()) :: {:ok, UserSession.t()} | {:error, atom()}
   def refresh_session(user_id) do
-    case lookup(user_id) do
-      {:ok, pid} -> GenServer.call(pid, :refresh_session)
-      :error -> {:error, :not_found}
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.refresh_session" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", user_id},
+        {"enduser.id", user_id},
+        {"session.operation", "refresh"}
+      ])
+
+      case lookup(user_id) do
+        {:ok, pid} ->
+          result = GenServer.call(pid, :refresh_session)
+
+          case result do
+            {:ok, _session} ->
+              Logger.info("Session refreshed", %{user_id: user_id})
+              OpenTelemetry.Tracer.set_status(:ok, "")
+              OpenTelemetry.Tracer.set_attribute("session.refreshed", true)
+              result
+
+            {:error, reason} ->
+              Logger.error("Session refresh failed", %{user_id: user_id, error: reason})
+
+              OpenTelemetry.Tracer.set_status(
+                :error,
+                "Session refresh failed: #{inspect(reason)}"
+              )
+
+              result
+          end
+
+        :error ->
+          OpenTelemetry.Tracer.set_status(:error, "Session not found")
+          {:error, :not_found}
+      end
     end
   end
 
   def get_session(user_id) do
-    case lookup(user_id) do
-      {:ok, pid} -> GenServer.call(pid, :get_session)
-      :error -> {:error, :not_found}
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.get_session" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", user_id},
+        {"enduser.id", user_id},
+        {"session.operation", "get"}
+      ])
+
+      case lookup(user_id) do
+        {:ok, pid} ->
+          result = GenServer.call(pid, :get_session)
+
+          case result do
+            {:ok, _session} ->
+              OpenTelemetry.Tracer.set_status(:ok, "")
+              result
+
+            {:error, reason} ->
+              OpenTelemetry.Tracer.set_status(:error, "Failed to get session: #{inspect(reason)}")
+              result
+          end
+
+        :error ->
+          OpenTelemetry.Tracer.set_status(:error, "Session not found")
+          {:error, :not_found}
+      end
     end
   end
 
   def stop(user_id) do
-    case lookup(user_id) do
-      {:ok, pid} ->
-        GenServer.stop(pid, :normal)
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.stop" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", user_id},
+        {"enduser.id", user_id},
+        {"session.operation", "stop"}
+      ])
 
-      :error ->
-        {:error, :not_found}
+      case lookup(user_id) do
+        {:ok, pid} ->
+          result = GenServer.stop(pid, :normal)
+          Logger.info("Session manager stopped", %{user_id: user_id})
+          OpenTelemetry.Tracer.set_status(:ok, "")
+          result
+
+        :error ->
+          OpenTelemetry.Tracer.set_status(:error, "Session not found")
+          {:error, :not_found}
+      end
     end
   end
 
@@ -144,9 +252,18 @@ defmodule Setlistify.Spotify.SessionManager do
 
   @impl true
   def init({user_id, %UserSession{} = session}) do
-    # Use the passed user_id to ensure consistency with Registry key
-    state = Map.put(session, :user_id, user_id)
-    {:ok, state, {:continue, :schedule_refresh}}
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.init" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", user_id},
+        {"enduser.id", user_id},
+        {"genserver.operation", "init"}
+      ])
+
+      # Use the passed user_id to ensure consistency with Registry key
+      state = Map.put(session, :user_id, user_id)
+      OpenTelemetry.Tracer.set_status(:ok, "")
+      {:ok, state, {:continue, :schedule_refresh}}
+    end
   end
 
   @impl true
@@ -158,51 +275,95 @@ defmodule Setlistify.Spotify.SessionManager do
 
   @impl true
   def handle_call(:get_token, _from, %{access_token: token} = state) do
-    {:reply, {:ok, token}, state}
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.handle_call.get_token" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", state.user_id},
+        {"enduser.id", state.user_id},
+        {"genserver.operation", "handle_call"},
+        {"genserver.message", "get_token"}
+      ])
+
+      OpenTelemetry.Tracer.set_status(:ok, "")
+      {:reply, {:ok, token}, state}
+    end
   end
 
   @impl true
   def handle_call(:get_session, _from, state) do
-    # Convert state back to UserSession struct
-    session = %UserSession{
-      access_token: state.access_token,
-      refresh_token: state.refresh_token,
-      expires_at: state.expires_at,
-      user_id: state.user_id,
-      username: Map.get(state, :username, state.user_id)
-    }
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.handle_call.get_session" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", state.user_id},
+        {"enduser.id", state.user_id},
+        {"genserver.operation", "handle_call"},
+        {"genserver.message", "get_session"}
+      ])
 
-    {:reply, {:ok, session}, state}
+      # Convert state back to UserSession struct
+      session = %UserSession{
+        access_token: state.access_token,
+        refresh_token: state.refresh_token,
+        expires_at: state.expires_at,
+        user_id: state.user_id,
+        username: Map.get(state, :username, state.user_id)
+      }
+
+      OpenTelemetry.Tracer.set_status(:ok, "")
+      {:reply, {:ok, session}, state}
+    end
   end
 
   @impl true
   def handle_call(:refresh_session, _from, state) do
-    case do_refresh_token(state) do
-      {:ok, new_state, _new_tokens} ->
-        # Return the full UserSession
-        session = %UserSession{
-          access_token: new_state.access_token,
-          refresh_token: new_state.refresh_token,
-          expires_at: new_state.expires_at,
-          user_id: new_state.user_id,
-          username: Map.get(new_state, :username, new_state.user_id)
-        }
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.handle_call.refresh_session" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", state.user_id},
+        {"enduser.id", state.user_id},
+        {"genserver.operation", "handle_call"},
+        {"genserver.message", "refresh_session"}
+      ])
 
-        {:reply, {:ok, session}, new_state}
+      case do_refresh_token(state) do
+        {:ok, new_state, _new_tokens} ->
+          # Return the full UserSession
+          session = %UserSession{
+            access_token: new_state.access_token,
+            refresh_token: new_state.refresh_token,
+            expires_at: new_state.expires_at,
+            user_id: new_state.user_id,
+            username: Map.get(new_state, :username, new_state.user_id)
+          }
 
-      {:error, _reason} = error ->
-        {:stop, :normal, error, state}
+          OpenTelemetry.Tracer.set_status(:ok, "")
+          {:reply, {:ok, session}, new_state}
+
+        {:error, reason} = error ->
+          OpenTelemetry.Tracer.set_status(:error, "Token refresh failed: #{inspect(reason)}")
+          {:stop, :normal, error, state}
+      end
     end
   end
 
   @impl true
   def handle_info(:refresh_token, state) do
-    case do_refresh_token(state) do
-      {:ok, new_state, _new_tokens} ->
-        {:noreply, new_state}
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.handle_info.refresh_token" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", state.user_id},
+        {"enduser.id", state.user_id},
+        {"genserver.operation", "handle_info"},
+        {"genserver.message", "refresh_token"},
+        {"session.scheduled_refresh", true}
+      ])
 
-      {:error, _reason} ->
-        {:stop, :normal, state}
+      case do_refresh_token(state) do
+        {:ok, new_state, _new_tokens} ->
+          OpenTelemetry.Tracer.set_status(:ok, "")
+          {:noreply, new_state}
+
+        {:error, reason} ->
+          Logger.error("Scheduled token refresh failed", %{user_id: state.user_id, error: reason})
+          OpenTelemetry.Tracer.set_status(:error, "Scheduled refresh failed: #{inspect(reason)}")
+          {:stop, :normal, state}
+      end
     end
   end
 
@@ -232,22 +393,49 @@ defmodule Setlistify.Spotify.SessionManager do
   defp timestamp, do: System.system_time(:second)
 
   defp do_refresh_token(%{refresh_token: refresh_token} = state) do
-    case API.refresh_token(refresh_token) do
-      {:ok, new_tokens} ->
-        schedule_refresh(new_tokens.expires_in - @refresh_threshold)
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.do_refresh_token" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", state.user_id},
+        {"enduser.id", state.user_id},
+        {"session.operation", "token_refresh"}
+      ])
 
-        new_state =
-          state
-          |> Map.merge(new_tokens)
-          |> Map.put(:expires_at, timestamp() + new_tokens.expires_in)
+      case API.refresh_token(refresh_token) do
+        {:ok, new_tokens} ->
+          schedule_refresh(new_tokens.expires_in - @refresh_threshold)
 
-        # Broadcast token refresh event to interested LiveViews
-        broadcast_token_refreshed(new_state)
+          new_state =
+            state
+            |> Map.merge(new_tokens)
+            |> Map.put(:expires_at, timestamp() + new_tokens.expires_in)
 
-        {:ok, new_state, new_tokens}
+          # Broadcast token refresh event to interested LiveViews
+          broadcast_token_refreshed(new_state)
 
-      {:error, _reason} = error ->
-        error
+          OpenTelemetry.Tracer.set_attributes([
+            {"session.token.expires_in", new_tokens.expires_in},
+            {"session.token.refreshed", true}
+          ])
+
+          OpenTelemetry.Tracer.add_event("token_refreshed", %{
+            "user.id" => state.user_id,
+            "expires_in" => new_tokens.expires_in
+          })
+
+          OpenTelemetry.Tracer.set_status(:ok, "")
+
+          {:ok, new_state, new_tokens}
+
+        {:error, reason} = error ->
+          OpenTelemetry.Tracer.set_status(:error, "Token refresh failed: #{inspect(reason)}")
+
+          OpenTelemetry.Tracer.add_event("token_refresh_failed", %{
+            "user.id" => state.user_id,
+            "error" => inspect(reason)
+          })
+
+          error
+      end
     end
   end
 

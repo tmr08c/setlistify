@@ -79,25 +79,6 @@ if config_env() == :prod do
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
-
-  # Grafana Cloud Loki configuration for production
-  if loki_url = System.get_env("LOKI_URL") do
-    config :logger,
-      backends: [:console, Setlistify.LokiLogger]
-
-    config :logger, Setlistify.LokiLogger,
-      url: loki_url,
-      username: System.get_env("LOKI_USERNAME"),
-      password: System.get_env("LOKI_PASSWORD"),
-      level: :info,
-      metadata: [:request_id, :trace_id, :span_id, :user_id],
-      max_buffer: 100,
-      labels: %{
-        "application" => "setlistify",
-        "environment" => "production",
-        "instance" => System.get_env("FLY_ALLOC_ID", "unknown")
-      }
-  end
 end
 
 # Non-prod specific configuration
@@ -123,3 +104,189 @@ config :setlistify, setlist_fm_api_key: System.fetch_env!("SETLIST_FM_API_SECRET
 ## Spotify API
 config :setlistify, spotify_client_id: System.fetch_env!("SPOTIFY_CLIENT_ID")
 config :setlistify, spotify_client_secret: System.fetch_env!("SPOTIFY_CLIENT_SECRET")
+
+## PromEx metrics server port configuration
+if prom_ex_port = System.get_env("PROM_EX_PORT") do
+  config :setlistify, Setlistify.PromEx,
+    port: String.to_integer(prom_ex_port),
+    path: "/metrics"
+end
+
+## OpenTelemetry Configuration
+# Determine if we should use Grafana Cloud based on environment variables
+use_grafana_cloud = System.get_env("GRAFANA_CLOUD_API_KEY") != nil
+
+# Grafana Cloud configuration
+if use_grafana_cloud do
+  grafana_api_key = System.get_env("GRAFANA_CLOUD_API_KEY")
+  grafana_region = System.get_env("GRAFANA_CLOUD_REGION", "us-central1")
+  grafana_zone = System.get_env("GRAFANA_CLOUD_ZONE")
+
+  # OpenTelemetry / Tempo
+  tempo_endpoint = System.get_env("GRAFANA_CLOUD_TEMPO_ENDPOINT")
+  grafana_tempo_user_id = System.get_env("GRAFANA_CLOUD_TEMPO_USER_ID")
+  otel_auth = Base.encode64("#{grafana_tempo_user_id}:#{grafana_api_key}")
+
+  config :opentelemetry_exporter,
+    otlp_protocol: :grpc,
+    otlp_traces_endpoint: tempo_endpoint,
+    otlp_headers: [{"Authorization", "Basic #{otel_auth}"}]
+
+  # Add zone to resource attributes if provided
+  # TODO: Should this actually be from Fly
+  zone_attrs = if grafana_zone, do: [{"cloud.zone", grafana_zone}], else: []
+
+  config :opentelemetry, :resource,
+    service: [
+      name: "setlistify",
+      namespace: "setlistify",
+      version: "1.0.0"
+    ],
+    deployment: [
+      environment: config_env() |> to_string()
+    ],
+    host: [
+      name: System.get_env("FLY_ALLOC_ID", "local")
+    ],
+    telemetry: [
+      sdk: [
+        name: "opentelemetry",
+        language: "elixir"
+      ]
+    ],
+    cloud:
+      [
+        provider: "grafana",
+        region: grafana_region
+      ] ++ zone_attrs
+
+  # Metrics / Prometheus
+
+  prometheus_endpoint = System.get_env("GRAFANA_CLOUD_PROMETHEUS_ENDPOINT")
+
+  if prometheus_endpoint do
+    prometheus_username = System.get_env("GRAFANA_CLOUD_PROMETHEUS_USERNAME")
+
+    # Build the base PromEx configuration
+    prom_ex_config = [
+      manual_metrics_start_delay: :no_delay,
+      drop_metrics_groups: [],
+      metrics_server: [
+        port: String.to_integer(System.get_env("PROM_EX_PORT", "9568")),
+        path: "/metrics"
+      ],
+      grafana_agent: [
+        working_directory: "/tmp/prom_ex",
+        config_opts: [
+          # Local metrics server config
+          metrics_server_path: "/metrics",
+          metrics_server_port: String.to_integer(System.get_env("PROM_EX_PORT", "9568")),
+          metrics_server_scheme: "http",
+          metrics_server_host: "localhost",
+
+          # Grafana Cloud remote write config
+          prometheus_url: prometheus_endpoint,
+          prometheus_username: prometheus_username,
+          prometheus_password: grafana_api_key,
+
+          # Instance identification
+          instance: System.get_env("FLY_APP_NAME") || "setlistify",
+          job: "setlistify",
+          scrape_interval: "15s"
+        ]
+      ]
+    ]
+
+    # Add Grafana dashboard configuration with dedicated dashboard API key
+    # Prefer dedicated dashboard key (service account) over the OTLP key
+    grafana_dashboard_key = System.get_env("GRAFANA_DASHBOARD_API_KEY")
+    grafana_host = System.get_env("GRAFANA_HOST")
+
+    prom_ex_config =
+      if grafana_dashboard_key && grafana_host do
+        Keyword.put(prom_ex_config, :grafana,
+          host: grafana_host,
+          # Use dashboard key with Editor permissions
+          auth_token: grafana_dashboard_key,
+          upload_dashboards_on_start: true,
+          folder_name: "Setlistify Dashboards",
+          annotate_app_lifecycle: true
+        )
+      else
+        prom_ex_config
+      end
+
+    config :setlistify, Setlistify.PromEx, prom_ex_config
+  end
+
+  # Logs / Loki
+  loki_endpoint = System.get_env("GRAFANA_CLOUD_LOKI_ENDPOINT")
+  loki_user_id = System.get_env("GRAFANA_CLOUD_LOKI_USER_ID")
+
+  if loki_endpoint && loki_user_id do
+    config :logger, backends: [:console, Setlistify.LokiLogger]
+
+    config :logger, Setlistify.LokiLogger,
+      url: loki_endpoint,
+      username: loki_user_id,
+      password: grafana_api_key,
+      level: :info,
+      metadata: [:request_id, :trace_id, :span_id, :user_id],
+      max_buffer: 100,
+      labels: %{
+        "application" => "setlistify",
+        "environment" => config_env(),
+        "instance" => System.get_env("FLY_ALLOC_ID", "unknown"),
+        "fly_app" => System.get_env("FLY_APP_NAME", "setlistify"),
+        "fly_region" => System.get_env("FLY_REGION", "unknown")
+      }
+  end
+
+  # Local OTEL-LGTM configuration (default)
+else
+  # OpenTelemetry / Tempo
+  config :opentelemetry_exporter,
+    otlp_protocol: :http_protobuf,
+    otlp_traces_endpoint: "http://localhost:4318/v1/traces",
+    otlp_headers: []
+
+  config :opentelemetry, :resource,
+    service: [
+      name: "setlistify",
+      namespace: "setlistify",
+      version: "1.0.0"
+    ],
+    deployment: [
+      environment: config_env() |> to_string()
+    ],
+    host: [
+      name: System.get_env("HOSTNAME", "localhost")
+    ]
+
+  # Local PromEx configuration
+  config :setlistify, Setlistify.PromEx,
+    manual_metrics_start_delay: :no_delay,
+    drop_metrics_groups: [],
+    grafana: [
+      host: "http://localhost:3000",
+      auth_token: "admin:admin",
+      upload_dashboards_on_start: true,
+      folder_name: "Setlistify Dashboards",
+      annotate_app_lifecycle: true
+    ],
+    metrics_server: [
+      port: String.to_integer(System.get_env("PROM_EX_PORT", "9568")),
+      path: "/metrics"
+    ]
+
+  # Local Loki configuration
+  config :logger, Setlistify.LokiLogger,
+    url: "http://localhost:3100/loki/api/v1/push",
+    level: :info,
+    metadata: [:request_id, :trace_id, :span_id, :user_id],
+    max_buffer: 50,
+    labels: %{
+      "application" => "setlistify",
+      "environment" => "development"
+    }
+end
