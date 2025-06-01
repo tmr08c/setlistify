@@ -238,7 +238,7 @@ if use_grafana_cloud do
       max_buffer: 100,
       labels: %{
         "application" => "setlistify",
-        "environment" => config_env() |> to_string(),
+        "environment" => config_env(),
         "instance" => System.get_env("FLY_ALLOC_ID", "unknown"),
         "fly_app" => System.get_env("FLY_APP_NAME", "setlistify"),
         "fly_region" => System.get_env("FLY_REGION", "unknown")
