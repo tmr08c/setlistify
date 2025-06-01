@@ -221,13 +221,10 @@ if use_grafana_cloud do
 
   # Logs / Loki
   loki_endpoint = System.get_env("GRAFANA_CLOUD_LOKI_ENDPOINT")
+  loki_user_id = System.get_env("GRAFANA_CLOUD_LOKI_USER_ID")
 
-  if loki_endpoint do
-    # Loki may use different credentials than Tempo
-    loki_user_id = System.get_env("GRAFANA_CLOUD_LOKI_USER_ID")
-
-    config :logger,
-      backends: [:console, Setlistify.LokiLogger]
+  if loki_endpoint && loki_user_id do
+    config :logger, backends: [:console, Setlistify.LokiLogger]
 
     config :logger, Setlistify.LokiLogger,
       url: loki_endpoint,
