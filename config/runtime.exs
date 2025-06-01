@@ -79,25 +79,6 @@ if config_env() == :prod do
   #       force_ssl: [hsts: true]
   #
   # Check `Plug.SSL` for all available options in `force_ssl`.
-
-  # Grafana Cloud Loki configuration for production
-  if loki_url = System.get_env("LOKI_URL") do
-    config :logger,
-      backends: [:console, Setlistify.LokiLogger]
-
-    config :logger, Setlistify.LokiLogger,
-      url: loki_url,
-      username: System.get_env("LOKI_USERNAME"),
-      password: System.get_env("LOKI_PASSWORD"),
-      level: :info,
-      metadata: [:request_id, :trace_id, :span_id, :user_id],
-      max_buffer: 100,
-      labels: %{
-        "application" => "setlistify",
-        "environment" => "production",
-        "instance" => System.get_env("FLY_ALLOC_ID", "unknown")
-      }
-  end
 end
 
 # Non-prod specific configuration
@@ -238,6 +219,29 @@ if use_grafana_cloud do
     config :setlistify, Setlistify.PromEx, prom_ex_config
   end
 
+  # Logs / Loki
+  loki_endpoint = System.get_env("GRAFANA_CLOUD_LOKI_ENDPOINT")
+  loki_user_id = System.get_env("GRAFANA_CLOUD_LOKI_USER_ID")
+
+  if loki_endpoint && loki_user_id do
+    config :logger, backends: [:console, Setlistify.LokiLogger]
+
+    config :logger, Setlistify.LokiLogger,
+      url: loki_endpoint,
+      username: loki_user_id,
+      password: grafana_api_key,
+      level: :info,
+      metadata: [:request_id, :trace_id, :span_id, :user_id],
+      max_buffer: 100,
+      labels: %{
+        "application" => "setlistify",
+        "environment" => config_env(),
+        "instance" => System.get_env("FLY_ALLOC_ID", "unknown"),
+        "fly_app" => System.get_env("FLY_APP_NAME", "setlistify"),
+        "fly_region" => System.get_env("FLY_REGION", "unknown")
+      }
+  end
+
   # Local OTEL-LGTM configuration (default)
 else
   # OpenTelemetry / Tempo
@@ -274,4 +278,15 @@ else
       port: String.to_integer(System.get_env("PROM_EX_PORT", "9568")),
       path: "/metrics"
     ]
+
+  # Local Loki configuration
+  config :logger, Setlistify.LokiLogger,
+    url: "http://localhost:3100/loki/api/v1/push",
+    level: :info,
+    metadata: [:request_id, :trace_id, :span_id, :user_id],
+    max_buffer: 50,
+    labels: %{
+      "application" => "setlistify",
+      "environment" => "development"
+    }
 end

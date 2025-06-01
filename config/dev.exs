@@ -73,14 +73,3 @@ config :phoenix, :stacktrace_depth, 20
 config :phoenix, :plug_init_mode, :runtime
 
 config :phoenix_live_view, debug_heex_annotations: true
-
-# Loki logger backend configuration
-config :logger, Setlistify.LokiLogger,
-  url: "http://localhost:3100/loki/api/v1/push",
-  level: :info,
-  metadata: [:request_id, :trace_id, :span_id, :user_id],
-  max_buffer: 50,
-  labels: %{
-    "application" => "setlistify",
-    "environment" => "development"
-  }
