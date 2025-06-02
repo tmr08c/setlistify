@@ -2,6 +2,8 @@ defmodule SetlistifyWeb.SearchLive do
   use SetlistifyWeb, :live_view
   use Gettext, backend: SetlistifyWeb.Gettext
 
+  alias SetlistifyWeb.Components.SearchFormComponent
+
   require Logger
   require OpenTelemetry.Tracer
 
@@ -38,26 +40,6 @@ defmodule SetlistifyWeb.SearchLive do
     end
   end
 
-  def handle_event("search", %{"search" => params}, socket) do
-    OpenTelemetry.Tracer.with_span "SetlistifyWeb.SearchLive.handle_event" do
-      OpenTelemetry.Tracer.set_attributes([
-        {"event", "search"},
-        {"params", inspect(params)}
-      ])
-
-      search_changeset = search_changeset(params) |> Map.put(:action, :validate)
-      search_form = to_form(search_changeset, as: :search)
-
-      OpenTelemetry.Tracer.set_attribute("search.valid", search_changeset.valid?)
-
-      if search_changeset.valid? do
-        {:noreply, push_patch(socket, to: ~p"/?#{params}")}
-      else
-        {:noreply, assign(socket, search: search_form)}
-      end
-    end
-  end
-
   def render(assigns) do
     ~H"""
     <div class="scroll-smooth">
@@ -87,41 +69,12 @@ defmodule SetlistifyWeb.SearchLive do
               />
 
               <div class="w-full max-w-lg mx-auto mb-8 sm:mb-16">
-                <.form
-                  for={@search}
-                  name="search"
-                  phx-submit="search"
-                  class="w-full flex justify-center"
-                >
-                  <div class="w-full max-w-full">
-                    <div class="relative w-full">
-                      <input
-                        type="text"
-                        id="search-query"
-                        name="search[query]"
-                        value={@search[:query].value}
-                        placeholder="Search for an artist or band..."
-                        autocomplete="off"
-                        class={[
-                          "w-full px-4 sm:px-6 py-4 sm:py-5 pr-14 sm:pr-16 text-sm sm:text-base text-white bg-gradient-to-r from-gray-900 to-gray-800 border rounded-full placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-opacity-50 focus:border-emerald-500 transition-all duration-200 shadow-lg focus:shadow-emerald-500/25",
-                          @search[:query].errors == [] && "border-gray-700 hover:border-gray-600",
-                          @search[:query].errors != [] && "border-rose-400"
-                        ]}
-                      />
-                      <button
-                        type="submit"
-                        class="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 bg-emerald-500 rounded-full flex items-center justify-center hover:bg-emerald-400 transition-colors"
-                      >
-                        <Heroicons.magnifying_glass class="w-4 h-4 sm:w-5 sm:h-5 text-black" />
-                      </button>
-                    </div>
-                    <div :if={@search[:query].errors != []} class="mt-2">
-                      <.error :for={msg <- @search[:query].errors}>
-                        {SetlistifyWeb.CoreComponents.translate_error(msg)}
-                      </.error>
-                    </div>
-                  </div>
-                </.form>
+                <.live_component
+                  module={SearchFormComponent}
+                  id="hero-search-form"
+                  search={@search}
+                  input_id="search-query"
+                />
               </div>
             </div>
 
@@ -129,7 +82,7 @@ defmodule SetlistifyWeb.SearchLive do
               <button
                 type="button"
                 id="learn-more-btn"
-                class="learn-more-button flex flex-col items-center gap-1 hover:text-emerald-400 transition-colors"
+                class="learn-more-button flex flex-col items-center gap-1 text-white hover:text-emerald-400"
                 onclick="document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })"
                 phx-hook="DelayedBounce"
               >
@@ -160,36 +113,12 @@ defmodule SetlistifyWeb.SearchLive do
       <% else %>
         <.section_container class="py-10">
           <div class="max-w-lg mx-auto mb-10">
-            <.form for={@search} name="search" phx-submit="search" class="w-full flex justify-center">
-              <div class="w-full max-w-full">
-                <div class="relative w-full">
-                  <input
-                    type="text"
-                    id="search-query-results"
-                    name="search[query]"
-                    value={@search[:query].value}
-                    placeholder="Search for an artist or band..."
-                    autocomplete="off"
-                    class={[
-                      "w-full px-4 sm:px-6 py-4 sm:py-5 pr-14 sm:pr-16 text-sm sm:text-base text-white bg-gradient-to-r from-gray-900 to-gray-800 border rounded-full placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-opacity-50 focus:border-emerald-500 transition-all duration-200 shadow-lg focus:shadow-emerald-500/25",
-                      @search[:query].errors == [] && "border-gray-700 hover:border-gray-600",
-                      @search[:query].errors != [] && "border-rose-400"
-                    ]}
-                  />
-                  <button
-                    type="submit"
-                    class="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 bg-emerald-500 rounded-full flex items-center justify-center hover:bg-emerald-400 transition-colors"
-                  >
-                    <Heroicons.magnifying_glass class="w-4 h-4 sm:w-5 sm:h-5 text-black" />
-                  </button>
-                </div>
-                <div :if={@search[:query].errors != []} class="mt-2">
-                  <.error :for={msg <- @search[:query].errors}>
-                    {SetlistifyWeb.CoreComponents.translate_error(msg)}
-                  </.error>
-                </div>
-              </div>
-            </.form>
+            <.live_component
+              module={SearchFormComponent}
+              id="results-search-form"
+              search={@search}
+              input_id="search-query-results"
+            />
           </div>
 
           <h2 class="text-3xl font-bold text-center mb-12">Search Results</h2>

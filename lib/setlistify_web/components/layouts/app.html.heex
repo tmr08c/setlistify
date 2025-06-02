@@ -11,7 +11,7 @@
       <span class="text-gray-400 sm:hidden text-sm">{@user_session.username}</span>
       <.link
         navigate={~p"/signout"}
-        class="text-white hover:text-emerald-400 transition-colors text-sm sm:text-base"
+        class="text-white hover:text-emerald-400 text-sm sm:text-base"
       >
         Sign Out
       </.link>
@@ -20,7 +20,7 @@
       <%= if @redirect_to do %>
         <.link
           navigate={~p"/signin/spotify?redirect_to=#{@redirect_to}"}
-          class="text-white hover:text-emerald-400 transition-colors text-sm sm:text-base whitespace-nowrap"
+          class="text-white hover:text-emerald-400 text-sm sm:text-base whitespace-nowrap"
         >
           <span class="hidden sm:inline">Sign in with Spotify</span>
           <span class="sm:hidden">Sign in</span>
@@ -28,7 +28,7 @@
       <% else %>
         <.link
           navigate={~p"/signin/spotify"}
-          class="text-white hover:text-emerald-400 transition-colors text-sm sm:text-base whitespace-nowrap"
+          class="text-white hover:text-emerald-400 text-sm sm:text-base whitespace-nowrap"
         >
           <span class="hidden sm:inline">Sign in with Spotify</span>
           <span class="sm:hidden">Sign in</span>
