@@ -4,36 +4,42 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
   @root_endpoint "https://api.setlist.fm/rest/1.0"
 
   def search(query, endpoint \\ @root_endpoint) do
-    %{"setlist" => setlists} =
-      Req.get!(request(endpoint), url: "/search/setlists", params: %{"artistName" => query}).body
+    response =
+      Req.get!(request(endpoint), url: "/search/setlists", params: %{"artistName" => query})
 
-    Enum.map(setlists, fn setlist ->
-      %{
-        "artist" => %{"name" => artist_name},
-        "eventDate" => date,
-        "id" => id,
-        "venue" => %{
-          "name" => venue_name,
-          "city" => city_data
-        },
-        "sets" => %{"set" => sets}
-      } = setlist
+    case response do
+      %{status: 404} ->
+        []
 
-      song_count =
-        sets
-        |> Enum.flat_map(&Map.get(&1, "song", []))
-        |> length()
+      %{status: 200, body: %{"setlist" => setlists}} ->
+        Enum.map(setlists, fn setlist ->
+          %{
+            "artist" => %{"name" => artist_name},
+            "eventDate" => date,
+            "id" => id,
+            "venue" => %{
+              "name" => venue_name,
+              "city" => city_data
+            },
+            "sets" => %{"set" => sets}
+          } = setlist
 
-      location = build_location(city_data)
+          song_count =
+            sets
+            |> Enum.flat_map(&Map.get(&1, "song", []))
+            |> length()
 
-      %{
-        artist: artist_name,
-        date: format_date(date),
-        id: id,
-        venue: %{name: venue_name, location: location},
-        song_count: song_count
-      }
-    end)
+          location = build_location(city_data)
+
+          %{
+            artist: artist_name,
+            date: format_date(date),
+            id: id,
+            venue: %{name: venue_name, location: location},
+            song_count: song_count
+          }
+        end)
+    end
   end
 
   def get_setlist(id, endpoint \\ @root_endpoint) do

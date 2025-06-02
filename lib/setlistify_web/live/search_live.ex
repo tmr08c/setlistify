@@ -6,7 +6,7 @@ defmodule SetlistifyWeb.SearchLive do
   require OpenTelemetry.Tracer
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, setlists: [], search: search_form(%{}))}
+    {:ok, assign(socket, setlists: nil, search: search_form(%{}))}
   end
 
   def handle_params(params, _uri, socket) when params == %{} do
@@ -52,7 +52,7 @@ defmodule SetlistifyWeb.SearchLive do
   def render(assigns) do
     ~H"""
     <div class="scroll-smooth">
-      <%= if @setlists == [] do %>
+      <%= if @setlists == nil do %>
         <.hero_section>
           <div class="flex flex-col h-full items-center justify-between px-4">
             <div class="flex-1 flex flex-col justify-center items-center text-center max-w-3xl mx-auto">
@@ -185,24 +185,30 @@ defmodule SetlistifyWeb.SearchLive do
 
           <h2 class="text-3xl font-bold text-center mb-12">Search Results</h2>
 
-          <ol class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-            <%= for setlist <- @setlists do %>
-              <.link navigate={~p"/setlist/#{setlist.id}"} {tid(["setlist", setlist.id])}>
-                <li class="bg-black/50 border border-gray-800 rounded-xl p-6 hover:border-emerald-500 transition-colors">
-                  <time datetime={setlist.date} class="inline-block mb-3">
-                    <span class="text-sm text-gray-400">
-                      {Calendar.strftime(setlist.date, "%B %d, %Y")}
-                    </span>
-                  </time>
+          <%= if @setlists == [] do %>
+            <p class="text-center text-gray-400 text-lg">No results found</p>
+          <% else %>
+            <ol class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              <%= for setlist <- @setlists do %>
+                <.link navigate={~p"/setlist/#{setlist.id}"} {tid(["setlist", setlist.id])}>
+                  <li class="bg-black/50 border border-gray-800 rounded-xl p-6 hover:border-emerald-500 transition-colors">
+                    <time datetime={setlist.date} class="inline-block mb-3">
+                      <span class="text-sm text-gray-400">
+                        {Calendar.strftime(setlist.date, "%B %d, %Y")}
+                      </span>
+                    </time>
 
-                  <h3 class="text-lg font-semibold mb-1">{setlist.artist}</h3>
-                  <p class="text-gray-400">{setlist.venue.name}</p>
-                  <p class="text-gray-400 text-sm">{format_location(setlist.venue.location)}</p>
-                  <p class="text-emerald-400 text-sm mt-2">{format_song_count(setlist.song_count)}</p>
-                </li>
-              </.link>
-            <% end %>
-          </ol>
+                    <h3 class="text-lg font-semibold mb-1">{setlist.artist}</h3>
+                    <p class="text-gray-400">{setlist.venue.name}</p>
+                    <p class="text-gray-400 text-sm">{format_location(setlist.venue.location)}</p>
+                    <p class="text-emerald-400 text-sm mt-2">
+                      {format_song_count(setlist.song_count)}
+                    </p>
+                  </li>
+                </.link>
+              <% end %>
+            </ol>
+          <% end %>
         </.section_container>
       <% end %>
     </div>
