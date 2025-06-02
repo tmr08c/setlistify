@@ -15,14 +15,11 @@ defmodule SetlistifyWeb.SearchLive do
       when is_binary(query) and byte_size(query) > 0 do
     case String.trim(query) do
       "" ->
-        # Query was only whitespace, redirect
         {:noreply, push_navigate(socket, to: ~p"/")}
 
       trimmed_query ->
-        # Valid non-empty query
         OpenTelemetry.Tracer.with_span "SetlistifyWeb.SearchLive.handle_params" do
           OpenTelemetry.Tracer.set_attributes([{"query", trimmed_query}])
-          Logger.info("Searching for: #{trimmed_query}")
 
           setlists = Setlistify.SetlistFm.API.search(trimmed_query)
           {:noreply, assign(socket, setlists: setlists, query_params: params)}
