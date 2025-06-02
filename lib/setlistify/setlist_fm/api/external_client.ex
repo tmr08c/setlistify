@@ -8,9 +8,6 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
       Req.get!(request(endpoint), url: "/search/setlists", params: %{"artistName" => query})
 
     case response do
-      %{status: 404} ->
-        []
-
       %{status: 200, body: %{"setlist" => setlists}} ->
         Enum.map(setlists, fn setlist ->
           %{
@@ -39,6 +36,10 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
             song_count: song_count
           }
         end)
+
+      # A 404 is returned when no matching results are found
+      %{status: 404} ->
+        []
     end
   end
 
