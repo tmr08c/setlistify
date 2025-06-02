@@ -274,14 +274,14 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
   test "search/1 returns empty list when no results found (404)" do
     Req.Test.stub(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
-        assert conn.params["artistName"] == "wefwef"
+        assert conn.params["artistName"] == "nonexistent"
 
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
         |> Plug.Conn.send_resp(404, @not_found_response)
     end)
 
-    result = ExternalClient.search("wefwef")
+    result = ExternalClient.search("nonexistent")
     assert result == []
   end
 
