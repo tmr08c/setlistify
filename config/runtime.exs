@@ -263,21 +263,23 @@ else
       name: System.get_env("HOSTNAME", "localhost")
     ]
 
-  # Local PromEx configuration
-  config :setlistify, Setlistify.PromEx,
-    manual_metrics_start_delay: :no_delay,
-    drop_metrics_groups: [],
-    grafana: [
-      host: "http://localhost:3000",
-      auth_token: "admin:admin",
-      upload_dashboards_on_start: true,
-      folder_name: "Setlistify Dashboards",
-      annotate_app_lifecycle: true
-    ],
-    metrics_server: [
-      port: String.to_integer(System.get_env("PROM_EX_PORT", "9568")),
-      path: "/metrics"
-    ]
+  # Local PromEx configuration (skip for test environment)
+  if config_env() != :test do
+    config :setlistify, Setlistify.PromEx,
+      manual_metrics_start_delay: :no_delay,
+      drop_metrics_groups: [],
+      grafana: [
+        host: "http://localhost:3000",
+        auth_token: "admin:admin",
+        upload_dashboards_on_start: true,
+        folder_name: "Setlistify Dashboards",
+        annotate_app_lifecycle: true
+      ],
+      metrics_server: [
+        port: String.to_integer(System.get_env("PROM_EX_PORT", "9568")),
+        path: "/metrics"
+      ]
+  end
 
   # Local Loki configuration
   config :logger, Setlistify.LokiLogger,
