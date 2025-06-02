@@ -22,43 +22,47 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
         {"http.status_code", response.status}
       ])
 
-      %{"setlist" => setlists} = response.body
+      case response do
+        %{status: 200, body: %{"setlist" => setlists}} ->
+          Enum.map(setlists, fn setlist ->
+            %{
+              "artist" => %{"name" => artist_name},
+              "eventDate" => date,
+              "id" => id,
+              "venue" => %{
+                "name" => venue_name,
+                "city" => city_data
+              },
+              "sets" => %{"set" => sets}
+            } = setlist
 
-      results =
-        Enum.map(setlists, fn setlist ->
-          %{
-            "artist" => %{"name" => artist_name},
-            "eventDate" => date,
-            "id" => id,
-            "venue" => %{
-              "name" => venue_name,
-              "city" => city_data
-            },
-            "sets" => %{"set" => sets}
-          } = setlist
+            song_count =
+              sets
+              |> Enum.flat_map(&Map.get(&1, "song", []))
+              |> length()
 
-          song_count =
-            sets
-            |> Enum.flat_map(&Map.get(&1, "song", []))
-            |> length()
+            location = build_location(city_data)
 
-          location = build_location(city_data)
+            %{
+              artist: artist_name,
+              date: format_date(date),
+              id: id,
+              venue: %{name: venue_name, location: location},
+              song_count: song_count
+            }
+          end)
 
-          %{
-            artist: artist_name,
-            date: format_date(date),
-            id: id,
-            venue: %{name: venue_name, location: location},
-            song_count: song_count
-          }
-        end)
+        # A 404 is returned when no matching results are found
+        %{status: 404} ->
+          []
+      end
+      |> tap(fn results ->
+        OpenTelemetry.Tracer.set_attributes([
+          {"setlist_fm.results.count", length(results)}
+        ])
 
-      OpenTelemetry.Tracer.set_attributes([
-        {"setlist_fm.results.count", length(results)}
-      ])
-
-      OpenTelemetry.Tracer.set_status(:ok, "")
-      results
+        OpenTelemetry.Tracer.set_status(:ok, "")
+      end)
     end
   rescue
     error ->

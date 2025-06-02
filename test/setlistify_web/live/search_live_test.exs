@@ -48,6 +48,18 @@ defmodule SetlistifyWeb.SearchLiveTest do
     assert_redirected(view, ~p"/setlist/#{setlist_id}")
   end
 
+  test "displays 'No results found' when search returns empty list", %{conn: conn} do
+    expect(SetlistFm.API.MockClient, :search, 1, fn "nonexistent" ->
+      []
+    end)
+
+    {:ok, view, _html} = live(conn, ~p"/")
+
+    html = view |> form("[name='search']", %{search: %{query: "nonexistent"}}) |> render_submit()
+
+    assert html =~ "No results found"
+  end
+
   test "displays song count in search results", %{conn: conn} do
     expect(SetlistFm.API.MockClient, :search, 1, fn "test artist" ->
       [

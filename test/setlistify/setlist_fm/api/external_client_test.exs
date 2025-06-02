@@ -268,6 +268,23 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     assert set_with_encore.venue.location.city == "Nashville"
   end
 
+  @not_found_response fixture_dir()
+                      |> Path.join("setlist_fm_search_404_response.json")
+                      |> File.read!()
+  test "search/1 returns empty list when no results found (404)" do
+    Req.Test.stub(MySetlistFmStub, fn
+      %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
+        assert conn.params["artistName"] == "nonexistent"
+
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/json")
+        |> Plug.Conn.send_resp(404, @not_found_response)
+    end)
+
+    result = ExternalClient.search("nonexistent")
+    assert result == []
+  end
+
   test "search/1 handles sets with missing or empty song arrays" do
     response = %{
       "setlist" => [
