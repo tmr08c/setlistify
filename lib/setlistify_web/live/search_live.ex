@@ -8,36 +8,31 @@ defmodule SetlistifyWeb.SearchLive do
   require OpenTelemetry.Tracer
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, setlists: [], search: search_form(%{}))}
+    {:ok, assign(socket, setlists: [], query_params: %{})}
   end
 
-  def handle_params(params, _uri, socket) when params == %{} do
-    {:noreply, push_navigate(socket, to: ~p"/")}
-  end
+  def handle_params(%{"query" => query} = params, _uri, socket)
+      when is_binary(query) and byte_size(query) > 0 do
+    case String.trim(query) do
+      "" ->
+        # Query was only whitespace, redirect
+        {:noreply, push_navigate(socket, to: ~p"/")}
 
-  def handle_params(params, _uri, socket) do
-    # Create a span for the handle_params operation
-    OpenTelemetry.Tracer.with_span "SetlistifyWeb.SearchLive.handle_params" do
-      OpenTelemetry.Tracer.set_attributes([
-        {"query", inspect(params)}
-      ])
+      trimmed_query ->
+        # Valid non-empty query
+        OpenTelemetry.Tracer.with_span "SetlistifyWeb.SearchLive.handle_params" do
+          OpenTelemetry.Tracer.set_attributes([{"query", trimmed_query}])
+          Logger.info("Searching for: #{trimmed_query}")
 
-      Logger.info("Log inside custom span looking for #{inspect(params)}")
-
-      search_form = search_form(params)
-      search_changeset = search_form.source
-
-      setlists =
-        if search_changeset.valid? do
-          search_changeset
-          |> Ecto.Changeset.get_field(:query)
-          |> Setlistify.SetlistFm.API.search()
-        else
-          []
+          setlists = Setlistify.SetlistFm.API.search(trimmed_query)
+          {:noreply, assign(socket, setlists: setlists, query_params: params)}
         end
-
-      {:noreply, assign(socket, search: search_form, setlists: setlists)}
     end
+  end
+
+  # Catch-all: any other params structure redirects home
+  def handle_params(_params, _uri, socket) do
+    {:noreply, push_navigate(socket, to: ~p"/")}
   end
 
   def render(assigns) do
@@ -47,8 +42,8 @@ defmodule SetlistifyWeb.SearchLive do
         <.live_component
           module={SearchFormComponent}
           id="results-search-form"
-          search={@search}
           input_id="search-query-results"
+          query_params={@query_params}
         />
       </div>
 
@@ -80,18 +75,6 @@ defmodule SetlistifyWeb.SearchLive do
       <% end %>
     </.section_container>
     """
-  end
-
-  defp search_form(params) do
-    params |> search_changeset() |> to_form(as: :search)
-  end
-
-  defp search_changeset(params) do
-    types = %{query: :string}
-
-    {%{}, types}
-    |> Ecto.Changeset.cast(params, Map.keys(types))
-    |> Ecto.Changeset.validate_required(Map.keys(types))
   end
 
   defp format_location(%{city: city, state: state, country: country}) do

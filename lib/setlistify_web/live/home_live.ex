@@ -4,10 +4,6 @@ defmodule SetlistifyWeb.HomeLive do
 
   alias SetlistifyWeb.Components.SearchFormComponent
 
-  def mount(_params, _session, socket) do
-    {:ok, assign(socket, search: search_form(%{}))}
-  end
-
   def render(assigns) do
     ~H"""
     <div class="scroll-smooth">
@@ -39,7 +35,6 @@ defmodule SetlistifyWeb.HomeLive do
               <.live_component
                 module={SearchFormComponent}
                 id="hero-search-form"
-                search={@search}
                 input_id="search-query"
               />
             </div>
@@ -79,17 +74,5 @@ defmodule SetlistifyWeb.HomeLive do
       </.section_container>
     </div>
     """
-  end
-
-  defp search_form(params) do
-    params |> search_changeset() |> to_form(as: :search)
-  end
-
-  defp search_changeset(params) do
-    types = %{query: :string}
-
-    {%{}, types}
-    |> Ecto.Changeset.cast(params, Map.keys(types))
-    |> Ecto.Changeset.validate_required(Map.keys(types))
   end
 end

@@ -4,6 +4,18 @@ defmodule SetlistifyWeb.Components.SearchFormComponent do
 
   require OpenTelemetry.Tracer
 
+  def mount(socket) do
+    {:ok, assign(socket, search: search_form(%{}))}
+  end
+
+  def update(assigns, socket) do
+    # Update the search form when query_params change
+    query_params = Map.get(assigns, :query_params, %{})
+    search_form = search_form(query_params)
+
+    {:ok, socket |> assign(assigns) |> assign(search: search_form)}
+  end
+
   def render(assigns) do
     ~H"""
     <div>
@@ -67,6 +79,10 @@ defmodule SetlistifyWeb.Components.SearchFormComponent do
         {:noreply, assign(socket, search: search_form)}
       end
     end
+  end
+
+  defp search_form(params) do
+    params |> search_changeset() |> to_form(as: :search)
   end
 
   defp search_changeset(params) do
