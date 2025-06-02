@@ -9,9 +9,7 @@ defmodule SetlistifyWeb.Components.SearchFormComponent do
   end
 
   def update(assigns, socket) do
-    # Update the search form when query_params change
-    query_params = Map.get(assigns, :query_params, %{})
-    search_form = search_form(query_params)
+    search_form = assigns |> Map.get(:query_params, %{}) |> search_form()
 
     {:ok, socket |> assign(assigns) |> assign(search: search_form)}
   end
