@@ -62,7 +62,7 @@ defmodule SetlistifyWeb.Components.SearchFormComponent do
       OpenTelemetry.Tracer.set_attribute("search.valid", search_changeset.valid?)
 
       if search_changeset.valid? do
-        {:noreply, push_patch(socket, to: ~p"/?#{params}")}
+        {:noreply, push_navigate(socket, to: ~p"/setlists?#{params}")}
       else
         {:noreply, assign(socket, search: search_form)}
       end

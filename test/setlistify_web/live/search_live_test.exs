@@ -14,6 +14,10 @@ defmodule SetlistifyWeb.SearchLiveTest do
   setup :set_mox_from_context
   setup :verify_on_exit!
 
+  test "redirects to home when no search params provided", %{conn: conn} do
+    assert {:error, {:live_redirect, %{to: "/"}}} = live(conn, ~p"/setlists")
+  end
+
   test "searching for setlists", %{conn: conn} do
     setlist_id = Ecto.UUID.generate()
 
@@ -32,13 +36,13 @@ defmodule SetlistifyWeb.SearchLiveTest do
       ]
     end)
 
-    {:ok, view, _} = live(conn, ~p"/")
+    {:ok, view, html} = live(conn, ~p"/setlists?query=beatles")
 
+    # Test validation first
     assert view |> form("[name='search']", %{search: %{query: ""}}) |> render_submit() =~
              "can&#39;t be blank"
 
-    html = view |> form("[name='search']", %{search: %{query: "beatles"}}) |> render_submit()
-
+    # Check that search results are displayed
     assert html =~ "The Beatles"
     assert html =~ "Compaq Center"
     assert html =~ "Houston, TX, United States"
@@ -53,9 +57,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
       []
     end)
 
-    {:ok, view, _html} = live(conn, ~p"/")
-
-    html = view |> form("[name='search']", %{search: %{query: "nonexistent"}}) |> render_submit()
+    {:ok, _view, html} = live(conn, ~p"/setlists?query=nonexistent")
 
     assert html =~ "No results found"
   end
@@ -96,7 +98,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
       ]
     end)
 
-    {:ok, _view, html} = live(conn, ~p"/?query=test+artist")
+    {:ok, _view, html} = live(conn, ~p"/setlists?query=test+artist")
 
     # Check that song counts are displayed
     assert html =~ "0 songs"

@@ -8,11 +8,11 @@ defmodule SetlistifyWeb.SearchLive do
   require OpenTelemetry.Tracer
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, setlists: nil, search: search_form(%{}))}
+    {:ok, assign(socket, setlists: [], search: search_form(%{}))}
   end
 
   def handle_params(params, _uri, socket) when params == %{} do
-    {:noreply, socket}
+    {:noreply, push_navigate(socket, to: ~p"/")}
   end
 
   def handle_params(params, _uri, socket) do
@@ -42,114 +42,43 @@ defmodule SetlistifyWeb.SearchLive do
 
   def render(assigns) do
     ~H"""
-    <div class="scroll-smooth">
-      <%= if @setlists == nil do %>
-        <.hero_section>
-          <div class="flex flex-col h-full items-center justify-between px-4">
-            <div class="flex-1 flex flex-col justify-center items-center text-center max-w-3xl mx-auto">
-              <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
-                Transform <span class="text-emerald-400 font-extrabold">Live Shows</span>
-                into <span class="text-emerald-400 font-extrabold">Playlists</span>
-                with
-                <span class="relative inline-block font-extrabold after:content-[''] after:absolute after:left-0 after:right-0 after:bottom-[-8px] after:h-1 after:bg-gradient-to-r after:from-emerald-400 after:via-emerald-500 after:to-emerald-600 after:rounded-sm">
-                  One Click
-                </span>
-              </h1>
+    <.section_container class="py-10">
+      <div class="max-w-lg mx-auto mb-10">
+        <.live_component
+          module={SearchFormComponent}
+          id="results-search-form"
+          search={@search}
+          input_id="search-query-results"
+        />
+      </div>
 
-              <.rotating_text
-                class="mb-8"
-                text_class="text-gray-300 text-sm sm:text-base font-medium text-center px-4"
-                texts={[
-                  "Turn concert memories into streaming soundtracks",
-                  "Create the perfect pre-concert playlist",
-                  "Experience setlists from shows you missed",
-                  "Build your music library with authentic live experiences",
-                  "Share iconic concert experiences with friends"
-                ]}
-              />
+      <h2 class="text-3xl font-bold text-center mb-12">Search Results</h2>
 
-              <div class="w-full max-w-lg mx-auto mb-8 sm:mb-16">
-                <.live_component
-                  module={SearchFormComponent}
-                  id="hero-search-form"
-                  search={@search}
-                  input_id="search-query"
-                />
-              </div>
-            </div>
-
-            <div class="mb-8">
-              <button
-                type="button"
-                id="learn-more-btn"
-                class="learn-more-button flex flex-col items-center gap-1 text-white hover:text-emerald-400"
-                onclick="document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })"
-                phx-hook="DelayedBounce"
-              >
-                <span class="text-sm font-normal">Learn More</span>
-                <Heroicons.chevron_double_down class="w-5 h-5 sm:w-6 sm:h-6" />
-              </button>
-            </div>
-          </div>
-        </.hero_section>
-
-        <.section_container id="how-it-works" class="text-center bg-gray-900">
-          <h2 class="text-3xl font-bold mb-12">How It Works</h2>
-
-          <div class="grid md:grid-cols-3 gap-8 max-w-5xl mx-auto">
-            <.step_card number={1} title="Search an Artist">
-              Enter any band or performer to see their concert history
-            </.step_card>
-
-            <.step_card number={2} title="Pick a Setlist">
-              Browse through recent shows and select the perfect setlist
-            </.step_card>
-
-            <.step_card number={3} title="Create Playlist">
-              With one click, generate a Spotify playlist of the entire show
-            </.step_card>
-          </div>
-        </.section_container>
+      <%= if @setlists == [] do %>
+        <p class="text-center text-gray-400 text-lg">No results found</p>
       <% else %>
-        <.section_container class="py-10">
-          <div class="max-w-lg mx-auto mb-10">
-            <.live_component
-              module={SearchFormComponent}
-              id="results-search-form"
-              search={@search}
-              input_id="search-query-results"
-            />
-          </div>
+        <ol class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          <%= for setlist <- @setlists do %>
+            <.link navigate={~p"/setlist/#{setlist.id}"} {tid(["setlist", setlist.id])}>
+              <li class="bg-black/50 border border-gray-800 rounded-xl p-6 hover:border-emerald-500 transition-colors">
+                <time datetime={setlist.date} class="inline-block mb-3">
+                  <span class="text-sm text-gray-400">
+                    {Calendar.strftime(setlist.date, "%B %d, %Y")}
+                  </span>
+                </time>
 
-          <h2 class="text-3xl font-bold text-center mb-12">Search Results</h2>
-
-          <%= if @setlists == [] do %>
-            <p class="text-center text-gray-400 text-lg">No results found</p>
-          <% else %>
-            <ol class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              <%= for setlist <- @setlists do %>
-                <.link navigate={~p"/setlist/#{setlist.id}"} {tid(["setlist", setlist.id])}>
-                  <li class="bg-black/50 border border-gray-800 rounded-xl p-6 hover:border-emerald-500 transition-colors">
-                    <time datetime={setlist.date} class="inline-block mb-3">
-                      <span class="text-sm text-gray-400">
-                        {Calendar.strftime(setlist.date, "%B %d, %Y")}
-                      </span>
-                    </time>
-
-                    <h3 class="text-lg font-semibold mb-1">{setlist.artist}</h3>
-                    <p class="text-gray-400">{setlist.venue.name}</p>
-                    <p class="text-gray-400 text-sm">{format_location(setlist.venue.location)}</p>
-                    <p class="text-emerald-400 text-sm mt-2">
-                      {format_song_count(setlist.song_count)}
-                    </p>
-                  </li>
-                </.link>
-              <% end %>
-            </ol>
+                <h3 class="text-lg font-semibold mb-1">{setlist.artist}</h3>
+                <p class="text-gray-400">{setlist.venue.name}</p>
+                <p class="text-gray-400 text-sm">{format_location(setlist.venue.location)}</p>
+                <p class="text-emerald-400 text-sm mt-2">
+                  {format_song_count(setlist.song_count)}
+                </p>
+              </li>
+            </.link>
           <% end %>
-        </.section_container>
+        </ol>
       <% end %>
-    </div>
+    </.section_container>
     """
   end
 
