@@ -32,7 +32,8 @@ defmodule SetlistifyWeb.Router do
         {SetlistifyWeb.Telemetry.LiveViewTelemetry, :default},
         SetlistifyWeb.Auth.LiveHooks
       ] do
-      live "/", SearchLive
+      live "/", HomeLive
+      live "/setlists", SearchLive
       live "/setlist/:id", Setlists.ShowLive
     end
 
