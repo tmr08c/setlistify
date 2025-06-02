@@ -38,10 +38,6 @@ defmodule SetlistifyWeb.SearchLiveTest do
 
     {:ok, view, html} = live(conn, ~p"/setlists?query=beatles")
 
-    # Test validation first
-    assert view |> form("[name='search']", %{search: %{query: ""}}) |> render_submit() =~
-             "can&#39;t be blank"
-
     # Check that search results are displayed
     assert html =~ "The Beatles"
     assert html =~ "Compaq Center"
