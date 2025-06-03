@@ -44,6 +44,7 @@ defmodule Setlistify.SetlistFm.API do
           name: nil | String.t(),
           songs: [%{title: String.t()}]
         }
+  @callback search(String.t()) :: search_response()
   @callback search(String.t(), pos_integer()) :: search_response()
   def search(query, page \\ 1) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.search" do

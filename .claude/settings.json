@@ -1,0 +1,24 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(mix test:*)",
+      "Bash(mix format:*)",
+      "Bash(mix compile)",
+      "Bash(bin/setup)",
+      "Bash(bin/server)",
+      "Bash(mv:*)",
+      "Bash(grep:*)",
+      "Bash(rg:*)",
+      "Bash(cp:*)"
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "mcp__puppeteer*",
+      "WebFetch(domain:hex.pm)",
+      "WebFetch(domain:github.com)",
+      "WebSearch"
+    ],
+    "deny": []
+  },
+  "enableAllProjectMcpServers": false
+}

@@ -6,7 +6,9 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
 
   @root_endpoint "https://api.setlist.fm/rest/1.0"
 
-  def search(query, page \\ 1, endpoint \\ @root_endpoint) do
+  def search(query), do: search(query, 1)
+
+  def search(query, page, endpoint \\ @root_endpoint) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.ExternalClient.search" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "setlist_fm"},
@@ -17,41 +19,53 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
       ])
 
       response =
-        Req.get!(request(endpoint), url: "/search/setlists", params: %{"artistName" => query, "p" => page})
+        Req.get!(request(endpoint),
+          url: "/search/setlists",
+          params: %{"artistName" => query, "p" => page}
+        )
 
       OpenTelemetry.Tracer.set_attributes([
         {"http.status_code", response.status}
       ])
 
       case response do
-        %{status: 200, body: %{"setlist" => setlists, "page" => page_num, "total" => total, "itemsPerPage" => items_per_page}} ->
-          formatted_setlists = Enum.map(setlists, fn setlist ->
-            %{
-              "artist" => %{"name" => artist_name},
-              "eventDate" => date,
-              "id" => id,
-              "venue" => %{
-                "name" => venue_name,
-                "city" => city_data
-              },
-              "sets" => %{"set" => sets}
-            } = setlist
+        %{
+          status: 200,
+          body: %{
+            "setlist" => setlists,
+            "page" => page_num,
+            "total" => total,
+            "itemsPerPage" => items_per_page
+          }
+        } ->
+          formatted_setlists =
+            Enum.map(setlists, fn setlist ->
+              %{
+                "artist" => %{"name" => artist_name},
+                "eventDate" => date,
+                "id" => id,
+                "venue" => %{
+                  "name" => venue_name,
+                  "city" => city_data
+                },
+                "sets" => %{"set" => sets}
+              } = setlist
 
-            song_count =
-              sets
-              |> Enum.flat_map(&Map.get(&1, "song", []))
-              |> length()
+              song_count =
+                sets
+                |> Enum.flat_map(&Map.get(&1, "song", []))
+                |> length()
 
-            location = build_location(city_data)
+              location = build_location(city_data)
 
-            %{
-              artist: artist_name,
-              date: format_date(date),
-              id: id,
-              venue: %{name: venue_name, location: location},
-              song_count: song_count
-            }
-          end)
+              %{
+                artist: artist_name,
+                date: format_date(date),
+                id: id,
+                venue: %{name: venue_name, location: location},
+                song_count: song_count
+              }
+            end)
 
           %{
             setlists: formatted_setlists,

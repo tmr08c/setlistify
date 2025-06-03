@@ -21,19 +21,22 @@ defmodule SetlistifyWeb.SearchLiveTest do
   test "searching for setlists", %{conn: conn} do
     setlist_id = Ecto.UUID.generate()
 
-    expect(SetlistFm.API.MockClient, :search, 1, fn "beatles" ->
-      [
-        %{
-          artist: "The Beatles",
-          venue: %{
-            name: "Compaq Center",
-            location: %{city: "Houston", state: "TX", country: "United States"}
-          },
-          date: Date.new!(2023, 01, 01),
-          id: setlist_id,
-          song_count: 12
-        }
-      ]
+    expect(SetlistFm.API.MockClient, :search, 1, fn "beatles", 1 ->
+      %{
+        setlists: [
+          %{
+            artist: "The Beatles",
+            venue: %{
+              name: "Compaq Center",
+              location: %{city: "Houston", state: "TX", country: "United States"}
+            },
+            date: Date.new!(2023, 01, 01),
+            id: setlist_id,
+            song_count: 12
+          }
+        ],
+        pagination: %{page: 1, total: 1, items_per_page: 20}
+      }
     end)
 
     {:ok, view, html} = live(conn, ~p"/setlists?query=beatles")
@@ -49,8 +52,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
   end
 
   test "displays 'No results found' when search returns empty list", %{conn: conn} do
-    expect(SetlistFm.API.MockClient, :search, 1, fn "nonexistent" ->
-      []
+    expect(SetlistFm.API.MockClient, :search, 1, fn "nonexistent", 1 ->
+      %{setlists: [], pagination: %{page: 1, total: 0, items_per_page: nil}}
     end)
 
     {:ok, _view, html} = live(conn, ~p"/setlists?query=nonexistent")
@@ -59,8 +62,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
   end
 
   test "search form is pre-filled with query parameter", %{conn: conn} do
-    expect(SetlistFm.API.MockClient, :search, 1, fn "some band" ->
-      []
+    expect(SetlistFm.API.MockClient, :search, 1, fn "some band", 1 ->
+      %{setlists: [], pagination: %{page: 1, total: 0, items_per_page: nil}}
     end)
 
     {:ok, _view, html} = live(conn, ~p"/setlists?query=some+band")
@@ -70,39 +73,42 @@ defmodule SetlistifyWeb.SearchLiveTest do
   end
 
   test "displays song count in search results", %{conn: conn} do
-    expect(SetlistFm.API.MockClient, :search, 1, fn "test artist" ->
-      [
-        %{
-          artist: "Test Artist",
-          venue: %{
-            name: "Test Venue 1",
-            location: %{city: "Austin", state: "TX", country: "United States"}
+    expect(SetlistFm.API.MockClient, :search, 1, fn "test artist", 1 ->
+      %{
+        setlists: [
+          %{
+            artist: "Test Artist",
+            venue: %{
+              name: "Test Venue 1",
+              location: %{city: "Austin", state: "TX", country: "United States"}
+            },
+            date: Date.new!(2023, 01, 01),
+            id: "test-id-1",
+            song_count: 0
           },
-          date: Date.new!(2023, 01, 01),
-          id: "test-id-1",
-          song_count: 0
-        },
-        %{
-          artist: "Test Artist",
-          venue: %{
-            name: "Test Venue 2",
-            location: %{city: "Seattle", state: "WA", country: "United States"}
+          %{
+            artist: "Test Artist",
+            venue: %{
+              name: "Test Venue 2",
+              location: %{city: "Seattle", state: "WA", country: "United States"}
+            },
+            date: Date.new!(2023, 01, 02),
+            id: "test-id-2",
+            song_count: 15
           },
-          date: Date.new!(2023, 01, 02),
-          id: "test-id-2",
-          song_count: 15
-        },
-        %{
-          artist: "Test Artist",
-          venue: %{
-            name: "Test Venue 3",
-            location: %{city: "Nashville", state: "TN", country: "United States"}
-          },
-          date: Date.new!(2023, 01, 03),
-          id: "test-id-3",
-          song_count: 1
-        }
-      ]
+          %{
+            artist: "Test Artist",
+            venue: %{
+              name: "Test Venue 3",
+              location: %{city: "Nashville", state: "TN", country: "United States"}
+            },
+            date: Date.new!(2023, 01, 03),
+            id: "test-id-3",
+            song_count: 1
+          }
+        ],
+        pagination: %{page: 1, total: 3, items_per_page: 20}
+      }
     end)
 
     {:ok, _view, html} = live(conn, ~p"/setlists?query=test+artist")
@@ -164,19 +170,22 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "properly handles URL-encoded queries with valid content", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "the beatles" ->
-        [
-          %{
-            artist: "The Beatles",
-            venue: %{
-              name: "Abbey Road Studios",
-              location: %{city: "London", state: nil, country: "UK"}
-            },
-            date: Date.new!(2023, 01, 01),
-            id: "test-id",
-            song_count: 10
-          }
-        ]
+      expect(SetlistFm.API.MockClient, :search, 1, fn "the beatles", 1 ->
+        %{
+          setlists: [
+            %{
+              artist: "The Beatles",
+              venue: %{
+                name: "Abbey Road Studios",
+                location: %{city: "London", state: nil, country: "UK"}
+              },
+              date: Date.new!(2023, 01, 01),
+              id: "test-id",
+              song_count: 10
+            }
+          ],
+          pagination: %{page: 1, total: 1, items_per_page: 20}
+        }
       end)
 
       {:ok, _view, html} = live(conn, "/setlists?query=the%20beatles")
@@ -184,19 +193,22 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "handles special characters in query parameters", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "AC/DC" ->
-        [
-          %{
-            artist: "AC/DC",
-            venue: %{
-              name: "Rock Arena",
-              location: %{city: "Sydney", state: nil, country: "Australia"}
-            },
-            date: Date.new!(2023, 01, 01),
-            id: "test-id-acdc",
-            song_count: 15
-          }
-        ]
+      expect(SetlistFm.API.MockClient, :search, 1, fn "AC/DC", 1 ->
+        %{
+          setlists: [
+            %{
+              artist: "AC/DC",
+              venue: %{
+                name: "Rock Arena",
+                location: %{city: "Sydney", state: nil, country: "Australia"}
+              },
+              date: Date.new!(2023, 01, 01),
+              id: "test-id-acdc",
+              song_count: 15
+            }
+          ],
+          pagination: %{page: 1, total: 1, items_per_page: 20}
+        }
       end)
 
       # AC/DC URL encoded
@@ -207,8 +219,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
     test "handles very long query strings appropriately", %{conn: conn} do
       long_query = String.duplicate("a", 1000)
 
-      expect(SetlistFm.API.MockClient, :search, 1, fn ^long_query ->
-        []
+      expect(SetlistFm.API.MockClient, :search, 1, fn ^long_query, 1 ->
+        %{setlists: [], pagination: %{page: 1, total: 0, items_per_page: nil}}
       end)
 
       {:ok, _view, html} = live(conn, "/setlists?query=#{URI.encode(long_query)}")
@@ -218,19 +230,22 @@ defmodule SetlistifyWeb.SearchLiveTest do
     test "handles unicode characters in queries", %{conn: conn} do
       unicode_query = "Björk"
 
-      expect(SetlistFm.API.MockClient, :search, 1, fn ^unicode_query ->
-        [
-          %{
-            artist: "Björk",
-            venue: %{
-              name: "Reykjavik Hall",
-              location: %{city: "Reykjavik", state: nil, country: "Iceland"}
-            },
-            date: Date.new!(2023, 01, 01),
-            id: "test-id-bjork",
-            song_count: 12
-          }
-        ]
+      expect(SetlistFm.API.MockClient, :search, 1, fn ^unicode_query, 1 ->
+        %{
+          setlists: [
+            %{
+              artist: "Björk",
+              venue: %{
+                name: "Reykjavik Hall",
+                location: %{city: "Reykjavik", state: nil, country: "Iceland"}
+              },
+              date: Date.new!(2023, 01, 01),
+              id: "test-id-bjork",
+              song_count: 12
+            }
+          ],
+          pagination: %{page: 1, total: 1, items_per_page: 20}
+        }
       end)
 
       {:ok, _view, html} = live(conn, "/setlists?query=#{URI.encode(unicode_query)}")
@@ -238,21 +253,260 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "trims whitespace from valid queries", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "radiohead" ->
-        [
-          %{
-            artist: "Radiohead",
-            venue: %{name: "Oxford Venue", location: %{city: "Oxford", state: nil, country: "UK"}},
-            date: Date.new!(2023, 01, 01),
-            id: "test-id-radiohead",
-            song_count: 18
-          }
-        ]
+      expect(SetlistFm.API.MockClient, :search, 1, fn "radiohead", 1 ->
+        %{
+          setlists: [
+            %{
+              artist: "Radiohead",
+              venue: %{
+                name: "Oxford Venue",
+                location: %{city: "Oxford", state: nil, country: "UK"}
+              },
+              date: Date.new!(2023, 01, 01),
+              id: "test-id-radiohead",
+              song_count: 18
+            }
+          ],
+          pagination: %{page: 1, total: 1, items_per_page: 20}
+        }
       end)
 
       # Test that leading/trailing spaces are trimmed but query still works
       {:ok, _view, html} = live(conn, "/setlists?query=%20%20radiohead%20%20")
       assert html =~ "Radiohead"
+    end
+  end
+
+  describe "pagination with page parameter" do
+    test "defaults to page 1 when page parameter is not provided", %{conn: conn} do
+      expect(SetlistFm.API.MockClient, :search, 1, fn "test band", 1 ->
+        %{
+          setlists: [
+            %{
+              artist: "Test Band",
+              venue: %{
+                name: "Test Venue",
+                location: %{city: "Austin", state: "TX", country: "United States"}
+              },
+              date: Date.new!(2023, 01, 01),
+              id: "test-id",
+              song_count: 10
+            }
+          ],
+          pagination: %{page: 1, total: 50, items_per_page: 20}
+        }
+      end)
+
+      {:ok, _view, html} = live(conn, ~p"/setlists?query=test+band")
+      assert html =~ "Test Band"
+    end
+
+    test "uses correct page when page parameter is provided", %{conn: conn} do
+      expect(SetlistFm.API.MockClient, :search, 1, fn "test band", 3 ->
+        %{
+          setlists: [
+            %{
+              artist: "Test Band Page 3",
+              venue: %{
+                name: "Page 3 Venue",
+                location: %{city: "Seattle", state: "WA", country: "United States"}
+              },
+              date: Date.new!(2023, 01, 03),
+              id: "test-id-page3",
+              song_count: 12
+            }
+          ],
+          pagination: %{page: 3, total: 50, items_per_page: 20}
+        }
+      end)
+
+      {:ok, _view, html} = live(conn, ~p"/setlists?query=test+band&page=3")
+      assert html =~ "Test Band Page 3"
+      assert html =~ "Page 3 Venue"
+    end
+
+    test "defaults to page 1 when page parameter is empty string", %{conn: conn} do
+      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
+        %{
+          setlists: [],
+          pagination: %{page: 1, total: 0, items_per_page: nil}
+        }
+      end)
+
+      {:ok, _view, _html} = live(conn, ~p"/setlists?query=artist&page=")
+    end
+
+    test "defaults to page 1 when page parameter has spaces", %{conn: conn} do
+      # TODO: Investigate why we need 3 calls here instead of 1. With caching enabled,
+      # subsequent calls to live() with the same query and page should hit the cache
+      # and not call the mock API. This suggests either:
+      # 1. The cache is not working properly in tests
+      # 2. Each live() call creates an isolated environment
+      # 3. The cache key is not being constructed consistently
+      expect(SetlistFm.API.MockClient, :search, 3, fn "artist", 1 ->
+        %{
+          setlists: [],
+          pagination: %{page: 1, total: 0, items_per_page: nil}
+        }
+      end)
+
+      # Test various space scenarios
+      {:ok, _view, _html} = live(conn, "/setlists?query=artist&page=%20%20%20")
+      {:ok, _view, _html} = live(conn, "/setlists?query=artist&page=%20")
+      # tab
+      {:ok, _view, _html} = live(conn, "/setlists?query=artist&page=%09")
+    end
+
+    test "defaults to page 1 when page parameter is not a number", %{conn: conn} do
+      expect(SetlistFm.API.MockClient, :search, 4, fn "artist", 1 ->
+        %{
+          setlists: [],
+          pagination: %{page: 1, total: 0, items_per_page: nil}
+        }
+      end)
+
+      # Various non-numeric inputs
+      {:ok, _view, _html} = live(conn, ~p"/setlists?query=artist&page=abc")
+      {:ok, _view, _html} = live(conn, ~p"/setlists?query=artist&page=two")
+      {:ok, _view, _html} = live(conn, ~p"/setlists?query=artist&page=2a")
+      {:ok, _view, _html} = live(conn, ~p"/setlists?query=artist&page=a2")
+    end
+
+    test "defaults to page 1 when page parameter is zero", %{conn: conn} do
+      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
+        %{
+          setlists: [],
+          pagination: %{page: 1, total: 0, items_per_page: nil}
+        }
+      end)
+
+      {:ok, _view, _html} = live(conn, ~p"/setlists?query=artist&page=0")
+    end
+
+    test "defaults to page 1 when page parameter is negative", %{conn: conn} do
+      expect(SetlistFm.API.MockClient, :search, 2, fn "artist", 1 ->
+        %{
+          setlists: [],
+          pagination: %{page: 1, total: 0, items_per_page: nil}
+        }
+      end)
+
+      {:ok, _view, _html} = live(conn, ~p"/setlists?query=artist&page=-1")
+      {:ok, _view, _html} = live(conn, ~p"/setlists?query=artist&page=-100")
+    end
+
+    test "handles very large page numbers", %{conn: conn} do
+      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 999_999 ->
+        %{
+          setlists: [],
+          pagination: %{page: 999_999, total: 50, items_per_page: nil}
+        }
+      end)
+
+      {:ok, _view, html} = live(conn, ~p"/setlists?query=artist&page=999999")
+      assert html =~ "No results found"
+    end
+
+    test "handles decimal page numbers by truncating to integer", %{conn: conn} do
+      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 2 ->
+        %{
+          setlists: [
+            %{
+              artist: "Artist",
+              venue: %{
+                name: "Venue",
+                location: %{city: "City", state: "ST", country: "Country"}
+              },
+              date: Date.new!(2023, 01, 01),
+              id: "id",
+              song_count: 5
+            }
+          ],
+          pagination: %{page: 2, total: 30, items_per_page: 20}
+        }
+      end)
+
+      {:ok, _view, html} = live(conn, ~p"/setlists?query=artist&page=2.5")
+      assert html =~ "Artist"
+    end
+
+    test "handles page parameter with special characters", %{conn: conn} do
+      expect(SetlistFm.API.MockClient, :search, 3, fn "artist", 1 ->
+        %{
+          setlists: [],
+          pagination: %{page: 1, total: 0, items_per_page: nil}
+        }
+      end)
+
+      # Special characters should default to page 1
+      {:ok, _view, _html} = live(conn, "/setlists?query=artist&page=@#$")
+      {:ok, _view, _html} = live(conn, "/setlists?query=artist&page=1%2B1")
+      {:ok, _view, _html} = live(conn, "/setlists?query=artist&page=<script>")
+    end
+
+    test "handles page parameter as array or map", %{conn: conn} do
+      # TODO: Same caching issue - need 2 calls for 2 live() invocations
+      expect(SetlistFm.API.MockClient, :search, 2, fn "artist", 1 ->
+        %{
+          setlists: [],
+          pagination: %{page: 1, total: 0, items_per_page: nil}
+        }
+      end)
+
+      # Arrays and maps should default to page 1
+      {:ok, _view, _html} = live(conn, "/setlists?query=artist&page[]=1")
+      {:ok, _view, _html} = live(conn, "/setlists?query=artist&page[key]=value")
+    end
+
+    test "handles multiple page parameters by using the last one", %{conn: conn} do
+      # Phoenix uses the last parameter value when duplicates exist
+      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 3 ->
+        %{
+          setlists: [
+            %{
+              artist: "Artist Page 3",
+              venue: %{
+                name: "Venue",
+                location: %{city: "City", state: nil, country: "Country"}
+              },
+              date: Date.new!(2023, 01, 01),
+              id: "id",
+              song_count: 8
+            }
+          ],
+          pagination: %{page: 3, total: 40, items_per_page: 20}
+        }
+      end)
+
+      # Phoenix uses the last parameter value when there are duplicates
+      {:ok, _view, html} = live(conn, "/setlists?query=artist&page=2&page=3")
+      assert html =~ "Artist Page 3"
+    end
+
+    test "preserves query parameter when navigating with page parameter", %{conn: conn} do
+      unicode_query = "Sigur Rós"
+
+      expect(SetlistFm.API.MockClient, :search, 1, fn ^unicode_query, 2 ->
+        %{
+          setlists: [
+            %{
+              artist: "Sigur Rós",
+              venue: %{
+                name: "Harpa",
+                location: %{city: "Reykjavik", state: nil, country: "Iceland"}
+              },
+              date: Date.new!(2023, 01, 01),
+              id: "test-id",
+              song_count: 15
+            }
+          ],
+          pagination: %{page: 2, total: 40, items_per_page: 20}
+        }
+      end)
+
+      {:ok, _view, html} = live(conn, "/setlists?query=#{URI.encode(unicode_query)}&page=2")
+      assert html =~ "Sigur Rós"
+      assert html =~ "Harpa"
     end
   end
 end

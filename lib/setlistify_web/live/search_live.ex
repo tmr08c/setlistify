@@ -8,7 +8,12 @@ defmodule SetlistifyWeb.SearchLive do
   require OpenTelemetry.Tracer
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, setlists: [], query_params: %{})}
+    {:ok,
+     assign(socket,
+       setlists: [],
+       query_params: %{},
+       pagination: %{page: 1, total: 0, items_per_page: 0}
+     )}
   end
 
   def handle_params(%{"query" => query} = params, _uri, socket)
@@ -18,11 +23,23 @@ defmodule SetlistifyWeb.SearchLive do
         {:noreply, push_navigate(socket, to: ~p"/")}
 
       trimmed_query ->
-        OpenTelemetry.Tracer.with_span "SetlistifyWeb.SearchLive.handle_params" do
-          OpenTelemetry.Tracer.set_attributes([{"query", trimmed_query}])
+        page = parse_page(params["page"])
 
-          setlists = Setlistify.SetlistFm.API.search(trimmed_query)
-          {:noreply, assign(socket, setlists: setlists, query_params: params)}
+        OpenTelemetry.Tracer.with_span "SetlistifyWeb.SearchLive.handle_params" do
+          OpenTelemetry.Tracer.set_attributes([
+            {"query", trimmed_query},
+            {"page", page}
+          ])
+
+          %{setlists: setlists, pagination: pagination} =
+            Setlistify.SetlistFm.API.search(trimmed_query, page)
+
+          {:noreply,
+           assign(socket,
+             setlists: setlists,
+             pagination: pagination,
+             query_params: params
+           )}
         end
     end
   end
@@ -83,4 +100,16 @@ defmodule SetlistifyWeb.SearchLive do
   defp format_song_count(count) do
     ngettext("1 song", "%{count} songs", count)
   end
+
+  defp parse_page(nil), do: 1
+  defp parse_page(""), do: 1
+
+  defp parse_page(page_string) when is_binary(page_string) do
+    case Integer.parse(page_string) do
+      {page, ""} when page > 0 -> page
+      _ -> 1
+    end
+  end
+
+  defp parse_page(_), do: 1
 end

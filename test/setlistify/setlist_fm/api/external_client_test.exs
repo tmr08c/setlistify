@@ -338,7 +338,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     end)
 
     %{setlists: setlists, pagination: pagination} = ExternalClient.search("nonexistent")
-    
+
     assert setlists == []
     assert pagination.page == 1
     assert pagination.total == 0
@@ -360,7 +360,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     end)
 
     %{setlists: setlists, pagination: pagination} = ExternalClient.search("test artist", 2000)
-    
+
     assert setlists == []
     assert pagination.page == 2000
     assert pagination.total == 0
