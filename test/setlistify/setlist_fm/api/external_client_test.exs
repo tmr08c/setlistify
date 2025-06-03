@@ -9,19 +9,21 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
   end
 
   @search_response fixture_dir() |> Path.join("setlist_fm_search_response.json") |> File.read!()
-  test "search/1" do
+  test "search/2 with default page" do
     Req.Test.stub(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         assert conn.params["artistName"] == "modest mouse"
+        assert conn.params["p"] == 1
 
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
         |> Plug.Conn.send_resp(200, Jason.encode!(Jason.decode!(@search_response)))
     end)
 
-    [event | _] = result = ExternalClient.search("modest mouse")
+    %{setlists: setlists, pagination: pagination} = ExternalClient.search("modest mouse")
+    [event | _] = setlists
 
-    assert length(result) == 20
+    assert length(setlists) == 20
     assert event.artist == "Modest Mouse"
     assert event.venue.name == "9:30 Club"
     assert event.date == Date.new!(2022, 12, 20)
@@ -34,6 +36,59 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     assert event.venue.location.city == "Washington"
     assert event.venue.location.state == "DC"
     assert event.venue.location.country == "United States"
+
+    # Check pagination metadata
+    assert pagination.page == 1
+    assert pagination.total == 1419
+    assert pagination.items_per_page == 20
+  end
+
+  test "search/2 with specific page" do
+    Req.Test.stub(MySetlistFmStub, fn
+      %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
+        assert conn.params["artistName"] == "test artist"
+        assert conn.params["p"] == 3
+
+        # Mock response for page 3
+        response = %{
+          "setlist" => [
+            %{
+              "artist" => %{"name" => "Test Artist"},
+              "eventDate" => "01-01-2023",
+              "id" => "test-id-page3",
+              "venue" => %{
+                "name" => "Page 3 Venue",
+                "city" => %{
+                  "name" => "Austin",
+                  "stateCode" => "TX",
+                  "country" => %{"name" => "United States"}
+                }
+              },
+              "sets" => %{"set" => [%{"song" => [%{"name" => "Song 1"}]}]}
+            }
+          ],
+          "page" => 3,
+          "total" => 50,
+          "itemsPerPage" => 20
+        }
+
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/json")
+        |> Plug.Conn.send_resp(200, Jason.encode!(response))
+    end)
+
+    %{setlists: setlists, pagination: pagination} = ExternalClient.search("test artist", 3)
+    [event] = setlists
+
+    assert length(setlists) == 1
+    assert event.artist == "Test Artist"
+    assert event.venue.name == "Page 3 Venue"
+    assert event.id == "test-id-page3"
+
+    # Check pagination metadata for page 3
+    assert pagination.page == 3
+    assert pagination.total == 50
+    assert pagination.items_per_page == 20
   end
 
   test "search/1 handles international venues without state" do
@@ -271,18 +326,45 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
   @not_found_response fixture_dir()
                       |> Path.join("setlist_fm_search_404_response.json")
                       |> File.read!()
-  test "search/1 returns empty list when no results found (404)" do
+  test "search/2 returns empty response when no results found (404)" do
     Req.Test.stub(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         assert conn.params["artistName"] == "nonexistent"
+        assert conn.params["p"] == 1
 
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
         |> Plug.Conn.send_resp(404, @not_found_response)
     end)
 
-    result = ExternalClient.search("nonexistent")
-    assert result == []
+    %{setlists: setlists, pagination: pagination} = ExternalClient.search("nonexistent")
+    
+    assert setlists == []
+    assert pagination.page == 1
+    assert pagination.total == 0
+    assert pagination.items_per_page == nil
+  end
+
+  @page_too_high_response fixture_dir()
+                          |> Path.join("setlist_fm_search_page_too_high.json")
+                          |> File.read!()
+  test "search/2 handles page that doesn't exist" do
+    Req.Test.stub(MySetlistFmStub, fn
+      %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
+        assert conn.params["artistName"] == "test artist"
+        assert conn.params["p"] == 2000
+
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/json")
+        |> Plug.Conn.send_resp(404, @page_too_high_response)
+    end)
+
+    %{setlists: setlists, pagination: pagination} = ExternalClient.search("test artist", 2000)
+    
+    assert setlists == []
+    assert pagination.page == 2000
+    assert pagination.total == 0
+    assert pagination.items_per_page == nil
   end
 
   test "search/1 handles sets with missing or empty song arrays" do

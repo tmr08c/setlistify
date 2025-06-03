@@ -6,25 +6,26 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
 
   @root_endpoint "https://api.setlist.fm/rest/1.0"
 
-  def search(query, endpoint \\ @root_endpoint) do
+  def search(query, page \\ 1, endpoint \\ @root_endpoint) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.ExternalClient.search" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "setlist_fm"},
         {"setlist_fm.operation", "search"},
         {"setlist_fm.search.query", query},
+        {"setlist_fm.search.page", page},
         {"http.url", "#{endpoint}/search/setlists"}
       ])
 
       response =
-        Req.get!(request(endpoint), url: "/search/setlists", params: %{"artistName" => query})
+        Req.get!(request(endpoint), url: "/search/setlists", params: %{"artistName" => query, "p" => page})
 
       OpenTelemetry.Tracer.set_attributes([
         {"http.status_code", response.status}
       ])
 
       case response do
-        %{status: 200, body: %{"setlist" => setlists}} ->
-          Enum.map(setlists, fn setlist ->
+        %{status: 200, body: %{"setlist" => setlists, "page" => page_num, "total" => total, "itemsPerPage" => items_per_page}} ->
+          formatted_setlists = Enum.map(setlists, fn setlist ->
             %{
               "artist" => %{"name" => artist_name},
               "eventDate" => date,
@@ -52,13 +53,32 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
             }
           end)
 
+          %{
+            setlists: formatted_setlists,
+            pagination: %{
+              page: page_num,
+              total: total,
+              items_per_page: items_per_page
+            }
+          }
+
         # A 404 is returned when no matching results are found
         %{status: 404} ->
-          []
+          %{
+            setlists: [],
+            pagination: %{
+              page: page,
+              total: 0,
+              items_per_page: nil
+            }
+          }
       end
-      |> tap(fn results ->
+      |> tap(fn %{setlists: setlists, pagination: pagination} ->
         OpenTelemetry.Tracer.set_attributes([
-          {"setlist_fm.results.count", length(results)}
+          {"setlist_fm.results.count", length(setlists)},
+          {"setlist_fm.pagination.page", pagination.page},
+          {"setlist_fm.pagination.total", pagination.total},
+          {"setlist_fm.pagination.items_per_page", pagination.items_per_page}
         ])
 
         OpenTelemetry.Tracer.set_status(:ok, "")

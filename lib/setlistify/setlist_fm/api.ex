@@ -16,6 +16,15 @@ defmodule Setlistify.SetlistFm.API do
           song_count: non_neg_integer()
         }
 
+  @type search_response() :: %{
+          setlists: [search_result()],
+          pagination: %{
+            page: pos_integer(),
+            total: non_neg_integer(),
+            items_per_page: pos_integer() | nil
+          }
+        }
+
   @type setlist() :: %{
           artist: String.t(),
           venue: %{
@@ -35,25 +44,30 @@ defmodule Setlistify.SetlistFm.API do
           name: nil | String.t(),
           songs: [%{title: String.t()}]
         }
-  @callback search(String.t()) :: [search_result()]
-  def search(query) do
+  @callback search(String.t(), pos_integer()) :: search_response()
+  def search(query, page \\ 1) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.search" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "setlist_fm"},
         {"setlist_fm.operation", "search"},
-        {"setlist_fm.search.query", query}
+        {"setlist_fm.search.query", query},
+        {"setlist_fm.search.page", page}
       ])
 
       # Cachex uses a separate process, so we need to propagate OpenTelemetry context
       parent_ctx = OpenTelemetry.Ctx.get_current()
       parent_span = OpenTelemetry.Tracer.current_span_ctx(parent_ctx)
 
+      # Warning: different pages may have different expiration times in cache,
+      # which could cause consistency issues if this becomes problematic
+      cache_key = {query, page}
+
       :setlist_fm_search_cache
-      |> Cachex.fetch(query, fn query ->
+      |> Cachex.fetch(cache_key, fn _cache_key ->
         OpenTelemetry.Ctx.attach(parent_ctx)
         OpenTelemetry.Tracer.set_current_span(parent_span)
 
-        impl().search(query)
+        impl().search(query, page)
       end)
       |> elem(1)
     end
