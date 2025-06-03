@@ -103,7 +103,14 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
       Logger.error("Exception during Setlist.fm search: #{inspect(error)}")
       OpenTelemetry.Tracer.record_exception(error)
       OpenTelemetry.Tracer.set_status(:error, "Exception: #{Exception.message(error)}")
-      []
+      %{
+        setlists: [],
+        pagination: %{
+          page: page,
+          total: 0,
+          items_per_page: nil
+        }
+      }
   end
 
   def get_setlist(id, endpoint \\ @root_endpoint) do

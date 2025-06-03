@@ -14,6 +14,13 @@ defmodule SetlistifyWeb.SearchLiveTest do
   setup :set_mox_from_context
   setup :verify_on_exit!
 
+  setup do
+    on_exit(fn ->
+      Cachex.clear!(:setlist_fm_search_cache)
+      Cachex.clear!(:setlist_fm_setlist_cache)
+    end)
+  end
+
   test "redirects to home when no search params provided", %{conn: conn} do
     assert {:error, {:live_redirect, %{to: "/"}}} = live(conn, ~p"/setlists")
   end
@@ -337,20 +344,16 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "defaults to page 1 when page parameter has spaces", %{conn: conn} do
-      # TODO: Investigate why we need 3 calls here instead of 1. With caching enabled,
-      # subsequent calls to live() with the same query and page should hit the cache
-      # and not call the mock API. This suggests either:
-      # 1. The cache is not working properly in tests
-      # 2. Each live() call creates an isolated environment
-      # 3. The cache key is not being constructed consistently
-      expect(SetlistFm.API.MockClient, :search, 3, fn "artist", 1 ->
+      # With cache clearing in setup, the first call will hit the API and subsequent
+      # calls will hit the cache since they all use the same {query, page} key
+      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
         %{
           setlists: [],
           pagination: %{page: 1, total: 0, items_per_page: nil}
         }
       end)
 
-      # Test various space scenarios
+      # Test various space scenarios - all parse to page 1
       {:ok, _view, _html} = live(conn, "/setlists?query=artist&page=%20%20%20")
       {:ok, _view, _html} = live(conn, "/setlists?query=artist&page=%20")
       # tab
@@ -358,14 +361,14 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "defaults to page 1 when page parameter is not a number", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 4, fn "artist", 1 ->
+      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
         %{
           setlists: [],
           pagination: %{page: 1, total: 0, items_per_page: nil}
         }
       end)
 
-      # Various non-numeric inputs
+      # Various non-numeric inputs - all parse to page 1
       {:ok, _view, _html} = live(conn, ~p"/setlists?query=artist&page=abc")
       {:ok, _view, _html} = live(conn, ~p"/setlists?query=artist&page=two")
       {:ok, _view, _html} = live(conn, ~p"/setlists?query=artist&page=2a")
@@ -384,13 +387,14 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "defaults to page 1 when page parameter is negative", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 2, fn "artist", 1 ->
+      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
         %{
           setlists: [],
           pagination: %{page: 1, total: 0, items_per_page: nil}
         }
       end)
 
+      # Both negative values parse to page 1
       {:ok, _view, _html} = live(conn, ~p"/setlists?query=artist&page=-1")
       {:ok, _view, _html} = live(conn, ~p"/setlists?query=artist&page=-100")
     end
@@ -431,7 +435,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "handles page parameter with special characters", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 3, fn "artist", 1 ->
+      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
         %{
           setlists: [],
           pagination: %{page: 1, total: 0, items_per_page: nil}
@@ -445,8 +449,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "handles page parameter as array or map", %{conn: conn} do
-      # TODO: Same caching issue - need 2 calls for 2 live() invocations
-      expect(SetlistFm.API.MockClient, :search, 2, fn "artist", 1 ->
+      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
         %{
           setlists: [],
           pagination: %{page: 1, total: 0, items_per_page: nil}
