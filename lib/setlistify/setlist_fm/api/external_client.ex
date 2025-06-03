@@ -21,7 +21,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
       response =
         Req.get!(request(endpoint),
           url: "/search/setlists",
-          params: %{"artistName" => query, "p" => page}
+          params: %{"artistName" => query, "p" => to_string(page)}
         )
 
       OpenTelemetry.Tracer.set_attributes([
@@ -103,6 +103,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
       Logger.error("Exception during Setlist.fm search: #{inspect(error)}")
       OpenTelemetry.Tracer.record_exception(error)
       OpenTelemetry.Tracer.set_status(:error, "Exception: #{Exception.message(error)}")
+
       %{
         setlists: [],
         pagination: %{

@@ -13,7 +13,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     Req.Test.stub(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         assert conn.params["artistName"] == "modest mouse"
-        assert conn.params["p"] == 1
+        assert conn.params["p"] == "1"
 
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
@@ -47,7 +47,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     Req.Test.stub(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         assert conn.params["artistName"] == "test artist"
-        assert conn.params["p"] == 3
+        assert conn.params["p"] == "3"
 
         # Mock response for page 3
         response = %{
@@ -123,7 +123,10 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
           },
           "sets" => %{"set" => [%{"song" => [%{"name" => "Let It Be"}]}]}
         }
-      ]
+      ],
+      "page" => 1,
+      "total" => 2,
+      "itemsPerPage" => 20
     }
 
     Req.Test.stub(MySetlistFmStub, fn
@@ -133,7 +136,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         |> Plug.Conn.send_resp(200, Jason.encode!(response))
     end)
 
-    [uk_event, canada_event] = ExternalClient.search("beatles")
+    %{setlists: [uk_event, canada_event]} = ExternalClient.search("beatles")
 
     # UK venue without state
     assert uk_event.venue.location.city == "London"
@@ -160,7 +163,10 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
           },
           "sets" => %{"set" => []}
         }
-      ]
+      ],
+      "page" => 1,
+      "total" => 1,
+      "itemsPerPage" => 20
     }
 
     Req.Test.stub(MySetlistFmStub, fn
@@ -170,7 +176,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         |> Plug.Conn.send_resp(200, Jason.encode!(response))
     end)
 
-    [event] = ExternalClient.search("test")
+    %{setlists: [event]} = ExternalClient.search("test")
 
     # Should handle missing data gracefully
     assert event.venue.location.city == "Unknown"
@@ -290,7 +296,10 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
             ]
           }
         }
-      ]
+      ],
+      "page" => 1,
+      "total" => 4,
+      "itemsPerPage" => 20
     }
 
     Req.Test.stub(MySetlistFmStub, fn
@@ -300,7 +309,8 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         |> Plug.Conn.send_resp(200, Jason.encode!(response))
     end)
 
-    [no_songs, one_set, multiple_sets, set_with_encore] = ExternalClient.search("test artist")
+    %{setlists: [no_songs, one_set, multiple_sets, set_with_encore]} =
+      ExternalClient.search("test artist")
 
     # Test setlist with no songs
     assert no_songs.song_count == 0
@@ -330,7 +340,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     Req.Test.stub(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         assert conn.params["artistName"] == "nonexistent"
-        assert conn.params["p"] == 1
+        assert conn.params["p"] == "1"
 
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
@@ -352,7 +362,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     Req.Test.stub(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         assert conn.params["artistName"] == "test artist"
-        assert conn.params["p"] == 2000
+        assert conn.params["p"] == "2000"
 
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
@@ -404,7 +414,10 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
             ]
           }
         }
-      ]
+      ],
+      "page" => 1,
+      "total" => 1,
+      "itemsPerPage" => 20
     }
 
     Req.Test.stub(MySetlistFmStub, fn
@@ -414,7 +427,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         |> Plug.Conn.send_resp(200, Jason.encode!(response))
     end)
 
-    [result] = ExternalClient.search("test artist")
+    %{setlists: [result]} = ExternalClient.search("test artist")
 
     # Should count only the songs from the normal set
     assert result.song_count == 2
