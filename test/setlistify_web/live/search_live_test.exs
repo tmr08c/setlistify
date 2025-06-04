@@ -17,7 +17,6 @@ defmodule SetlistifyWeb.SearchLiveTest do
   setup do
     on_exit(fn ->
       Cachex.clear!(:setlist_fm_search_cache)
-      Cachex.clear!(:setlist_fm_setlist_cache)
     end)
   end
 
