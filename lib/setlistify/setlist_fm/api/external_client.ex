@@ -28,90 +28,95 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
         {"http.status_code", response.status}
       ])
 
-      case response do
-        %{
-          status: 200,
-          body: %{
-            "setlist" => setlists,
-            "page" => page_num,
-            "total" => total,
-            "itemsPerPage" => items_per_page
-          }
-        } ->
-          formatted_setlists =
-            Enum.map(setlists, fn setlist ->
-              %{
-                "artist" => %{"name" => artist_name},
-                "eventDate" => date,
-                "id" => id,
-                "venue" => %{
-                  "name" => venue_name,
-                  "city" => city_data
-                },
-                "sets" => %{"set" => sets}
-              } = setlist
-
-              song_count =
-                sets
-                |> Enum.flat_map(&Map.get(&1, "song", []))
-                |> length()
-
-              location = build_location(city_data)
-
-              %{
-                artist: artist_name,
-                date: format_date(date),
-                id: id,
-                venue: %{name: venue_name, location: location},
-                song_count: song_count
-              }
-            end)
-
+      result =
+        case response do
           %{
-            setlists: formatted_setlists,
-            pagination: %{
-              page: page_num,
-              total: total,
-              items_per_page: items_per_page
+            status: 200,
+            body: %{
+              "setlist" => setlists,
+              "page" => page_num,
+              "total" => total,
+              "itemsPerPage" => items_per_page
             }
-          }
+          } ->
+            formatted_setlists =
+              Enum.map(setlists, fn setlist ->
+                %{
+                  "artist" => %{"name" => artist_name},
+                  "eventDate" => date,
+                  "id" => id,
+                  "venue" => %{
+                    "name" => venue_name,
+                    "city" => city_data
+                  },
+                  "sets" => %{"set" => sets}
+                } = setlist
 
-        # A 404 is returned when no matching results are found
-        %{status: 404} ->
-          %{
-            setlists: [],
-            pagination: %{
-              page: page,
-              total: 0,
-              items_per_page: nil
-            }
-          }
+                song_count =
+                  sets
+                  |> Enum.flat_map(&Map.get(&1, "song", []))
+                  |> length()
+
+                location = build_location(city_data)
+
+                %{
+                  artist: artist_name,
+                  date: format_date(date),
+                  id: id,
+                  venue: %{name: venue_name, location: location},
+                  song_count: song_count
+                }
+              end)
+
+            {:ok,
+             %{
+               setlists: formatted_setlists,
+               pagination: %{
+                 page: page_num,
+                 total: total,
+                 items_per_page: items_per_page
+               }
+             }}
+
+          # A 404 is returned when no matching results are found
+          %{status: 404} ->
+            {:error, :not_found}
+
+          %{status: status} when status >= 400 ->
+            {:error, {:api_error, "HTTP #{status}"}}
+        end
+
+      case result do
+        {:ok, response} ->
+          OpenTelemetry.Tracer.set_attributes([
+            {"setlist_fm.results.count", length(response.setlists)},
+            {"setlist_fm.pagination.page", response.pagination.page},
+            {"setlist_fm.pagination.total", response.pagination.total},
+            {"setlist_fm.pagination.items_per_page", response.pagination.items_per_page}
+          ])
+
+          OpenTelemetry.Tracer.set_status(:ok, "")
+          result
+
+        {:error, :not_found} ->
+          OpenTelemetry.Tracer.set_attributes([
+            {"setlist_fm.results.count", 0}
+          ])
+
+          OpenTelemetry.Tracer.set_status(:ok, "No results found")
+          result
+
+        {:error, reason} ->
+          OpenTelemetry.Tracer.set_status(:error, "Error: #{inspect(reason)}")
+          result
       end
-      |> tap(fn %{setlists: setlists, pagination: pagination} ->
-        OpenTelemetry.Tracer.set_attributes([
-          {"setlist_fm.results.count", length(setlists)},
-          {"setlist_fm.pagination.page", pagination.page},
-          {"setlist_fm.pagination.total", pagination.total},
-          {"setlist_fm.pagination.items_per_page", pagination.items_per_page}
-        ])
-
-        OpenTelemetry.Tracer.set_status(:ok, "")
-      end)
     end
   rescue
     error ->
       Logger.error("Exception during Setlist.fm search: #{inspect(error)}")
       OpenTelemetry.Tracer.record_exception(error)
       OpenTelemetry.Tracer.set_status(:error, "Exception: #{Exception.message(error)}")
-
-      %{
-        setlists: [],
-        pagination: %{
-          page: page,
-          total: 0,
-          items_per_page: nil
-        }
-      }
+      {:error, {:api_error, error}}
   end
 
   def get_setlist(id, endpoint \\ @root_endpoint) do
@@ -129,44 +134,57 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
         {"http.status_code", response.status}
       ])
 
-      resp = response.body
+      case response do
+        %{status: 200, body: resp} ->
+          %{
+            "artist" => %{"name" => artist_name},
+            "venue" => %{"name" => venue_name, "city" => city_data},
+            "eventDate" => date,
+            # The [docs](https://api.setlist.fm/docs/1.0/json_Setlist.html) do not
+            # indicate there is a "sets" key, but only a "set" key which is an array
+            # of set resources. For now, I am going to assume this is essentially an
+            # extraneous key and we can dig into the sub-"set" array and not miss out
+            # on anything.
+            "sets" => %{"set" => sets}
+          } = resp
 
-      %{
-        "artist" => %{"name" => artist_name},
-        "venue" => %{"name" => venue_name, "city" => city_data},
-        "eventDate" => date,
-        # The [docs](https://api.setlist.fm/docs/1.0/json_Setlist.html) do not
-        # indicate there is a "sets" key, but only a "set" key which is an array
-        # of set resources. For now, I am going to assume this is essentially an
-        # extraneous key and we can dig into the sub-"set" array and not miss out
-        # on anything.
-        "sets" => %{"set" => sets}
-      } = resp
+          sets =
+            Enum.map(sets, fn set ->
+              songs = set |> Map.get("song", []) |> Enum.map(&%{title: Map.get(&1, "name")})
+              %{name: set["name"], encore: set["encore"], songs: songs}
+            end)
 
-      sets =
-        Enum.map(sets, fn set ->
-          songs = set |> Map.get("song", []) |> Enum.map(&%{title: Map.get(&1, "name")})
-          %{name: set["name"], encore: set["encore"], songs: songs}
-        end)
+          location = build_location(city_data)
 
-      location = build_location(city_data)
+          result = %{
+            artist: artist_name,
+            venue: %{name: venue_name, location: location},
+            date: format_date(date),
+            sets: sets
+          }
 
-      result = %{
-        artist: artist_name,
-        venue: %{name: venue_name, location: location},
-        date: format_date(date),
-        sets: sets
-      }
+          OpenTelemetry.Tracer.set_attributes([
+            {"setlist_fm.artist", artist_name},
+            {"setlist_fm.venue", venue_name},
+            {"setlist_fm.sets.count", length(sets)},
+            {"setlist_fm.songs.count", sets |> Enum.flat_map(& &1.songs) |> length()}
+          ])
 
-      OpenTelemetry.Tracer.set_attributes([
-        {"setlist_fm.artist", artist_name},
-        {"setlist_fm.venue", venue_name},
-        {"setlist_fm.sets.count", length(sets)},
-        {"setlist_fm.songs.count", sets |> Enum.flat_map(& &1.songs) |> length()}
-      ])
+          OpenTelemetry.Tracer.set_status(:ok, "")
+          {:ok, result}
 
-      OpenTelemetry.Tracer.set_status(:ok, "")
-      result
+        %{status: 404} ->
+          OpenTelemetry.Tracer.set_status(:error, "Not found")
+          {:error, :not_found}
+
+        %{status: status} when status >= 500 ->
+          OpenTelemetry.Tracer.set_status(:error, "Network error")
+          {:error, :network_error}
+
+        %{status: status} ->
+          OpenTelemetry.Tracer.set_status(:error, "Unexpected status: #{status}")
+          {:error, "unexpected_status_#{status}"}
+      end
     end
   rescue
     error ->

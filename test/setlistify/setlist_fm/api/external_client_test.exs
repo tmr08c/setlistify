@@ -20,7 +20,9 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         |> Plug.Conn.send_resp(200, Jason.encode!(Jason.decode!(@search_response)))
     end)
 
-    %{setlists: setlists, pagination: pagination} = ExternalClient.search("modest mouse")
+    assert {:ok, %{setlists: setlists, pagination: pagination}} =
+             ExternalClient.search("modest mouse")
+
     [event | _] = setlists
 
     assert length(setlists) == 20
@@ -77,7 +79,9 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         |> Plug.Conn.send_resp(200, Jason.encode!(response))
     end)
 
-    %{setlists: setlists, pagination: pagination} = ExternalClient.search("test artist", 3)
+    assert {:ok, %{setlists: setlists, pagination: pagination}} =
+             ExternalClient.search("test artist", 3)
+
     [event] = setlists
 
     assert length(setlists) == 1
@@ -136,7 +140,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         |> Plug.Conn.send_resp(200, Jason.encode!(response))
     end)
 
-    %{setlists: [uk_event, canada_event]} = ExternalClient.search("beatles")
+    assert {:ok, %{setlists: [uk_event, canada_event]}} = ExternalClient.search("beatles")
 
     # UK venue without state
     assert uk_event.venue.location.city == "London"
@@ -176,7 +180,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         |> Plug.Conn.send_resp(200, Jason.encode!(response))
     end)
 
-    %{setlists: [event]} = ExternalClient.search("test")
+    assert {:ok, %{setlists: [event]}} = ExternalClient.search("test")
 
     # Should handle missing data gracefully
     assert event.venue.location.city == "Unknown"
@@ -309,8 +313,8 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         |> Plug.Conn.send_resp(200, Jason.encode!(response))
     end)
 
-    %{setlists: [no_songs, one_set, multiple_sets, set_with_encore]} =
-      ExternalClient.search("test artist")
+    assert {:ok, %{setlists: [no_songs, one_set, multiple_sets, set_with_encore]}} =
+             ExternalClient.search("test artist")
 
     # Test setlist with no songs
     assert no_songs.song_count == 0
@@ -347,12 +351,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         |> Plug.Conn.send_resp(404, @not_found_response)
     end)
 
-    %{setlists: setlists, pagination: pagination} = ExternalClient.search("nonexistent")
-
-    assert setlists == []
-    assert pagination.page == 1
-    assert pagination.total == 0
-    assert pagination.items_per_page == nil
+    assert {:error, :not_found} = ExternalClient.search("nonexistent")
   end
 
   @page_too_high_response fixture_dir()
@@ -369,12 +368,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         |> Plug.Conn.send_resp(404, @page_too_high_response)
     end)
 
-    %{setlists: setlists, pagination: pagination} = ExternalClient.search("test artist", 2000)
-
-    assert setlists == []
-    assert pagination.page == 2000
-    assert pagination.total == 0
-    assert pagination.items_per_page == nil
+    assert {:error, :not_found} = ExternalClient.search("test artist", 2000)
   end
 
   test "search/1 handles sets with missing or empty song arrays" do
@@ -427,7 +421,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         |> Plug.Conn.send_resp(200, Jason.encode!(response))
     end)
 
-    %{setlists: [result]} = ExternalClient.search("test artist")
+    assert {:ok, %{setlists: [result]}} = ExternalClient.search("test artist")
 
     # Should count only the songs from the normal set
     assert result.song_count == 2
@@ -447,7 +441,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
       |> Plug.Conn.send_resp(200, Jason.encode!(Jason.decode!(@get_response)))
     end)
 
-    result = ExternalClient.get_setlist(id)
+    assert {:ok, result} = ExternalClient.get_setlist(id)
 
     assert result.artist == "Modest Mouse"
     assert result.venue.name == "Terminal 5"
@@ -460,6 +454,65 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
 
     for %{songs: songs} <- result.sets do
       assert length(songs) > 0
+    end
+  end
+
+  describe "error handling" do
+    test "search/2 returns error tuple on server error" do
+      Req.Test.stub(MySetlistFmStub, fn
+        %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(500, Jason.encode!(%{error: "Internal Server Error"}))
+      end)
+
+      assert {:error, {:api_error, _}} = ExternalClient.search("test artist")
+    end
+
+    test "search/2 returns error tuple on unexpected status" do
+      Req.Test.stub(MySetlistFmStub, fn
+        %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(429, Jason.encode!(%{error: "Rate Limited"}))
+      end)
+
+      assert {:error, {:api_error, "HTTP 429"}} = ExternalClient.search("test artist")
+    end
+
+    test "search/2 returns error tuple on network failure" do
+      Req.Test.stub(MySetlistFmStub, fn
+        %{request_path: "/rest/1.0/search/setlists", method: "GET"} = _conn ->
+          raise "network failure"
+      end)
+
+      assert {:error, {:api_error, _}} = ExternalClient.search("test artist")
+    end
+
+    test "get_setlist/1 returns error tuple on 404" do
+      id = Ecto.UUID.generate()
+
+      Req.Test.stub(MySetlistFmStub, fn
+        %{request_path: "/rest/1.0/setlist/" <> ^id, method: "GET"} = conn ->
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(404, Jason.encode!(%{error: "Not Found"}))
+      end)
+
+      assert {:error, :not_found} = ExternalClient.get_setlist(id)
+    end
+
+    test "get_setlist/1 returns error tuple on server error" do
+      id = Ecto.UUID.generate()
+
+      Req.Test.stub(MySetlistFmStub, fn
+        %{request_path: "/rest/1.0/setlist/" <> ^id, method: "GET"} = conn ->
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(503, Jason.encode!(%{error: "Service Unavailable"}))
+      end)
+
+      assert {:error, :network_error} = ExternalClient.get_setlist(id)
     end
   end
 end

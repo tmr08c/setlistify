@@ -12,7 +12,7 @@ defmodule SetlistifyWeb.SearchLive do
      assign(socket,
        setlists: [],
        query_params: %{},
-       pagination: %{page: 1, total: 0, items_per_page: 0}
+       pagination: nil
      )}
   end
 
@@ -31,15 +31,35 @@ defmodule SetlistifyWeb.SearchLive do
             {"page", page}
           ])
 
-          %{setlists: setlists, pagination: pagination} =
-            Setlistify.SetlistFm.API.search(trimmed_query, page)
+          case Setlistify.SetlistFm.API.search(trimmed_query, page) do
+            {:ok, %{setlists: setlists, pagination: pagination}} ->
+              {:noreply,
+               assign(socket,
+                 setlists: setlists,
+                 pagination: pagination,
+                 query_params: params
+               )}
 
-          {:noreply,
-           assign(socket,
-             setlists: setlists,
-             pagination: pagination,
-             query_params: params
-           )}
+            {:error, :not_found} ->
+              {:noreply,
+               assign(socket,
+                 setlists: [],
+                 pagination: nil,
+                 query_params: params
+               )}
+
+            {:error, {:api_error, reason}} ->
+              Logger.warning("Failed to search setlists: #{inspect(reason)}")
+
+              {:noreply,
+               socket
+               |> put_flash(:error, "Unable to search at this time. Please try again later.")
+               |> assign(
+                 setlists: [],
+                 pagination: nil,
+                 query_params: params
+               )}
+          end
         end
     end
   end
@@ -87,7 +107,7 @@ defmodule SetlistifyWeb.SearchLive do
           <% end %>
         </ol>
 
-        <%= if should_show_pagination?(@pagination) do %>
+        <%= if @pagination && should_show_pagination?(@pagination) do %>
           <.pagination
             page={@pagination.page}
             total_pages={total_pages(@pagination)}
@@ -129,7 +149,7 @@ defmodule SetlistifyWeb.SearchLive do
 
   defp parse_page(_), do: 1
 
-  defp should_show_pagination?(%{total: _total, items_per_page: nil}), do: false
+  defp should_show_pagination?(nil), do: false
 
   defp should_show_pagination?(%{total: total, items_per_page: items_per_page})
        when total > items_per_page,
@@ -137,7 +157,7 @@ defmodule SetlistifyWeb.SearchLive do
 
   defp should_show_pagination?(_), do: false
 
-  defp total_pages(%{total: _total, items_per_page: nil}), do: 1
+  defp total_pages(nil), do: 1
 
   defp total_pages(%{total: total, items_per_page: items_per_page}) when items_per_page > 0 do
     ceil(total / items_per_page)
