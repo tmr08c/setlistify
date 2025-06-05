@@ -107,7 +107,7 @@ defmodule SetlistifyWeb.SearchLive do
           <% end %>
         </ol>
 
-        <%= if @pagination && should_show_pagination?(@pagination) do %>
+        <%= if should_show_pagination?(@pagination) do %>
           <.pagination
             page={@pagination.page}
             total_pages={total_pages(@pagination)}
