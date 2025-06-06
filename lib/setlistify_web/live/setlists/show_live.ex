@@ -7,45 +7,59 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   alias OpentelemetryProcessPropagator.Task
 
   def mount(%{"id" => id}, _session, socket) do
-    setlist = SetlistFm.API.get_setlist(id)
-    user_session = socket.assigns[:user_session]
+    case SetlistFm.API.get_setlist(id) do
+      {:ok, setlist} ->
+        user_session = socket.assigns[:user_session]
 
-    setlist =
-      if user_session do
-        # TODO: This current model requires fetching all songs from a set before
-        # we can move onto the next one
-        sets =
-          setlist.sets
-          |> Enum.map(fn set ->
-            # TODO: The workflow of updating UserSession after a refresh (see
-            # SetlistifyWeb.handle_info) probably won't work with this pattern
-            # because the spawned tasks won't receive the message.
-            songs =
-              Task.async_stream(set.songs, fn song ->
-                spotify_info =
-                  Spotify.API.search_for_track(user_session, setlist.artist, song.title)
+        setlist =
+          if user_session do
+            # TODO: This current model requires fetching all songs from a set before
+            # we can move onto the next one
+            sets =
+              setlist.sets
+              |> Enum.map(fn set ->
+                # TODO: The workflow of updating UserSession after a refresh (see
+                # SetlistifyWeb.handle_info) probably won't work with this pattern
+                # because the spawned tasks won't receive the message.
+                songs =
+                  Task.async_stream(set.songs, fn song ->
+                    spotify_info =
+                      Spotify.API.search_for_track(user_session, setlist.artist, song.title)
 
-                Map.put(song, :spotify_info, spotify_info)
+                    Map.put(song, :spotify_info, spotify_info)
+                  end)
+
+                %{set | songs: songs}
               end)
+              |> Enum.map(fn set -> %{set | songs: Enum.map(set.songs, &elem(&1, 1))} end)
 
-            %{set | songs: songs}
-          end)
-          |> Enum.map(fn set -> %{set | songs: Enum.map(set.songs, &elem(&1, 1))} end)
+            %{setlist | sets: sets}
+          else
+            setlist
+          end
 
-        %{setlist | sets: sets}
-      else
-        setlist
-      end
+        {:ok,
+         assign(socket,
+           sets: setlist.sets,
+           artist: setlist.artist,
+           venue_name: setlist.venue.name,
+           venue_location: setlist.venue.location,
+           date: setlist.date,
+           redirect_to: "/setlist/#{id}"
+         )}
 
-    {:ok,
-     assign(socket,
-       sets: setlist.sets,
-       artist: setlist.artist,
-       venue_name: setlist.venue.name,
-       venue_location: setlist.venue.location,
-       date: setlist.date,
-       redirect_to: "/setlist/#{id}"
-     )}
+      {:error, :not_found} ->
+        {:ok,
+         socket
+         |> put_flash(:error, "Setlist not found")
+         |> push_navigate(to: ~p"/")}
+
+      {:error, _reason} ->
+        {:ok,
+         socket
+         |> put_flash(:error, "Failed to load setlist. Please try again.")
+         |> push_navigate(to: ~p"/")}
+    end
   end
 
   def handle_event("create_playlist", _params, socket) do

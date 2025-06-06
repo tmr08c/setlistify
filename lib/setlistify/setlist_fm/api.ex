@@ -16,6 +16,21 @@ defmodule Setlistify.SetlistFm.API do
           song_count: non_neg_integer()
         }
 
+  @type pagination() :: %{
+          page: pos_integer(),
+          total: non_neg_integer(),
+          items_per_page: pos_integer()
+        }
+
+  @type search_response() ::
+          {:ok,
+           %{
+             setlists: [search_result()],
+             pagination: pagination()
+           }}
+          | {:error, :not_found}
+          | {:error, {:api_error, term()}}
+
   @type setlist() :: %{
           artist: String.t(),
           venue: %{
@@ -35,31 +50,47 @@ defmodule Setlistify.SetlistFm.API do
           name: nil | String.t(),
           songs: [%{title: String.t()}]
         }
-  @callback search(String.t()) :: [search_result()]
-  def search(query) do
+
+  @callback search(String.t(), pos_integer()) :: search_response()
+  def search(query, page \\ 1) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.search" do
       OpenTelemetry.Tracer.set_attributes([
         {"service.name", "setlist_fm"},
         {"setlist_fm.operation", "search"},
-        {"setlist_fm.search.query", query}
+        {"setlist_fm.search.query", query},
+        {"setlist_fm.search.page", page}
       ])
 
       # Cachex uses a separate process, so we need to propagate OpenTelemetry context
       parent_ctx = OpenTelemetry.Ctx.get_current()
       parent_span = OpenTelemetry.Tracer.current_span_ctx(parent_ctx)
 
-      :setlist_fm_search_cache
-      |> Cachex.fetch(query, fn query ->
-        OpenTelemetry.Ctx.attach(parent_ctx)
-        OpenTelemetry.Tracer.set_current_span(parent_span)
+      # Warning: different pages may have different expiration times in cache,
+      # which could cause consistency issues if this becomes problematic
+      cache_key = {query, page}
 
-        impl().search(query)
-      end)
-      |> elem(1)
+      result =
+        :setlist_fm_search_cache
+        |> Cachex.fetch(cache_key, fn _cache_key ->
+          OpenTelemetry.Ctx.attach(parent_ctx)
+          OpenTelemetry.Tracer.set_current_span(parent_span)
+
+          case impl().search(query, page) do
+            {:ok, _} = success -> {:commit, success}
+            {:error, :not_found} = error -> {:commit, error}
+            {:error, _} = error -> {:ignore, error}
+          end
+        end)
+
+      case result do
+        {:ok, response} -> response
+        {:commit, response} -> response
+        {:ignore, result} -> result
+      end
     end
   end
 
-  @callback get_setlist(String.t()) :: setlist()
+  @callback get_setlist(String.t()) :: {:ok, setlist()} | {:error, atom() | String.t()}
   def get_setlist(id) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.get_setlist" do
       OpenTelemetry.Tracer.set_attributes([
@@ -72,14 +103,23 @@ defmodule Setlistify.SetlistFm.API do
       parent_ctx = OpenTelemetry.Ctx.get_current()
       parent_span = OpenTelemetry.Tracer.current_span_ctx(parent_ctx)
 
-      :setlist_fm_setlist_cache
-      |> Cachex.fetch(id, fn id ->
-        OpenTelemetry.Ctx.attach(parent_ctx)
-        OpenTelemetry.Tracer.set_current_span(parent_span)
+      result =
+        :setlist_fm_setlist_cache
+        |> Cachex.fetch(id, fn id ->
+          OpenTelemetry.Ctx.attach(parent_ctx)
+          OpenTelemetry.Tracer.set_current_span(parent_span)
 
-        impl().get_setlist(id)
-      end)
-      |> elem(1)
+          case impl().get_setlist(id) do
+            {:ok, setlist} -> {:commit, setlist}
+            {:error, reason} -> {:ignore, {:error, reason}}
+          end
+        end)
+
+      case result do
+        {:ok, setlist} -> {:ok, setlist}
+        {:commit, setlist} -> {:ok, setlist}
+        {:ignore, {:error, reason}} -> {:error, reason}
+      end
     end
   end
 

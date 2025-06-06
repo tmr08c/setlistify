@@ -28,23 +28,24 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     setlist_id = Ecto.UUID.generate()
 
     expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
-      %{
-        artist: "The Beatles",
-        venue: %{
-          name: "Compaq Center",
-          location: %{
-            city: "Houston",
-            state: "TX",
-            country: "United States"
-          }
-        },
-        date: Date.new!(2023, 01, 01),
-        sets: [
-          %{name: "Warm up", songs: [%{title: "a warm up song"}]},
-          %{name: nil, songs: [%{title: "main set song1"}, %{title: "main set song2"}]},
-          %{name: nil, encore: 1, songs: [%{title: "encore song1"}, %{title: "encore song2"}]}
-        ]
-      }
+      {:ok,
+       %{
+         artist: "The Beatles",
+         venue: %{
+           name: "Compaq Center",
+           location: %{
+             city: "Houston",
+             state: "TX",
+             country: "United States"
+           }
+         },
+         date: Date.new!(2023, 01, 01),
+         sets: [
+           %{name: "Warm up", songs: [%{title: "a warm up song"}]},
+           %{name: nil, songs: [%{title: "main set song1"}, %{title: "main set song2"}]},
+           %{name: nil, encore: 1, songs: [%{title: "encore song1"}, %{title: "encore song2"}]}
+         ]
+       }}
     end)
 
     {:ok, _view, html} = live(conn, ~p"/setlist/#{setlist_id}")
@@ -64,21 +65,22 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     setlist_id = Ecto.UUID.generate()
 
     expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
-      %{
-        artist: "The Beatles",
-        venue: %{
-          name: "Compaq Center",
-          location: %{
-            city: "Houston",
-            state: "TX",
-            country: "United States"
-          }
-        },
-        date: Date.new!(2023, 01, 01),
-        sets: [
-          %{name: "Main", songs: [%{title: "Hey Jude"}]}
-        ]
-      }
+      {:ok,
+       %{
+         artist: "The Beatles",
+         venue: %{
+           name: "Compaq Center",
+           location: %{
+             city: "Houston",
+             state: "TX",
+             country: "United States"
+           }
+         },
+         date: Date.new!(2023, 01, 01),
+         sets: [
+           %{name: "Main", songs: [%{title: "Hey Jude"}]}
+         ]
+       }}
     end)
 
     {:ok, _view, html} = live(conn, ~p"/setlist/#{setlist_id}")
@@ -109,19 +111,20 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
 
     # Mock setlist reponse
     expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
-      %{
-        artist: artist,
-        venue: %{
-          name: "Compaq Center",
-          location: %{
-            city: "Houston",
-            state: "TX",
-            country: "United States"
-          }
-        },
-        date: Date.utc_today(),
-        sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
-      }
+      {:ok,
+       %{
+         artist: artist,
+         venue: %{
+           name: "Compaq Center",
+           location: %{
+             city: "Houston",
+             state: "TX",
+             country: "United States"
+           }
+         },
+         date: Date.utc_today(),
+         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
+       }}
     end)
 
     # Mock searching for songs in setlist
@@ -171,19 +174,20 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
 
     # Mock setlist reponse
     expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
-      %{
-        artist: artist,
-        venue: %{
-          name: venue,
-          location: %{
-            city: "Houston",
-            state: "TX",
-            country: "United States"
-          }
-        },
-        date: Date.utc_today(),
-        sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
-      }
+      {:ok,
+       %{
+         artist: artist,
+         venue: %{
+           name: venue,
+           location: %{
+             city: "Houston",
+             state: "TX",
+             country: "United States"
+           }
+         },
+         date: Date.utc_today(),
+         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
+       }}
     end)
 
     # Mock searching for songs in setlist - use stub to handle async ordering
