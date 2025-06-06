@@ -43,10 +43,8 @@ defmodule SetlistifyWeb.HomeLive do
           <div class="mb-8">
             <button
               type="button"
-              id="learn-more-btn"
-              class="learn-more-button flex flex-col items-center gap-1 text-white hover:text-emerald-400"
+              class="bouncing flex flex-col items-center gap-1 text-white hover:text-emerald-400"
               onclick="document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })"
-              phx-hook="DelayedBounce"
             >
               <span class="text-sm font-normal">Learn More</span>
               <Heroicons.chevron_double_down class="w-5 h-5 sm:w-6 sm:h-6" />

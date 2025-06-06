@@ -39,17 +39,8 @@ Hooks.RotatingText = {
       setTimeout(() => {
         this.textElement.textContent = this.texts[this.currentIndex]
         this.textElement.style.opacity = "1"
-      }, 300)
-    }, 3000)
-  }
-}
-
-Hooks.DelayedBounce = {
-  mounted() {
-    // Start bouncing after a 3 second delay
-    setTimeout(() => {
-      this.el.classList.add('bouncing')
-    }, 3000)
+      }, 350)
+    }, 2000)
   }
 }
 
