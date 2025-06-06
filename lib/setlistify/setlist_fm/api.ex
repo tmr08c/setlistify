@@ -51,8 +51,6 @@ defmodule Setlistify.SetlistFm.API do
           songs: [%{title: String.t()}]
         }
 
-  @type error_reason() :: :not_found | :timeout | :network_error | String.t()
-
   @callback search(String.t(), pos_integer()) :: search_response()
   def search(query, page \\ 1) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.search" do
@@ -92,7 +90,7 @@ defmodule Setlistify.SetlistFm.API do
     end
   end
 
-  @callback get_setlist(String.t()) :: {:ok, setlist()} | {:error, error_reason()}
+  @callback get_setlist(String.t()) :: {:ok, setlist()} | {:error, atom() | String.t()}
   def get_setlist(id) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.get_setlist" do
       OpenTelemetry.Tracer.set_attributes([
