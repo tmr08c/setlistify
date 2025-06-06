@@ -129,9 +129,6 @@ defmodule SetlistifyWeb.SearchLive do
     ngettext("1 song", "%{count} songs", count)
   end
 
-  defp parse_page(nil), do: 1
-  defp parse_page(""), do: 1
-
   defp parse_page(page_string) when is_binary(page_string) do
     case Integer.parse(page_string) do
       {page, remainder} when page > 0 ->
