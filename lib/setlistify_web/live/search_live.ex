@@ -256,6 +256,6 @@ defmodule SetlistifyWeb.SearchLive do
   end
 
   defp build_pagination_url(query, page) do
-    "/setlists?#{URI.encode_query(%{"query" => query, "page" => page})}"
+    ~p"/setlists?#{%{"query" => query, "page" => page}}"
   end
 end
