@@ -19,7 +19,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
       response =
         Req.get!(request(endpoint),
           url: "/search/setlists",
-          params: %{"artistName" => query, "p" => to_string(page)}
+          params: %{"artistName" => query, "p" => page}
         )
 
       OpenTelemetry.Tracer.set_attributes([
