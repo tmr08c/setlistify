@@ -10,7 +10,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
 
   @search_response fixture_dir() |> Path.join("setlist_fm_search_response.json") |> File.read!()
   test "search/2 with default page" do
-    Req.Test.stub(MySetlistFmStub, fn
+    Req.Test.expect(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         assert conn.params["artistName"] == "modest mouse"
         assert conn.params["p"] == "1"
@@ -46,7 +46,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
   end
 
   test "search/2 with specific page" do
-    Req.Test.stub(MySetlistFmStub, fn
+    Req.Test.expect(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         assert conn.params["artistName"] == "test artist"
         assert conn.params["p"] == "3"
@@ -173,7 +173,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
       "itemsPerPage" => 20
     }
 
-    Req.Test.stub(MySetlistFmStub, fn
+    Req.Test.expect(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
@@ -306,7 +306,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
       "itemsPerPage" => 20
     }
 
-    Req.Test.stub(MySetlistFmStub, fn
+    Req.Test.expect(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
@@ -341,7 +341,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
                       |> Path.join("setlist_fm_search_404_response.json")
                       |> File.read!()
   test "search/2 returns empty response when no results found (404)" do
-    Req.Test.stub(MySetlistFmStub, fn
+    Req.Test.expect(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         assert conn.params["artistName"] == "nonexistent"
         assert conn.params["p"] == "1"
@@ -358,7 +358,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
                           |> Path.join("setlist_fm_search_page_too_high.json")
                           |> File.read!()
   test "search/2 handles page that doesn't exist" do
-    Req.Test.stub(MySetlistFmStub, fn
+    Req.Test.expect(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         assert conn.params["artistName"] == "test artist"
         assert conn.params["p"] == "2000"
@@ -414,7 +414,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
       "itemsPerPage" => 20
     }
 
-    Req.Test.stub(MySetlistFmStub, fn
+    Req.Test.expect(MySetlistFmStub, fn
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
@@ -459,7 +459,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
 
   describe "error handling" do
     test "search/2 returns error tuple on server error" do
-      Req.Test.stub(MySetlistFmStub, fn
+      Req.Test.expect(MySetlistFmStub, fn
         %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
@@ -470,7 +470,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     end
 
     test "search/2 returns error tuple on unexpected status" do
-      Req.Test.stub(MySetlistFmStub, fn
+      Req.Test.expect(MySetlistFmStub, fn
         %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
@@ -481,7 +481,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     end
 
     test "search/2 returns error tuple on network failure" do
-      Req.Test.stub(MySetlistFmStub, fn
+      Req.Test.expect(MySetlistFmStub, fn
         %{request_path: "/rest/1.0/search/setlists", method: "GET"} = _conn ->
           raise "network failure"
       end)
@@ -505,7 +505,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
     test "get_setlist/1 returns error tuple on server error" do
       id = Ecto.UUID.generate()
 
-      Req.Test.stub(MySetlistFmStub, fn
+      Req.Test.expect(MySetlistFmStub, fn
         %{request_path: "/rest/1.0/setlist/" <> ^id, method: "GET"} = conn ->
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
