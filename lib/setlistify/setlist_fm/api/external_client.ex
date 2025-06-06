@@ -6,8 +6,6 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
 
   @root_endpoint "https://api.setlist.fm/rest/1.0"
 
-  def search(query), do: search(query, 1)
-
   def search(query, page, endpoint \\ @root_endpoint) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.ExternalClient.search" do
       OpenTelemetry.Tracer.set_attributes([

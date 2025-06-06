@@ -53,7 +53,6 @@ defmodule Setlistify.SetlistFm.API do
 
   @type error_reason() :: :not_found | :timeout | :network_error | String.t()
 
-  @callback search(String.t()) :: search_response()
   @callback search(String.t(), pos_integer()) :: search_response()
   def search(query, page \\ 1) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.search" do
