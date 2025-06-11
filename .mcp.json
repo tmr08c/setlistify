@@ -1,16 +1,35 @@
 {
   "mcpServers": {
-    "Context7": {
-      "command": "npx",
-      "args": ["-y", "@upstash/context7-mcp"]
+    "tidewave": {
+      "type": "sse",
+      "url": "http://localhost:4000/tidewave/mcp"
     },
     "puppeteer": {
       "command": "npx",
-      "args": ["-y", "@modelcontextprotocol/server-puppeteer"]
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-puppeteer"
+      ]
+    },
+    "memory": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@modelcontextprotocol/server-memory"
+      ]
     },
     "fetch": {
       "command": "uvx",
-      "args": ["mcp-server-fetch"]
+      "args": [
+        "mcp-server-fetch"
+      ]
+    },
+    "Context7": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@upstash/context7-mcp"
+      ]
     }
   }
 }

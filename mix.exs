@@ -80,7 +80,10 @@ defmodule Setlistify.MixProject do
       {:telemetry, "~> 1.2.1"},
 
       # Logging - enabled in Phase 2
-      {:opentelemetry_logger_metadata, "~> 0.2.0"}
+      {:opentelemetry_logger_metadata, "~> 0.2.0"},
+
+      # Tidewave - AI assistant for development
+      {:tidewave, "~> 0.1", only: :dev}
     ]
   end
 
