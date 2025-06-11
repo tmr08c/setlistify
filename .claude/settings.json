@@ -1,0 +1,28 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bin/server)",
+      "Bash(bin/setup)",
+      "Bash(cp:*)",
+      "Bash(fd:*)",
+      "Bash(find:*)",
+      "Bash(gh pr list:*)",
+      "Bash(gh pr view:*)",
+      "Bash(grep:*)",
+      "Bash(ls:*)",
+      "Bash(mix compile)",
+      "Bash(mix format:*)",
+      "Bash(mix test:*)",
+      "Bash(mv:*)",
+      "Bash(rg:*)",
+      "Bash(sed:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:hex.pm)",
+      "mcp__Context7__get-library-docs",
+      "mcp__Context7__resolve-library-id"
+      "mcp__puppeteer*",
+    ],
+    "deny": []
+  },
+  "enableAllProjectMcpServers": false
+}
