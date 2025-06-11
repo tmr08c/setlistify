@@ -11,6 +11,10 @@
     "fetch": {
       "command": "uvx",
       "args": ["mcp-server-fetch"]
+    },
+    "tidewave": {
+      "transport": "sse", 
+      "url": "http://localhost:${PORT:-4000}/tidewave/mcp"
     }
   }
 }
