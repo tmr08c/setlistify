@@ -191,7 +191,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                       <span class="inline-flex items-center gap-2">
                         <%= if is_loading do %>
                           <svg
-                            class="animate-spin h-4 w-4 text-gray-400"
+                            class="animate-spin h-4 w-4 text-gray-400 opacity-0 animate-fade-in-delayed"
                             xmlns="http://www.w3.org/2000/svg"
                             fill="none"
                             viewBox="0 0 24 24"
