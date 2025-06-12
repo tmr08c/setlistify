@@ -35,6 +35,10 @@ module.exports = {
           '60%': { transform: 'translateY(0)' },
           '100%': { transform: 'translateY(0)' },
         },
+        show: {
+          '0%': { opacity: '1' },
+          '100%': { opacity: '1' },
+        },
       },
     },
   },
