@@ -133,21 +133,21 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
       # We have a match for song
       %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
     end)
-    |> expect(:search_for_track, 2, fn ^user_session, ^artist, "song2" ->
+    |> expect(:search_for_track, fn ^user_session, ^artist, "song2" ->
       # We cannot find a match for the song
-      #
-      # Because we do not find a match, we will not cache it, resulting in
-      # making the call twice for both mount calls
       nil
     end)
 
-    {:ok, _view, html} = live(conn, ~p"/setlist/#{setlist_id}")
+    {:ok, view, html} = live(conn, ~p"/setlist/#{setlist_id}")
 
     assert html =~ "song1"
     assert html =~ "song2"
 
-    assert_has_element(html, "[aria-label='found matching song']", count: 1)
-    assert_has_element(html, "[aria-label='no matching song found']", count: 1)
+    # Wait for async Spotify searches to complete
+    final_html = render_async(view)
+
+    assert_has_element(final_html, "[aria-label='found matching song']", count: 1)
+    assert_has_element(final_html, "[aria-label='no matching song found']", count: 1)
   end
 
   test "creating a playlist redirects to playlist page", %{conn: conn} do
@@ -205,6 +205,9 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     end)
 
     {:ok, view, _html} = live(conn, ~p"/setlist/#{setlist_id}")
+
+    # Wait for async Spotify searches to complete before creating playlist
+    render_async(view)
 
     # Mock playlist creation
     Spotify.API.MockClient
