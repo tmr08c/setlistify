@@ -83,7 +83,10 @@ defmodule Setlistify.MixProject do
       {:opentelemetry_logger_metadata, "~> 0.2.0"},
 
       # Tidewave - AI assistant for development
-      {:tidewave, "~> 0.1", only: :dev}
+      {:tidewave, "~> 0.1", only: :dev},
+
+      # OpenTelemetry LiveView Process Propagation
+      {:opentelemetry_phoenix_live_view_process_propagator, "~> 0.1"}
     ]
   end
 

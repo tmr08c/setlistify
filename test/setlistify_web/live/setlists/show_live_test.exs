@@ -127,15 +127,17 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
        }}
     end)
 
-    # Mock searching for songs in setlist
+    # Mock searching for songs in setlist - use stub to handle async ordering
     Spotify.API.MockClient
-    |> expect(:search_for_track, fn ^user_session, ^artist, "song1" ->
-      # We have a match for song
-      %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
-    end)
-    |> expect(:search_for_track, fn ^user_session, ^artist, "song2" ->
-      # We cannot find a match for the song
-      nil
+    |> stub(:search_for_track, fn _user_session, _artist, title ->
+      case title do
+        "song1" ->
+          # We have a match for song
+          %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
+        "song2" ->
+          # We cannot find a match for the song
+          nil
+      end
     end)
 
     {:ok, view, html} = live(conn, ~p"/setlist/#{setlist_id}")
