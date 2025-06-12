@@ -30,45 +30,50 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
           socket =
             if user_session do
-            # Start async operations for all songs in parallel
-            setlist.sets
-            |> Enum.with_index()
-            |> Enum.flat_map(fn {set, set_index} ->
-              set.songs
+              # Start async operations for all songs in parallel
+              setlist.sets
               |> Enum.with_index()
-              |> Enum.map(fn {song, song_index} ->
-                key = "song_#{set_index}_#{song_index}"
-                {key, set_index, song_index, song}
+              |> Enum.flat_map(fn {set, set_index} ->
+                set.songs
+                |> Enum.with_index()
+                |> Enum.map(fn {song, song_index} ->
+                  key = "song_#{set_index}_#{song_index}"
+                  {key, set_index, song_index, song}
+                end)
               end)
-            end)
-            |> Enum.reduce(socket, fn {key, set_index, song_index, song}, acc_socket ->
-              atom_key = String.to_atom(key)
+              |> Enum.reduce(socket, fn {key, set_index, song_index, song}, acc_socket ->
+                atom_key = String.to_atom(key)
 
-              OpentelemetryPhoenixLiveViewProcessPropagator.LiveView.assign_async(acc_socket, atom_key, fn ->
-                OpenTelemetry.Tracer.with_span "SetlistifyWeb.Setlists.ShowLive.search_song_async" do
-                  OpenTelemetry.Tracer.set_attributes([
-                    {"song.title", song.title},
-                    {"song.artist", setlist.artist},
-                    {"song.set_index", set_index},
-                    {"song.song_index", song_index}
-                  ])
+                OpentelemetryPhoenixLiveViewProcessPropagator.LiveView.assign_async(
+                  acc_socket,
+                  atom_key,
+                  fn ->
+                    OpenTelemetry.Tracer.with_span "SetlistifyWeb.Setlists.ShowLive.search_song_async" do
+                      OpenTelemetry.Tracer.set_attributes([
+                        {"song.title", song.title},
+                        {"song.artist", setlist.artist},
+                        {"song.set_index", set_index},
+                        {"song.song_index", song_index}
+                      ])
 
-                  spotify_info =
-                    Spotify.API.search_for_track(user_session, setlist.artist, song.title)
+                      spotify_info =
+                        Spotify.API.search_for_track(user_session, setlist.artist, song.title)
 
-                  {:ok, %{
-                    atom_key => %{
-                      spotify_info: spotify_info,
-                      set_index: set_index,
-                      song_index: song_index
-                    }
-                  }}
-                end
+                      {:ok,
+                       %{
+                         atom_key => %{
+                           spotify_info: spotify_info,
+                           set_index: set_index,
+                           song_index: song_index
+                         }
+                       }}
+                    end
+                  end
+                )
               end)
-            end)
-          else
-            socket
-          end
+            else
+              socket
+            end
 
           {:ok, socket}
 
@@ -86,7 +91,6 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
       end
     end
   end
-
 
   def handle_event("create_playlist", _params, socket) do
     user_session = socket.assigns.user_session
@@ -108,9 +112,11 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
               |> Enum.with_index()
               |> Enum.filter(fn {_song, song_index} ->
                 async_key = String.to_atom("song_#{set_index}_#{song_index}")
+
                 case Map.get(socket.assigns, async_key) do
                   %Phoenix.LiveView.AsyncResult{ok?: true, result: result} ->
                     result[:spotify_info] != nil
+
                   _ ->
                     false
                 end
@@ -167,17 +173,20 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
                 <ol class="list-decimal list-inside space-y-2 ml-6">
                   <%= for {song, song_index} <- Enum.with_index(set.songs) do %>
-                    <% 
-                      set_index = Enum.find_index(@sets, &(&1 == set))
-                      async_key = String.to_atom("song_#{set_index}_#{song_index}")
-                      async_result = Map.get(assigns, async_key)
-                      spotify_info = case async_result do
-                        %Phoenix.LiveView.AsyncResult{ok?: true, result: result} -> 
+                    <% set_index = Enum.find_index(@sets, &(&1 == set))
+                    async_key = String.to_atom("song_#{set_index}_#{song_index}")
+                    async_result = Map.get(assigns, async_key)
+
+                    spotify_info =
+                      case async_result do
+                        %Phoenix.LiveView.AsyncResult{ok?: true, result: result} ->
                           result[:spotify_info]
-                        _ -> nil
+
+                        _ ->
+                          nil
                       end
-                      is_loading = @user_session && async_result && async_result.loading != nil
-                    %>
+
+                    is_loading = @user_session && async_result && async_result.loading != nil %>
                     <li>
                       <span class="inline-flex items-center gap-2">
                         <%= if is_loading do %>
