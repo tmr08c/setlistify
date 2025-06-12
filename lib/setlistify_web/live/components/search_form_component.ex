@@ -34,7 +34,7 @@ defmodule SetlistifyWeb.Components.SearchFormComponent do
               placeholder="Search for an artist or band..."
               autocomplete="off"
               class={[
-                "w-full px-4 sm:px-6 py-4 sm:py-5 pr-14 sm:pr-16 text-sm sm:text-base text-white bg-gradient-to-r from-gray-900 to-gray-800 border rounded-full placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-opacity-50 focus:border-emerald-500 shadow-lg focus:shadow-emerald-500/25",
+                "w-full px-4 sm:px-6 py-4 sm:py-5 pr-14 sm:pr-16 text-base text-white bg-gradient-to-r from-gray-900 to-gray-800 border rounded-full placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-emerald-400 focus:ring-opacity-50 focus:border-emerald-500 shadow-lg focus:shadow-emerald-500/25",
                 if(Enum.empty?(@search[:query].errors || []),
                   do: "border-gray-700 hover:border-gray-600",
                   else: "border-rose-400"
