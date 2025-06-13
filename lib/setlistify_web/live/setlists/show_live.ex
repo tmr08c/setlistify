@@ -7,88 +7,81 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   alias Setlistify.{SetlistFm, Spotify}
 
   def mount(%{"id" => id}, _session, socket) do
-    OpenTelemetry.Tracer.with_span "SetlistifyWeb.Setlists.ShowLive.mount" do
-      OpenTelemetry.Tracer.set_attributes([
-        {"setlist.id", id},
-        {"liveview.module", "SetlistifyWeb.Setlists.ShowLive"}
-      ])
+    case SetlistFm.API.get_setlist(id) do
+      {:ok, setlist} ->
+        user_session = socket.assigns[:user_session]
 
-      case SetlistFm.API.get_setlist(id) do
-        {:ok, setlist} ->
-          user_session = socket.assigns[:user_session]
+        socket =
+          socket
+          |> assign(
+            sets: setlist.sets,
+            artist: setlist.artist,
+            venue_name: setlist.venue.name,
+            venue_location: setlist.venue.location,
+            date: setlist.date,
+            redirect_to: "/setlist/#{id}"
+          )
 
-          socket =
-            socket
-            |> assign(
-              sets: setlist.sets,
-              artist: setlist.artist,
-              venue_name: setlist.venue.name,
-              venue_location: setlist.venue.location,
-              date: setlist.date,
-              redirect_to: "/setlist/#{id}"
-            )
-
-          socket =
-            if user_session do
-              # Start async operations for all songs in parallel
-              setlist.sets
+        socket =
+          if user_session do
+            # Start async operations for all songs in parallel
+            setlist.sets
+            |> Enum.with_index()
+            |> Enum.flat_map(fn {set, set_index} ->
+              set.songs
               |> Enum.with_index()
-              |> Enum.flat_map(fn {set, set_index} ->
-                set.songs
-                |> Enum.with_index()
-                |> Enum.map(fn {song, song_index} ->
-                  key = "song_#{set_index}_#{song_index}"
-                  {key, set_index, song_index, song}
-                end)
+              |> Enum.map(fn {song, song_index} ->
+                key = "song_#{set_index}_#{song_index}"
+                {key, set_index, song_index, song}
               end)
-              |> Enum.reduce(socket, fn {key, set_index, song_index, song}, acc_socket ->
-                atom_key = String.to_atom(key)
+            end)
+            |> Enum.reduce(socket, fn {key, set_index, song_index, song}, acc_socket ->
+              atom_key = String.to_atom(key)
 
-                OpentelemetryPhoenixLiveViewProcessPropagator.LiveView.assign_async(
-                  acc_socket,
-                  atom_key,
-                  fn ->
-                    OpenTelemetry.Tracer.with_span "SetlistifyWeb.Setlists.ShowLive.search_song_async" do
-                      OpenTelemetry.Tracer.set_attributes([
-                        {"song.title", song.title},
-                        {"song.artist", setlist.artist},
-                        {"song.set_index", set_index},
-                        {"song.song_index", song_index}
-                      ])
+              OpentelemetryPhoenixLiveViewProcessPropagator.LiveView.assign_async(
+                acc_socket,
+                atom_key,
+                fn ->
+                  OpenTelemetry.Tracer.with_span "SetlistifyWeb.Setlists.ShowLive.search_song_async" do
+                    OpenTelemetry.Tracer.set_attributes([
+                      {"song.title", song.title},
+                      {"song.artist", setlist.artist},
+                      {"song.set_index", set_index},
+                      {"song.song_index", song_index}
+                    ])
 
-                      spotify_info =
-                        Spotify.API.search_for_track(user_session, setlist.artist, song.title)
+                    spotify_info =
+                      Spotify.API.search_for_track(user_session, setlist.artist, song.title)
 
-                      {:ok,
-                       %{
-                         atom_key => %{
-                           spotify_info: spotify_info,
-                           set_index: set_index,
-                           song_index: song_index
-                         }
-                       }}
-                    end
+                    {:ok,
+                     %{
+                       atom_key => %{
+                         spotify_info: spotify_info,
+                         set_index: set_index,
+                         song_index: song_index
+                       }
+                     }}
                   end
-                )
-              end)
-            else
-              socket
-            end
+                end
+              )
+            end)
+          else
+            socket
+          end
 
-          {:ok, socket}
+        {:ok, socket}
 
-        {:error, :not_found} ->
-          {:ok,
-           socket
-           |> put_flash(:error, "Setlist not found")
-           |> push_navigate(to: ~p"/")}
+      {:error, :not_found} ->
+        {:ok,
+         socket
+         |> put_flash(:error, "Setlist not found")
+         |> push_navigate(to: ~p"/")}
 
-        {:error, _reason} ->
-          {:ok,
-           socket
-           |> put_flash(:error, "Failed to load setlist. Please try again.")
-           |> push_navigate(to: ~p"/")}
-      end
+      {:error, _reason} ->
+        {:ok,
+         socket
+         |> put_flash(:error, "Failed to load setlist. Please try again.")
+         |> push_navigate(to: ~p"/")}
     end
   end
 
