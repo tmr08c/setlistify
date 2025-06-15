@@ -168,45 +168,46 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                   <%= for {song, song_index} <- Enum.with_index(set.songs) do %>
                     <% set_index = Enum.find_index(@sets, &(&1 == set))
                     async_key = String.to_atom("song_#{set_index}_#{song_index}")
-                    async_result = Map.get(assigns, async_key)
-
-                    spotify_info =
-                      case async_result do
-                        %Phoenix.LiveView.AsyncResult{ok?: true, result: result} ->
-                          result[:spotify_info]
-
-                        _ ->
-                          nil
-                      end
-
-                    is_loading = @user_session && async_result && async_result.loading != nil %>
+                    async_result = Map.get(assigns, async_key) %>
                     <li>
                       <span class="inline-flex items-center gap-2">
-                        <%= if is_loading do %>
-                          <Heroicons.arrow_path
-                            mini
-                            id={"loading-spinner-#{set_index}-#{song_index}"}
-                            class="h-4 w-4 text-gray-400 animate-spin opacity-0"
-                            aria-label="searching for song"
-                            phx-hook="DelayedShow"
-                            data-delay="250"
-                          />
-                        <% else %>
-                          <Heroicons.check
-                            :if={@user_session && spotify_info != nil}
-                            mini
-                            class="h-4 w-4 text-emerald-500"
-                            aria-label="found matching song"
-                          />
-                          <Heroicons.x_mark
-                            :if={@user_session && spotify_info == nil}
-                            mini
-                            class="h-4 w-4 text-red-500"
-                            aria-label="no matching song found"
-                          />
+                        <%= if @user_session && async_result do %>
+                          <.async_result :let={result} assign={async_result}>
+                            <:loading>
+                              <Heroicons.arrow_path
+                                mini
+                                id={"loading-spinner-#{set_index}-#{song_index}"}
+                                class="h-4 w-4 text-gray-400 animate-spin opacity-0"
+                                aria-label="searching for song"
+                                phx-hook="DelayedShow"
+                                data-delay="250"
+                              />
+                            </:loading>
+                            <:failed :let={_failure}>
+                              <Heroicons.x_mark
+                                mini
+                                class="h-4 w-4 text-red-500"
+                                aria-label="search failed"
+                              />
+                            </:failed>
+                            <%= if result[:spotify_info] do %>
+                              <Heroicons.check
+                                mini
+                                class="h-4 w-4 text-emerald-500"
+                                aria-label="found matching song"
+                              />
+                            <% else %>
+                              <Heroicons.x_mark
+                                mini
+                                class="h-4 w-4 text-red-500"
+                                aria-label="no matching song found"
+                              />
+                            <% end %>
+                          </.async_result>
                         <% end %>
                         <span class={[
-                          @user_session && spotify_info == nil && !is_loading && "text-gray-500",
+                          @user_session && async_result && async_result.ok? &&
+                            !async_result.result[:spotify_info] && "text-gray-500",
                           "inline"
                         ]}>
                           {song.title}
