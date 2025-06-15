@@ -185,8 +185,11 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                         <%= if is_loading do %>
                           <Heroicons.arrow_path
                             mini
-                            class="animate-spin h-4 w-4 text-gray-400 opacity-0 animate-[show_0s_ease-in-out_0.3s_forwards]"
+                            id={"loading-spinner-#{set_index}-#{song_index}"}
+                            class="h-4 w-4 text-gray-400 animate-spin opacity-0"
                             aria-label="searching for song"
+                            phx-hook="DelayedShow"
+                            data-delay="250"
                           />
                         <% else %>
                           <Heroicons.check

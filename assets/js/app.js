@@ -44,6 +44,25 @@ Hooks.RotatingText = {
   }
 }
 
+Hooks.DelayedShow = {
+  mounted() {
+    const delay = parseInt(this.el.dataset.delay) || 300
+
+    // Show after delay by removing opacity-0 class and adding opacity-100
+    this.timeout = setTimeout(() => {
+      this.isHidden = false
+      this.el.classList.remove('opacity-0')
+      this.el.classList.add('opacity-100')
+    }, delay)
+  },
+
+  destroyed() {
+    if (this.timeout) {
+      clearTimeout(this.timeout)
+    }
+  }
+}
+
 let liveSocket = new LiveSocket("/live", Socket, {params: {_csrf_token: csrfToken}, hooks: Hooks})
 
 // Show progress bar on live navigation and form submits
