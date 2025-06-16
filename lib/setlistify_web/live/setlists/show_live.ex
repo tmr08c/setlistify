@@ -2,51 +2,74 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   use SetlistifyWeb, :live_view
 
   require OpenTelemetry.Tracer
+  require OpentelemetryPhoenixLiveViewProcessPropagator.LiveView
 
   alias Setlistify.{SetlistFm, Spotify}
-  alias OpentelemetryProcessPropagator.Task
 
   def mount(%{"id" => id}, _session, socket) do
     case SetlistFm.API.get_setlist(id) do
       {:ok, setlist} ->
         user_session = socket.assigns[:user_session]
 
-        setlist =
+        socket =
+          socket
+          |> assign(
+            sets: setlist.sets,
+            artist: setlist.artist,
+            venue_name: setlist.venue.name,
+            venue_location: setlist.venue.location,
+            date: setlist.date,
+            redirect_to: "/setlist/#{id}"
+          )
+
+        socket =
           if user_session do
-            # TODO: This current model requires fetching all songs from a set before
-            # we can move onto the next one
-            sets =
-              setlist.sets
-              |> Enum.map(fn set ->
-                # TODO: The workflow of updating UserSession after a refresh (see
-                # SetlistifyWeb.handle_info) probably won't work with this pattern
-                # because the spawned tasks won't receive the message.
-                songs =
-                  Task.async_stream(set.songs, fn song ->
+            # Start async operations for all songs in parallel
+            setlist.sets
+            |> Enum.with_index()
+            |> Enum.flat_map(fn {set, set_index} ->
+              set.songs
+              |> Enum.with_index()
+              |> Enum.map(fn {song, song_index} ->
+                key = "song_#{set_index}_#{song_index}"
+                {key, set_index, song_index, song}
+              end)
+            end)
+            |> Enum.reduce(socket, fn {key, set_index, song_index, song}, acc_socket ->
+              atom_key = String.to_atom(key)
+
+              OpentelemetryPhoenixLiveViewProcessPropagator.LiveView.assign_async(
+                acc_socket,
+                atom_key,
+                fn ->
+                  OpenTelemetry.Tracer.with_span "SetlistifyWeb.Setlists.ShowLive.search_song_async" do
+                    OpenTelemetry.Tracer.set_attributes([
+                      {"song.title", song.title},
+                      {"song.artist", setlist.artist},
+                      {"song.set_index", set_index},
+                      {"song.song_index", song_index}
+                    ])
+
                     spotify_info =
                       Spotify.API.search_for_track(user_session, setlist.artist, song.title)
 
-                    Map.put(song, :spotify_info, spotify_info)
-                  end)
-
-                %{set | songs: songs}
-              end)
-              |> Enum.map(fn set -> %{set | songs: Enum.map(set.songs, &elem(&1, 1))} end)
-
-            %{setlist | sets: sets}
+                    {:ok,
+                     %{
+                       atom_key => %{
+                         spotify_info: spotify_info,
+                         set_index: set_index,
+                         song_index: song_index
+                       }
+                     }}
+                  end
+                end
+              )
+            end)
           else
-            setlist
+            socket
           end
 
-        {:ok,
-         assign(socket,
-           sets: setlist.sets,
-           artist: setlist.artist,
-           venue_name: setlist.venue.name,
-           venue_location: setlist.venue.location,
-           date: setlist.date,
-           redirect_to: "/setlist/#{id}"
-         )}
+        {:ok, socket}
 
       {:error, :not_found} ->
         {:ok,
@@ -75,10 +98,27 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
         {:ok, %{id: playlist_id, external_url: external_url}} ->
           # Build a flatlist of track Ids from our setlist
           track_ids =
-            Enum.flat_map(socket.assigns.sets, fn set ->
+            socket.assigns.sets
+            |> Enum.with_index()
+            |> Enum.flat_map(fn {set, set_index} ->
               set.songs
-              |> Enum.filter(&(Map.has_key?(&1, :spotify_info) and not is_nil(&1.spotify_info)))
-              |> Enum.map(& &1.spotify_info.uri)
+              |> Enum.with_index()
+              |> Enum.filter(fn {_song, song_index} ->
+                async_key = String.to_atom("song_#{set_index}_#{song_index}")
+
+                case Map.get(socket.assigns, async_key) do
+                  %Phoenix.LiveView.AsyncResult{ok?: true, result: result} ->
+                    result[:spotify_info] != nil
+
+                  _ ->
+                    false
+                end
+              end)
+              |> Enum.map(fn {_song, song_index} ->
+                async_key = String.to_atom("song_#{set_index}_#{song_index}")
+                result = Map.get(socket.assigns, async_key).result
+                result[:spotify_info].uri
+              end)
             end)
 
           case Spotify.API.add_tracks_to_playlist(user_session, playlist_id, track_ids) do
@@ -125,23 +165,49 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                 </h2>
 
                 <ol class="list-decimal list-inside space-y-2 ml-6">
-                  <%= for song <- set.songs do %>
+                  <%= for {song, song_index} <- Enum.with_index(set.songs) do %>
+                    <% set_index = Enum.find_index(@sets, &(&1 == set))
+                    async_key = String.to_atom("song_#{set_index}_#{song_index}")
+                    async_result = Map.get(assigns, async_key) %>
                     <li>
                       <span class="inline-flex items-center gap-2">
-                        <Heroicons.check
-                          :if={@user_session && song[:spotify_info] != nil}
-                          mini
-                          class="h-4 w-4 text-emerald-500"
-                          aria-label="found matching song"
-                        />
-                        <Heroicons.x_mark
-                          :if={@user_session && song[:spotify_info] == nil}
-                          mini
-                          class="h-4 w-4 text-red-500"
-                          aria-label="no matching song found"
-                        />
+                        <%= if @user_session && async_result do %>
+                          <.async_result :let={result} assign={async_result}>
+                            <:loading>
+                              <Heroicons.arrow_path
+                                mini
+                                id={"loading-spinner-#{set_index}-#{song_index}"}
+                                class="h-4 w-4 text-gray-400 animate-spin opacity-0"
+                                aria-label="searching for song"
+                                phx-hook="DelayedShow"
+                                data-delay="250"
+                              />
+                            </:loading>
+                            <:failed :let={_failure}>
+                              <Heroicons.x_mark
+                                mini
+                                class="h-4 w-4 text-red-500"
+                                aria-label="search failed"
+                              />
+                            </:failed>
+                            <%= if result[:spotify_info] do %>
+                              <Heroicons.check
+                                mini
+                                class="h-4 w-4 text-emerald-500"
+                                aria-label="found matching song"
+                              />
+                            <% else %>
+                              <Heroicons.x_mark
+                                mini
+                                class="h-4 w-4 text-red-500"
+                                aria-label="no matching song found"
+                              />
+                            <% end %>
+                          </.async_result>
+                        <% end %>
                         <span class={[
-                          @user_session && song[:spotify_info] == nil && "text-gray-500",
+                          @user_session && async_result && async_result.ok? &&
+                            !async_result.result[:spotify_info] && "text-gray-500",
                           "inline"
                         ]}>
                           {song.title}
