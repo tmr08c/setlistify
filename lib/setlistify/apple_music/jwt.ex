@@ -12,16 +12,18 @@ defmodule Setlistify.AppleMusic.JWT do
   `pem` must contain a PKCS#8-wrapped EC P-256 private key (Apple's `.p8` format).
   `kid` is embedded in the JWT header so Apple can identify the signing key.
   """
-  @spec sign(claims :: map(), pem :: String.t(), kid :: String.t()) :: String.t()
+  @spec sign(claims :: map(), pem :: String.t(), kid :: String.t(), iss :: String.t()) :: String.t()
   def sign(
         claims,
         pem \\ System.fetch_env!("APPLE_MUSIC_PRIVATE_KEY"),
-        kid \\ System.fetch_env!("APPLE_MUSIC_KEY_ID")
+        kid \\ System.fetch_env!("APPLE_MUSIC_KEY_ID"),
+        iss \\ System.fetch_env!("APPLE_MUSIC_TEAM_ID")
       ) do
     header_b64 =
       %{"alg" => "ES256", "kid" => kid} |> Jason.encode!() |> Base.url_encode64(padding: false)
 
-    payload_b64 = claims |> Jason.encode!() |> Base.url_encode64(padding: false)
+    payload_b64 =
+      Map.put_new(claims, "iss", iss) |> Jason.encode!() |> Base.url_encode64(padding: false)
 
     signing_input = header_b64 <> "." <> payload_b64
 
