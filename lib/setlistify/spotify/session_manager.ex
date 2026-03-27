@@ -370,7 +370,7 @@ defmodule Setlistify.Spotify.SessionManager do
   # Helper functions
 
   defp via_tuple(user_id) do
-    {:via, Registry, {Setlistify.UserSessionRegistry, user_id}}
+    {:via, Registry, {Setlistify.UserSessionRegistry, {:spotify, user_id}}}
   end
 
   @doc """
@@ -378,7 +378,7 @@ defmodule Setlistify.Spotify.SessionManager do
   Returns {:ok, pid} if found, :error otherwise.
   """
   def lookup(user_id) do
-    case Registry.lookup(Setlistify.UserSessionRegistry, user_id) do
+    case Registry.lookup(Setlistify.UserSessionRegistry, {:spotify, user_id}) do
       [{pid, _}] -> {:ok, pid}
       [] -> :error
     end

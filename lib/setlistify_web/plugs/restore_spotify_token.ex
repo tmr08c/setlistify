@@ -13,6 +13,16 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
   def init(opts), do: opts
 
   def call(conn, _opts) do
+    auth_provider = get_session(conn, :auth_provider)
+
+    if auth_provider != "spotify" do
+      conn
+    else
+      do_call(conn)
+    end
+  end
+
+  defp do_call(conn) do
     user_id = get_session(conn, :user_id)
     refresh_token = get_session(conn, :refresh_token)
 
