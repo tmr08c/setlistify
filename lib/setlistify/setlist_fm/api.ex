@@ -55,7 +55,7 @@ defmodule Setlistify.SetlistFm.API do
   def search(query, page \\ 1) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.search" do
       OpenTelemetry.Tracer.set_attributes([
-        {"service.name", "setlist_fm"},
+        {"peer.service", "setlist_fm"},
         {"setlist_fm.operation", "search"},
         {"setlist_fm.search.query", query},
         {"setlist_fm.search.page", page}
@@ -94,7 +94,7 @@ defmodule Setlistify.SetlistFm.API do
   def get_setlist(id) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.get_setlist" do
       OpenTelemetry.Tracer.set_attributes([
-        {"service.name", "setlist_fm"},
+        {"peer.service", "setlist_fm"},
         {"setlist_fm.operation", "get_setlist"},
         {"setlist_fm.setlist.id", id}
       ])
