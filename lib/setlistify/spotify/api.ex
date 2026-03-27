@@ -5,7 +5,7 @@ defmodule Setlistify.Spotify.API do
 
   # TODO Set response type
   @callback search_for_track(UserSession.t(), String.t(), String.t()) ::
-              nil | %{uri: String.t(), preview_url: String.t()}
+              nil | %{track_id: String.t()}
   def search_for_track(user_session, artist, track) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.search_for_track" do
       OpenTelemetry.Tracer.set_attributes([

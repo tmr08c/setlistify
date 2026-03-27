@@ -97,7 +97,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
                   {"spotify.track.uri", track_info["uri"]}
                 ])
 
-                %{uri: track_info["uri"], preview_url: track_info["preview_url"]}
+                %{track_id: track_info["uri"]}
             end
 
           OpenTelemetry.Tracer.set_status(:ok, "")

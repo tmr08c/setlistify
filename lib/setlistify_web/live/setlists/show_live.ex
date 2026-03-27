@@ -117,7 +117,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
               |> Enum.map(fn {_song, song_index} ->
                 async_key = String.to_atom("song_#{set_index}_#{song_index}")
                 result = Map.get(socket.assigns, async_key).result
-                result[:spotify_info].uri
+                result[:spotify_info].track_id
               end)
             end)
 

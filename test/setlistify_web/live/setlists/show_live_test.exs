@@ -132,7 +132,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
       case title do
         "song1" ->
           # We have a match for song
-          %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
+          %{track_id: "spotify:track:123"}
 
         "song2" ->
           # We cannot find a match for the song
@@ -197,7 +197,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
       case title do
         "song1" ->
           # We have a match for song
-          %{uri: "spotify:track:123", preview_url: "http://www.example.com"}
+          %{track_id: "spotify:track:123"}
 
         "song2" ->
           # We cannot find a match for the song
