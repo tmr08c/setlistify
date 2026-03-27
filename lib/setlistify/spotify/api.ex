@@ -9,7 +9,7 @@ defmodule Setlistify.Spotify.API do
   def search_for_track(user_session, artist, track) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.search_for_track" do
       OpenTelemetry.Tracer.set_attributes([
-        {"service.name", "spotify"},
+        {"peer.service", "spotify"},
         {"spotify.operation", "search_track"},
         {"spotify.artist", artist},
         {"spotify.track", track},
@@ -38,7 +38,7 @@ defmodule Setlistify.Spotify.API do
   def create_playlist(user_session, name, description) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.create_playlist" do
       OpenTelemetry.Tracer.set_attributes([
-        {"service.name", "spotify"},
+        {"peer.service", "spotify"},
         {"spotify.operation", "create_playlist"},
         {"spotify.playlist.name", name},
         {"user.id", user_session.user_id},
@@ -54,7 +54,7 @@ defmodule Setlistify.Spotify.API do
   def add_tracks_to_playlist(user_session, playlist_id, tracks) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.add_tracks_to_playlist" do
       OpenTelemetry.Tracer.set_attributes([
-        {"service.name", "spotify"},
+        {"peer.service", "spotify"},
         {"spotify.operation", "add_tracks_to_playlist"},
         {"spotify.playlist.id", playlist_id},
         {"spotify.tracks.count", length(tracks)},
@@ -70,7 +70,7 @@ defmodule Setlistify.Spotify.API do
   def get_embed(url) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.get_embed" do
       OpenTelemetry.Tracer.set_attributes([
-        {"service.name", "spotify"},
+        {"peer.service", "spotify"},
         {"spotify.operation", "get_embed"},
         {"spotify.embed.url", url}
       ])
@@ -85,7 +85,7 @@ defmodule Setlistify.Spotify.API do
   def refresh_token(refresh_token) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.refresh_token" do
       OpenTelemetry.Tracer.set_attributes([
-        {"service.name", "spotify"},
+        {"peer.service", "spotify"},
         {"spotify.operation", "refresh_token"},
         {"oauth.grant_type", "refresh_token"}
       ])
@@ -100,7 +100,7 @@ defmodule Setlistify.Spotify.API do
   def exchange_code(code, redirect_uri) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.exchange_code" do
       OpenTelemetry.Tracer.set_attributes([
-        {"service.name", "spotify"},
+        {"peer.service", "spotify"},
         {"spotify.operation", "exchange_code"},
         {"oauth.grant_type", "authorization_code"},
         {"oauth.redirect_uri", redirect_uri}
@@ -116,7 +116,7 @@ defmodule Setlistify.Spotify.API do
   def refresh_to_user_session(refresh_token) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.refresh_to_user_session" do
       OpenTelemetry.Tracer.set_attributes([
-        {"service.name", "spotify"},
+        {"peer.service", "spotify"},
         {"spotify.operation", "refresh_to_user_session"},
         {"oauth.grant_type", "refresh_token"}
       ])
