@@ -26,7 +26,8 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
     user_id = get_session(conn, :user_id)
     refresh_token = get_session(conn, :refresh_token)
 
-    with user_id when not is_nil(user_id) <- user_id,
+    with "spotify" <- get_session(conn, :auth_provider),
+         user_id when not is_nil(user_id) <- user_id,
          {:error, :not_found} <- SessionManager.get_session(user_id),
          encrypted_token when not is_nil(encrypted_token) <- refresh_token,
          {:ok, refresh_token} <-
@@ -48,8 +49,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
           )
       end
     else
-      _ ->
-        conn
+      _ -> conn
     end
   end
 end
