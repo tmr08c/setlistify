@@ -22,22 +22,17 @@ defmodule Setlistify.AppleMusic.JWTTest do
   """
 
   @kid "TEST_KEY_ID"
+  @iss "TEST_TEAM_ID"
 
-  describe "sign/3" do
+  describe "sign/4" do
     test "returns a three-part JWT string" do
-      token =
-        JWT.sign(%{"iss" => "TEAM123", "iat" => 1_000, "exp" => 2_000}, @test_private_pem, @kid)
+      token = JWT.sign(%{"iat" => 1_000, "exp" => 2_000}, @test_private_pem, @kid, @iss)
 
       assert [_, _, _] = String.split(token, ".")
     end
 
     test "header contains alg ES256 and the given kid" do
-      token =
-        JWT.sign(
-          %{"iss" => "TEAM123", "iat" => 1_000, "exp" => 2_000},
-          @test_private_pem,
-          @kid
-        )
+      token = JWT.sign(%{"iat" => 1_000, "exp" => 2_000}, @test_private_pem, @kid, @iss)
 
       [header_b64 | _] = String.split(token, ".")
       header = header_b64 |> Base.url_decode64!(padding: false) |> Jason.decode!()
@@ -47,29 +42,28 @@ defmodule Setlistify.AppleMusic.JWTTest do
     end
 
     test "payload matches the provided claims" do
-      claims = %{"iss" => "TEAM123", "iat" => 1_000, "exp" => 2_000, "foo" => "bar"}
-      token = JWT.sign(claims, @test_private_pem, @kid)
+      claims = %{"iat" => 1_000, "exp" => 2_000, "foo" => "bar"}
+      token = JWT.sign(claims, @test_private_pem, @kid, @iss)
 
       [_, payload_b64 | _] = String.split(token, ".")
       decoded = payload_b64 |> Base.url_decode64!(padding: false) |> Jason.decode!()
 
-      assert decoded["iss"] == "TEAM123"
+      assert decoded["iss"] == @iss
       assert decoded["iat"] == 1_000
       assert decoded["exp"] == 2_000
       assert decoded["foo"] == "bar"
     end
 
     test "signature is exactly 64 bytes (raw R||S for P-256)" do
-      token =
-        JWT.sign(%{"iss" => "TEAM123", "iat" => 1_000, "exp" => 2_000}, @test_private_pem, @kid)
+      token = JWT.sign(%{"iat" => 1_000, "exp" => 2_000}, @test_private_pem, @kid, @iss)
 
       [_, _, sig_b64] = String.split(token, ".")
       assert byte_size(Base.url_decode64!(sig_b64, padding: false)) == 64
     end
 
     test "signature verifies against the corresponding public key" do
-      claims = %{"iss" => "TEAM123", "iat" => 1_000, "exp" => 2_000}
-      token = JWT.sign(claims, @test_private_pem, @kid)
+      claims = %{"iat" => 1_000, "exp" => 2_000}
+      token = JWT.sign(claims, @test_private_pem, @kid, @iss)
 
       [header_b64, payload_b64, sig_b64] = String.split(token, ".")
       signing_input = header_b64 <> "." <> payload_b64
@@ -95,8 +89,8 @@ defmodule Setlistify.AppleMusic.JWTTest do
     end
 
     test "different claims produce different tokens" do
-      token1 = JWT.sign(%{"iss" => "T", "iat" => 1_000, "exp" => 2_000}, @test_private_pem, @kid)
-      token2 = JWT.sign(%{"iss" => "T", "iat" => 2_000, "exp" => 3_000}, @test_private_pem, @kid)
+      token1 = JWT.sign(%{"iat" => 1_000, "exp" => 2_000}, @test_private_pem, @kid, @iss)
+      token2 = JWT.sign(%{"iat" => 2_000, "exp" => 3_000}, @test_private_pem, @kid, @iss)
 
       refute token1 == token2
     end
