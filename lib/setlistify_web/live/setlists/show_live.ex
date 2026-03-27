@@ -50,13 +50,13 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                       {"song.song_index", song_index}
                     ])
 
-                    spotify_info =
+                    track_info =
                       Spotify.API.search_for_track(user_session, setlist.artist, song.title)
 
                     {:ok,
                      %{
                        atom_key => %{
-                         spotify_info: spotify_info,
+                         track_info: track_info,
                          set_index: set_index,
                          song_index: song_index
                        }
@@ -108,7 +108,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
                 case Map.get(socket.assigns, async_key) do
                   %Phoenix.LiveView.AsyncResult{ok?: true, result: result} ->
-                    result[:spotify_info] != nil
+                    result[:track_info] != nil
 
                   _ ->
                     false
@@ -117,7 +117,8 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
               |> Enum.map(fn {_song, song_index} ->
                 async_key = String.to_atom("song_#{set_index}_#{song_index}")
                 result = Map.get(socket.assigns, async_key).result
-                result[:spotify_info].track_id
+
+                result[:track_info].track_id
               end)
             end)
 
@@ -190,7 +191,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                                 aria-label="search failed"
                               />
                             </:failed>
-                            <%= if result[:spotify_info] do %>
+                            <%= if result[:track_info] do %>
                               <Heroicons.check
                                 mini
                                 class="h-4 w-4 text-emerald-500"
@@ -207,7 +208,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                         <% end %>
                         <span class={[
                           @user_session && async_result && async_result.ok? &&
-                            !async_result.result[:spotify_info] && "text-gray-500",
+                            !async_result.result[:track_info] && "text-gray-500",
                           "inline"
                         ]}>
                           {song.title}
