@@ -44,7 +44,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
       result = ExternalClient.search_for_track(user_session, "some artist", "some track")
 
-      assert result.uri =~ ~r"spotify:track:\w+"
+      assert result.track_id =~ ~r"spotify:track:\w+"
     end
 
     test "returns nil if no tracks are found", %{user_session: user_session} do
@@ -879,7 +879,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       # 3. Retry with the new token
       # 4. Successfully complete the search
       assert result
-      assert result.uri =~ ~r"spotify:track:\w+"
+      assert result.track_id =~ ~r"spotify:track:\w+"
     end
   end
 end
