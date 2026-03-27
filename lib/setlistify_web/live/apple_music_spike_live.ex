@@ -1,25 +1,28 @@
 defmodule SetlistifyWeb.AppleMusicSpikeLive do
   use SetlistifyWeb, :live_view
 
-  alias Setlistify.AppleMusic.JWT
+  alias Setlistify.AppleMusic.DeveloperTokenManager
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, status: :idle, user_token: nil, storefront: nil, error: nil)}
   end
 
   def handle_event("connect", _params, socket) do
-    now = System.system_time(:second)
-
-    developer_token = JWT.sign(%{"iat" => now, "exp" => now + 3600})
-
     {:noreply,
      socket
      |> assign(status: :authorizing)
-     |> push_event("request_apple_music_auth", %{developer_token: developer_token})}
+     |> push_event("request_apple_music_auth", %{
+       developer_token: DeveloperTokenManager.get_token()
+     })}
   end
 
-  def handle_event("apple_music_authorized", %{"user_token" => user_token, "storefront" => storefront}, socket) do
-    {:noreply, assign(socket, status: :authorized, user_token: user_token, storefront: storefront)}
+  def handle_event(
+        "apple_music_authorized",
+        %{"user_token" => user_token, "storefront" => storefront},
+        socket
+      ) do
+    {:noreply,
+     assign(socket, status: :authorized, user_token: user_token, storefront: storefront)}
   end
 
   def handle_event("apple_music_auth_failed", %{"reason" => reason}, socket) do
@@ -31,7 +34,11 @@ defmodule SetlistifyWeb.AppleMusicSpikeLive do
     <div class="p-8 max-w-xl mx-auto" id="apple-music-spike" phx-hook="AppleMusicAuth">
       <h1 class="text-2xl font-bold mb-6">Apple Music Spike</h1>
 
-      <button :if={@status == :idle} phx-click="connect" class="px-4 py-2 bg-white text-black rounded font-semibold">
+      <button
+        :if={@status == :idle}
+        phx-click="connect"
+        class="px-4 py-2 bg-white text-black rounded font-semibold"
+      >
         Connect Apple Music
       </button>
 
