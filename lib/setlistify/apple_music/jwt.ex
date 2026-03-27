@@ -15,9 +15,9 @@ defmodule Setlistify.AppleMusic.JWT do
   @spec sign(claims :: map(), pem :: String.t(), kid :: String.t(), iss :: String.t()) :: String.t()
   def sign(
         claims,
-        pem \\ System.fetch_env!("APPLE_MUSIC_PRIVATE_KEY"),
-        kid \\ System.fetch_env!("APPLE_MUSIC_KEY_ID"),
-        iss \\ System.fetch_env!("APPLE_MUSIC_TEAM_ID")
+        pem \\ Application.fetch_env!(:setlistify, :apple_music_private_key),
+        kid \\ Application.fetch_env!(:setlistify, :apple_music_key_id),
+        iss \\ Application.fetch_env!(:setlistify, :apple_music_team_id)
       ) do
     header_b64 =
       %{"alg" => "ES256", "kid" => kid} |> Jason.encode!() |> Base.url_encode64(padding: false)

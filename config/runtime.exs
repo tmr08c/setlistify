@@ -105,6 +105,11 @@ config :setlistify, setlist_fm_api_key: System.fetch_env!("SETLIST_FM_API_SECRET
 config :setlistify, spotify_client_id: System.fetch_env!("SPOTIFY_CLIENT_ID")
 config :setlistify, spotify_client_secret: System.fetch_env!("SPOTIFY_CLIENT_SECRET")
 
+## Apple Music API
+config :setlistify, apple_music_team_id: System.fetch_env!("APPLE_MUSIC_TEAM_ID")
+config :setlistify, apple_music_key_id: System.fetch_env!("APPLE_MUSIC_KEY_ID")
+config :setlistify, apple_music_private_key: System.fetch_env!("APPLE_MUSIC_PRIVATE_KEY")
+
 ## PromEx metrics server port configuration
 if prom_ex_port = System.get_env("PROM_EX_PORT") do
   config :setlistify, Setlistify.PromEx,
