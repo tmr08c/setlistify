@@ -36,6 +36,9 @@ npm-debug.log
 # local
 .env
 
+# Apple Music developer private keys
+priv/*.p8
+
 # Ignore Dialyzer's PLT files
 /priv/plts/*.plt
 /priv/plts/*.plt.hash
