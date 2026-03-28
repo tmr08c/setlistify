@@ -1,6 +1,10 @@
 defmodule Setlistify.AppleMusic.DeveloperTokenManager do
   use GenServer
 
+  require Logger
+
+  require Logger
+
   @refresh_threshold 5 * 60
   @default_ttl_seconds 30 * 24 * 60 * 60
 
@@ -12,17 +16,29 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
     do: {:ok, %{token: nil, expires_at: nil, timer_ref: nil}, {:continue, :generate_token}}
 
   def handle_continue(:generate_token, state) do
-    {token, expires_at} = generate_and_sign()
-    timer_ref = schedule_refresh(expires_at, state.timer_ref)
-    {:noreply, %{state | token: token, expires_at: expires_at, timer_ref: timer_ref}}
+    case generate_and_sign() do
+      {:ok, token, expires_at} ->
+        timer_ref = schedule_refresh(expires_at, state.timer_ref)
+        {:noreply, %{state | token: token, expires_at: expires_at, timer_ref: timer_ref}}
+
+      {:error, reason} ->
+        Logger.error("DeveloperTokenManager failed to generate token: #{inspect(reason)}")
+        {:stop, reason, state}
+    end
   end
 
   def handle_call(:get_token, _from, state), do: {:reply, state.token, state}
 
   def handle_info(:refresh_token, state) do
-    {token, expires_at} = generate_and_sign()
-    timer_ref = schedule_refresh(expires_at, state.timer_ref)
-    {:noreply, %{state | token: token, expires_at: expires_at, timer_ref: timer_ref}}
+    case generate_and_sign() do
+      {:ok, token, expires_at} ->
+        timer_ref = schedule_refresh(expires_at, state.timer_ref)
+        {:noreply, %{state | token: token, expires_at: expires_at, timer_ref: timer_ref}}
+
+      {:error, reason} ->
+        Logger.error("DeveloperTokenManager failed to refresh token: #{inspect(reason)}")
+        {:stop, reason, state}
+    end
   end
 
   defp generate_and_sign do
@@ -35,7 +51,9 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
     token =
       Setlistify.AppleMusic.JWT.sign(%{"iat" => now, "exp" => expires_at}, pem, key_id, team_id)
 
-    {token, expires_at}
+    {:ok, token, expires_at}
+  rescue
+    e -> {:error, e}
   end
 
   defp schedule_refresh(expires_at, existing_timer) do
