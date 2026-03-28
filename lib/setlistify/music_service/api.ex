@@ -1,0 +1,36 @@
+defmodule Setlistify.MusicService.API do
+  @moduledoc """
+  Provider-agnostic dispatch module for music service operations.
+
+  LiveViews call functions in this module instead of referencing a specific
+  provider (e.g. Spotify) directly. Dispatch is based on the type of the
+  user_session struct.
+  """
+
+  alias Setlistify.Spotify
+
+  @type user_session :: Spotify.UserSession.t()
+
+  @callback search_for_track(user_session(), String.t(), String.t()) ::
+              nil | %{track_id: String.t()}
+
+  @callback create_playlist(user_session(), String.t(), String.t()) ::
+              {:ok, %{id: String.t(), external_url: String.t()}} | {:error, atom()}
+
+  @callback add_tracks_to_playlist(user_session(), String.t(), [String.t()]) ::
+              {:ok, atom()} | {:error, atom()}
+
+  def search_for_track(%Spotify.UserSession{} = user_session, artist, track) do
+    Spotify.API.search_for_track(user_session, artist, track)
+  end
+
+  def create_playlist(%Spotify.UserSession{} = user_session, name, description) do
+    Spotify.API.create_playlist(user_session, name, description)
+  end
+
+  def add_tracks_to_playlist(%Spotify.UserSession{} = user_session, playlist_id, tracks) do
+    Spotify.API.add_tracks_to_playlist(user_session, playlist_id, tracks)
+  end
+
+  def get_embed("spotify", url), do: Spotify.API.get_embed(url)
+end

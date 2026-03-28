@@ -33,6 +33,7 @@ defmodule SetlistifyWeb.Router do
         SetlistifyWeb.Auth.LiveHooks
       ] do
       live "/", HomeLive
+      live "/sign-in", SignInLive
       live "/setlists", SearchLive
       live "/setlist/:id", Setlists.ShowLive
     end
