@@ -30,4 +30,6 @@ defmodule Setlistify.MusicService.API do
   def add_tracks_to_playlist(%Spotify.UserSession{} = user_session, playlist_id, tracks) do
     Spotify.API.add_tracks_to_playlist(user_session, playlist_id, tracks)
   end
+
+  def get_embed("spotify", url), do: Spotify.API.get_embed(url)
 end
