@@ -1,10 +1,9 @@
 defmodule Setlistify.MusicService.API do
   @moduledoc """
-  Provider-agnostic dispatch module for music service operations.
+  Provider-agnostic public API for music service operations within the app.
 
-  LiveViews call functions in this module instead of referencing a specific
-  provider (e.g. Spotify) directly. Dispatch is based on the type of the
-  user_session struct.
+  Dispatch is based on the type of the user_session struct, so callers do not
+  need to reference a specific provider (e.g. Spotify) directly.
   """
 
   alias Setlistify.Spotify
@@ -31,6 +30,4 @@ defmodule Setlistify.MusicService.API do
   def add_tracks_to_playlist(%Spotify.UserSession{} = user_session, playlist_id, tracks) do
     Spotify.API.add_tracks_to_playlist(user_session, playlist_id, tracks)
   end
-
-  def get_embed("spotify", url), do: Spotify.API.get_embed(url)
 end
