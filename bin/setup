@@ -9,3 +9,35 @@ asdf install
 
 echo "==> Running mix setup…"
 mix setup
+
+echo ""
+echo "==> Checking for Tidewave…"
+if command -v tidewave &>/dev/null || [ -d "/Applications/Tidewave.app" ]; then
+  echo "    Tidewave is installed."
+elif [ "$(uname -s)" = "Darwin" ]; then
+  echo "    Tidewave not found — downloading…"
+
+  if [ "$(uname -m)" = "arm64" ]; then
+    TIDEWAVE_URL="https://github.com/tidewave-ai/tidewave_app/releases/latest/download/tidewave-app-aarch64.dmg"
+  else
+    TIDEWAVE_URL="https://github.com/tidewave-ai/tidewave_app/releases/latest/download/tidewave-app-x64.dmg"
+  fi
+
+  TIDEWAVE_DMG=$(mktemp /tmp/tidewave-XXXXXX.dmg)
+  curl -L --progress-bar "$TIDEWAVE_URL" -o "$TIDEWAVE_DMG"
+
+  echo "    Mounting disk image…"
+  TIDEWAVE_MOUNT=$(hdiutil attach "$TIDEWAVE_DMG" -nobrowse -quiet | awk 'END{print $NF}')
+
+  echo "    Installing Tidewave.app to /Applications…"
+  cp -R "$TIDEWAVE_MOUNT/Tidewave.app" /Applications/
+
+  hdiutil detach "$TIDEWAVE_MOUNT" -quiet
+  rm "$TIDEWAVE_DMG"
+
+  echo "    Tidewave installed!"
+  echo "    Open Tidewave and connect to Claude Code via: Settings → Providers → Claude Code → Connect"
+else
+  echo "    Tidewave auto-install is only supported on macOS."
+  echo "    Visit https://tidewave.ai to download for your platform."
+fi

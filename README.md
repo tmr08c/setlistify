@@ -92,6 +92,20 @@ mix test
 mix format
 ```
 
+## AI-Assisted Development with Tidewave
+
+Setlistify includes [Tidewave](https://tidewave.ai), which exposes an MCP server at `/tidewave/mcp` that lets AI coding tools (Claude Code, Cursor, etc.) interact with the running app — evaluating code, inspecting logs, querying the database, and more.
+
+The hex package is already included as a dev dependency. To use it, you also need the **Tidewave desktop app**:
+
+1. Download and install the app for your Mac:
+   - [Apple Silicon](https://github.com/tidewave-ai/tidewave_app/releases/latest/download/tidewave-app-aarch64.dmg)
+   - [Intel](https://github.com/tidewave-ai/tidewave_app/releases/latest/download/tidewave-app-x64.dmg)
+2. Start your Phoenix server (`bin/server`)
+3. Open Tidewave → Settings → Providers → **Claude Code** → **Connect**
+
+Tidewave will automatically configure Claude Code's MCP settings to connect to your running app.
+
 ## Observability with OpenTelemetry
 
 Setlistify includes comprehensive observability through OpenTelemetry, providing distributed tracing, structured logging, and metrics collection.
