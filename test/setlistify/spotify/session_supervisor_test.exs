@@ -97,7 +97,7 @@ defmodule Setlistify.Spotify.SessionSupervisorTest do
       # as well.
       Process.sleep(1)
 
-      refute_in_registry(user_id)
+      refute_in_registry({:spotify, user_id})
     end
   end
 

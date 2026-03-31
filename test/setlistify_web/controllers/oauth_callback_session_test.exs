@@ -50,7 +50,7 @@ defmodule SetlistifyWeb.OAuthCallbackSessionTest do
       refute get_session(conn, "account_name")
 
       # Verify SessionManager was started with the user session
-      assert_in_registry(user_id)
+      assert_in_registry({:spotify, user_id})
 
       # Verify redirect happened
       assert conn.status == 302

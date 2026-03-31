@@ -49,7 +49,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       }
 
       {:ok, pid} = SessionManager.start_link({user_id, user_session})
-      registry_pid = assert_in_registry(user_id)
+      registry_pid = assert_in_registry({:spotify, user_id})
       assert registry_pid == pid
     end
 
@@ -223,7 +223,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
         # before the process is registered
         # In this test, we're starting the process after setting up the mock,
         # so we don't want to fail if the process isn't registered yet
-        pid = assert_in_registry(user_id, fail_on_timeout: false)
+        pid = assert_in_registry({:spotify, user_id}, fail_on_timeout: false)
         if is_nil(pid), do: self(), else: pid
       end)
 

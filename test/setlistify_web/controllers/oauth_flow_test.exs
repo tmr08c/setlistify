@@ -78,7 +78,7 @@ defmodule SetlistifyWeb.OAuthFlowTest do
       signout_response = get(signout_conn, ~p"/signout")
 
       # Session process should be stopped
-      refute_in_registry(test_user)
+      refute_in_registry({:spotify, test_user})
 
       # Session should be cleared
       refute get_session(signout_response, :refresh_token)
