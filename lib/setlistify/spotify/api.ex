@@ -1,4 +1,6 @@
 defmodule Setlistify.Spotify.API do
+  @behaviour Setlistify.MusicService.API
+
   require OpenTelemetry.Tracer
 
   alias Setlistify.Spotify.UserSession

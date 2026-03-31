@@ -1,14 +1,14 @@
 defmodule SetlistifyWeb.Playlists.ShowLive do
   use SetlistifyWeb, :live_view
 
-  alias Setlistify.Spotify
+  alias Setlistify.MusicService
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, error: nil, playlist_href: nil)}
   end
 
   def handle_params(%{"provider" => "spotify", "url" => url}, _uri, socket) do
-    case Spotify.API.get_embed(url) do
+    case MusicService.API.get_embed("spotify", url) do
       {:ok, embed_html} ->
         {:noreply, assign(socket, playlist_href: url, embed_html: embed_html, error: nil)}
 

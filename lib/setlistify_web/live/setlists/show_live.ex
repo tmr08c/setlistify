@@ -4,7 +4,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   require OpenTelemetry.Tracer
   require OpentelemetryPhoenixLiveViewProcessPropagator.LiveView
 
-  alias Setlistify.{SetlistFm, Spotify}
+  alias Setlistify.{MusicService, SetlistFm}
 
   def mount(%{"id" => id}, _session, socket) do
     case SetlistFm.API.get_setlist(id) do
@@ -52,7 +52,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                     ])
 
                     track_info =
-                      Spotify.API.search_for_track(user_session, setlist.artist, song.title)
+                      MusicService.API.search_for_track(user_session, setlist.artist, song.title)
 
                     {:ok,
                      %{
@@ -95,7 +95,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
       description =
         "Created by Setlistify: #{socket.assigns.artist} at #{socket.assigns.venue_name} on #{socket.assigns.date}"
 
-      case Spotify.API.create_playlist(user_session, name, description) do
+      case MusicService.API.create_playlist(user_session, name, description) do
         {:ok, %{id: playlist_id, external_url: external_url}} ->
           # Build a flatlist of track Ids from our setlist
           track_ids =
@@ -123,7 +123,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
               end)
             end)
 
-          case Spotify.API.add_tracks_to_playlist(user_session, playlist_id, track_ids) do
+          case MusicService.API.add_tracks_to_playlist(user_session, playlist_id, track_ids) do
             {:ok, _} ->
               {:noreply,
                push_navigate(socket, to: ~p"/playlists?provider=spotify&url=#{external_url}")}
