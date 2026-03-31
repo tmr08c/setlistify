@@ -1,7 +1,29 @@
 defmodule Setlistify.AppleMusic.DeveloperTokenManager do
-  use GenServer
+  @moduledoc """
+  Singleton GenServer that generates and caches the Apple Music developer token.
 
-  require Logger
+  Unlike user tokens, the developer token is not tied to any individual user — it
+  identifies the app itself to Apple's API and is shared across all requests. Apple
+  issues developer tokens as ES256-signed JWTs with a maximum lifetime of 180 days,
+  though we sign ours for 30 days.
+
+  Because the token must be present before any Apple Music API call can succeed, this
+  process generates the token eagerly on startup (via `handle_continue`) rather than
+  lazily on first call. Callers are guaranteed to receive a non-nil token even on the
+  very first `get_token/0` call.
+
+  ## Rotation
+
+  The token is automatically rotated 5 minutes before it expires. A `Process.send_after`
+  timer fires a `:refresh_token` message, which regenerates and caches a fresh token
+  before the old one becomes invalid. This means callers never need to think about
+  expiry — `get_token/0` always returns a valid token.
+
+  If token generation fails (e.g. misconfigured PEM or missing env vars), the process
+  logs the error and stops, allowing the supervisor to handle the restart policy.
+  """
+
+  use GenServer
 
   require Logger
 
@@ -10,6 +32,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
 
   def start_link(_opts), do: GenServer.start_link(__MODULE__, [], name: __MODULE__)
 
+  @doc "Returns the cached developer token. Always valid — rotation is handled automatically."
   def get_token, do: GenServer.call(__MODULE__, :get_token)
 
   def init(_),
