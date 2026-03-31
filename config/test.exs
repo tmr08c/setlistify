@@ -32,3 +32,6 @@ config :opentelemetry,
 config :setlistify, Setlistify.PromEx,
   grafana: :disabled,
   metrics_server: :disabled
+
+# Disable Apple Music token manager in tests (uses placeholder PEM from .env.example)
+config :setlistify, start_apple_music_token_manager: false
