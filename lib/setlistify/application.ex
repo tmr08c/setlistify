@@ -7,12 +7,6 @@ defmodule Setlistify.Application do
 
   require Cachex.Spec
 
-  @start_apple_music_token_manager Application.compile_env(
-                                     :setlistify,
-                                     :start_apple_music_token_manager,
-                                     true
-                                   )
-
   @impl true
   def start(_type, _args) do
     Setlistify.Observability.setup()
@@ -78,7 +72,7 @@ defmodule Setlistify.Application do
   end
 
   defp apple_music_children do
-    if @start_apple_music_token_manager do
+    if Application.get_env(:setlistify, :start_apple_music_token_manager, true) do
       [Setlistify.AppleMusic.DeveloperTokenManager]
     else
       []
