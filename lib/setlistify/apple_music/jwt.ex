@@ -3,7 +3,6 @@ defmodule Setlistify.AppleMusic.JWT do
   Generates ES256-signed JWTs for Apple Music API authentication.
 
   Handles PKCS#8 PEM keys — the format Apple distributes as `.p8` files
-  (`-----BEGIN PRIVATE KEY-----`).
   """
 
   @doc """
