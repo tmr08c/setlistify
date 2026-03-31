@@ -9,7 +9,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
   def search(query, page, endpoint \\ @root_endpoint) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.ExternalClient.search" do
       OpenTelemetry.Tracer.set_attributes([
-        {"service.name", "setlist_fm"},
+        {"peer.service", "setlist_fm"},
         {"setlist_fm.operation", "search"},
         {"setlist_fm.search.query", query},
         {"setlist_fm.search.page", page},
@@ -120,7 +120,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
   def get_setlist(id, endpoint \\ @root_endpoint) do
     OpenTelemetry.Tracer.with_span "Setlistify.SetlistFm.API.ExternalClient.get_setlist" do
       OpenTelemetry.Tracer.set_attributes([
-        {"service.name", "setlist_fm"},
+        {"peer.service", "setlist_fm"},
         {"setlist_fm.operation", "get_setlist"},
         {"setlist_fm.setlist.id", id},
         {"http.url", "#{endpoint}/setlist/#{id}"}

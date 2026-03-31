@@ -11,7 +11,7 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
     test_user = "user_#{System.unique_integer([:positive])}"
 
     # Clean up session manager for the test user to avoid interference between tests
-    case Registry.lookup(Setlistify.UserSessionRegistry, test_user) do
+    case Registry.lookup(Setlistify.UserSessionRegistry, {:spotify, test_user}) do
       [{pid, _}] -> GenServer.stop(pid)
       [] -> :ok
     end
@@ -109,7 +109,7 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       assert get_session(conn, :refresh_token) == "some_token"
 
       # Start a session process using the supervisor to properly register it
-      assert Registry.lookup(Setlistify.UserSessionRegistry, test_user) == []
+      assert Registry.lookup(Setlistify.UserSessionRegistry, {:spotify, test_user}) == []
 
       user_session = %Setlistify.Spotify.UserSession{
         access_token: "test",
@@ -123,7 +123,8 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       assert Process.alive?(original_pid)
 
       # Verify process is registered with the Registry
-      assert [{^original_pid, _}] = Registry.lookup(Setlistify.UserSessionRegistry, test_user)
+      assert [{^original_pid, _}] =
+               Registry.lookup(Setlistify.UserSessionRegistry, {:spotify, test_user})
 
       # Do the sign-out
       sign_out_conn = get(conn, "/signout")

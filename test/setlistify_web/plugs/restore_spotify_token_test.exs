@@ -48,6 +48,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
         conn
         |> init_test_session(%{})
         |> fetch_flash()
+        |> put_session(:auth_provider, "spotify")
         |> put_session(:user_id, user_id)
         |> RestoreSpotifyToken.call([])
 
@@ -56,7 +57,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
 
     test "restores session process from valid refresh token", %{conn: conn, user_id: user_id} do
       # Ensure there is no existing session process
-      case Registry.lookup(Setlistify.UserSessionRegistry, user_id) do
+      case Registry.lookup(Setlistify.UserSessionRegistry, {:spotify, user_id}) do
         [{pid, _}] -> GenServer.stop(pid)
         [] -> :ok
       end
@@ -87,6 +88,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
         conn
         |> init_test_session(%{})
         |> fetch_flash()
+        |> put_session(:auth_provider, "spotify")
         |> put_session(:user_id, user_id)
         |> put_session(:refresh_token, encrypted_token)
         |> RestoreSpotifyToken.call([])
@@ -123,6 +125,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
         conn
         |> init_test_session(%{})
         |> fetch_flash()
+        |> put_session(:auth_provider, "spotify")
         |> put_session(:user_id, user_id)
         |> put_session(:refresh_token, encrypted_token)
         |> RestoreSpotifyToken.call([])

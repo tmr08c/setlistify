@@ -75,6 +75,7 @@ defmodule SetlistifyWeb.OAuthCallbackController do
           SessionSupervisor.start_user_token(user_session.user_id, user_session)
 
           conn
+          |> put_session(:auth_provider, "spotify")
           |> put_session(:refresh_token, encrypted_refresh_token)
           |> put_session(:user_id, user_session.user_id)
           |> UserAuth.auth_user(user_session.user_id)
