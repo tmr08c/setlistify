@@ -19,17 +19,16 @@ defmodule Setlistify.MusicService.API do
   @callback add_tracks_to_playlist(user_session(), String.t(), [String.t()]) ::
               {:ok, atom()} | {:error, atom()}
 
-  def search_for_track(%Spotify.UserSession{} = user_session, artist, track) do
-    Spotify.API.search_for_track(user_session, artist, track)
-  end
+  defp impl(%Spotify.UserSession{}), do: Spotify.API
 
-  def create_playlist(%Spotify.UserSession{} = user_session, name, description) do
-    Spotify.API.create_playlist(user_session, name, description)
-  end
+  def search_for_track(user_session, artist, track),
+    do: impl(user_session).search_for_track(user_session, artist, track)
 
-  def add_tracks_to_playlist(%Spotify.UserSession{} = user_session, playlist_id, tracks) do
-    Spotify.API.add_tracks_to_playlist(user_session, playlist_id, tracks)
-  end
+  def create_playlist(user_session, name, description),
+    do: impl(user_session).create_playlist(user_session, name, description)
+
+  def add_tracks_to_playlist(user_session, playlist_id, tracks),
+    do: impl(user_session).add_tracks_to_playlist(user_session, playlist_id, tracks)
 
   def get_embed("spotify", url), do: Spotify.API.get_embed(url)
 end
