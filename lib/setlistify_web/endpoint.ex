@@ -36,7 +36,7 @@ defmodule SetlistifyWeb.Endpoint do
     cookie_key: "request_logger"
 
   # Tidewave AI assistant plug
-  if Code.ensure_loaded?(Tidewave) do
+  if Mix.env() == :dev do
     plug Tidewave
   end
 
