@@ -80,7 +80,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
 
       # Allow the mock to be called from the session process
       allow(Setlistify.Spotify.API.MockClient, self(), fn ->
-        pid = assert_in_registry(user_id, fail_on_timeout: false)
+        pid = assert_in_registry({:spotify, user_id}, fail_on_timeout: false)
         if is_nil(pid), do: self(), else: pid
       end)
 
@@ -114,12 +114,12 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
 
       # Allow the mock to be called from the session process
       allow(Setlistify.Spotify.API.MockClient, self(), fn ->
-        pid = assert_in_registry(user_id, fail_on_timeout: false)
+        pid = assert_in_registry({:spotify, user_id}, fail_on_timeout: false)
         if is_nil(pid), do: self(), else: pid
       end)
 
       # Ensure there is no existing token process
-      refute_in_registry(user_id)
+      refute_in_registry({:spotify, user_id})
 
       conn =
         conn

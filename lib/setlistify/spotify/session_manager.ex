@@ -89,6 +89,9 @@ defmodule Setlistify.Spotify.SessionManager do
   use GenServer
   require Logger
   require OpenTelemetry.Tracer
+
+  @behaviour Setlistify.UserSessionManager
+
   alias Setlistify.Spotify.API
   alias Setlistify.Spotify.UserSession
 
@@ -98,6 +101,7 @@ defmodule Setlistify.Spotify.SessionManager do
 
   # Client API
 
+  @impl Setlistify.UserSessionManager
   def start_link({user_id, initial_tokens_or_session}) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.start_link" do
       OpenTelemetry.Tracer.set_attributes([
@@ -197,6 +201,7 @@ defmodule Setlistify.Spotify.SessionManager do
     end
   end
 
+  @impl Setlistify.UserSessionManager
   def get_session(user_id) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.get_session" do
       OpenTelemetry.Tracer.set_attributes([
@@ -226,6 +231,7 @@ defmodule Setlistify.Spotify.SessionManager do
     end
   end
 
+  @impl Setlistify.UserSessionManager
   def stop(user_id) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionManager.stop" do
       OpenTelemetry.Tracer.set_attributes([

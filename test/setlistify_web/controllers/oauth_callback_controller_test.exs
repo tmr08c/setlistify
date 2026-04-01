@@ -138,7 +138,7 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       # Check that user was removed from the session
 
       # Check that process was removed from registry
-      refute_in_registry(test_user)
+      refute_in_registry({:spotify, test_user})
     end
 
     test "successful callback with redirect_to redirects to provided path", %{
