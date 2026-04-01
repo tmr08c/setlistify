@@ -35,6 +35,13 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
   @doc "Returns the cached developer token. Always valid — rotation is handled automatically."
   def get_token, do: GenServer.call(__MODULE__, :get_token)
 
+  @doc """
+  Forces immediate token regeneration and returns the new token.
+  Called on a 401 response from ExternalClient. Cancels the pending scheduled
+  refresh and reschedules from the new expiry to prevent a double refresh.
+  """
+  def regenerate_token, do: GenServer.call(__MODULE__, :regenerate_token)
+
   def init(_),
     do: {:ok, %{token: nil, expires_at: nil, timer_ref: nil}, {:continue, :generate_token}}
 
@@ -51,6 +58,19 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
   end
 
   def handle_call(:get_token, _from, state), do: {:reply, state.token, state}
+
+  def handle_call(:regenerate_token, _from, state) do
+    case generate_and_sign() do
+      {:ok, token, expires_at} ->
+        timer_ref = schedule_refresh(expires_at, state.timer_ref)
+        new_state = %{state | token: token, expires_at: expires_at, timer_ref: timer_ref}
+        {:reply, token, new_state}
+
+      {:error, reason} ->
+        Logger.error("DeveloperTokenManager failed to regenerate token: #{inspect(reason)}")
+        {:reply, state.token, state}
+    end
+  end
 
   def handle_info(:refresh_token, state) do
     case generate_and_sign() do
