@@ -6,7 +6,7 @@ defmodule Setlistify.AppleMusic.SessionManager do
   Apple Music user tokens are valid for approximately six months with no
   server-side refresh endpoint. This GenServer stores the session as-is —
   there is no refresh timer, no scheduled token rotation, and no PubSub
-  broadcast on token change. The simplicity is intentional.
+  broadcast on token change.
   """
 
   use GenServer

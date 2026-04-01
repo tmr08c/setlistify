@@ -5,16 +5,16 @@ defmodule Setlistify.UserSessionManager do
   Two dispatch patterns are used depending on whether the caller has the
   session in hand:
 
-  - **Session struct** — used at session creation time, when the full
+  - Session struct — used at session creation time, when the full
     `UserSession` struct is available. Dispatch is by struct type, so no
     provider argument is needed.
 
-  - **Provider key tuple** — used for lookups and teardown, when the session
+  - Provider key tuple — used for lookups and teardown, when the session
     hasn't been fetched yet and only the provider + user ID are known (e.g.
     from a session cookie). The tuple mirrors the Registry key format used
     internally.
 
-  Provider key format: `{:spotify, user_id}` / `{:apple_music, user_id}`
+    Provider key format: `{:provider, user_id}`
   """
 
   alias Setlistify.{Spotify, AppleMusic}
