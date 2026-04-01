@@ -22,6 +22,10 @@ config :setlistify,
   setlist_fm_req_options: [
     plug: {Req.Test, MySetlistFmStub},
     retry: false
+  ],
+  apple_music_req_options: [
+    plug: {Req.Test, MyAppleMusicStub},
+    retry: false
   ]
 
 # Disable OpenTelemetry exports in test

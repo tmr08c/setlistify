@@ -6,9 +6,9 @@ defmodule Setlistify.MusicService.API do
   need to reference a specific provider (e.g. Spotify) directly.
   """
 
-  alias Setlistify.Spotify
+  alias Setlistify.{AppleMusic, Spotify}
 
-  @type user_session :: Spotify.UserSession.t()
+  @type user_session :: Spotify.UserSession.t() | AppleMusic.UserSession.t()
 
   @callback search_for_track(user_session(), String.t(), String.t()) ::
               nil | %{track_id: String.t()}
@@ -19,16 +19,24 @@ defmodule Setlistify.MusicService.API do
   @callback add_tracks_to_playlist(user_session(), String.t(), [String.t()]) ::
               {:ok, atom()} | {:error, atom()}
 
-  defp impl(%Spotify.UserSession{}), do: Spotify.API
+  def search_for_track(%Spotify.UserSession{} = s, artist, track),
+    do: Spotify.API.search_for_track(s, artist, track)
 
-  def search_for_track(user_session, artist, track),
-    do: impl(user_session).search_for_track(user_session, artist, track)
+  def search_for_track(%AppleMusic.UserSession{} = s, artist, track),
+    do: AppleMusic.API.search_for_track(s, artist, track)
 
-  def create_playlist(user_session, name, description),
-    do: impl(user_session).create_playlist(user_session, name, description)
+  def create_playlist(%Spotify.UserSession{} = s, name, desc),
+    do: Spotify.API.create_playlist(s, name, desc)
 
-  def add_tracks_to_playlist(user_session, playlist_id, tracks),
-    do: impl(user_session).add_tracks_to_playlist(user_session, playlist_id, tracks)
+  def create_playlist(%AppleMusic.UserSession{} = s, name, desc),
+    do: AppleMusic.API.create_playlist(s, name, desc)
+
+  def add_tracks_to_playlist(%Spotify.UserSession{} = s, id, tracks),
+    do: Spotify.API.add_tracks_to_playlist(s, id, tracks)
+
+  def add_tracks_to_playlist(%AppleMusic.UserSession{} = s, id, tracks),
+    do: AppleMusic.API.add_tracks_to_playlist(s, id, tracks)
 
   def get_embed("spotify", url), do: Spotify.API.get_embed(url)
+  def get_embed("apple_music", url), do: AppleMusic.API.get_embed(url)
 end
