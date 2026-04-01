@@ -27,12 +27,12 @@ elif [ "$(uname -s)" = "Darwin" ]; then
   curl -L --progress-bar "$TIDEWAVE_URL" -o "$TIDEWAVE_DMG"
 
   echo "    Mounting disk image…"
-  TIDEWAVE_MOUNT=$(hdiutil attach "$TIDEWAVE_DMG" -nobrowse -quiet | awk 'END{print $NF}')
+  TIDEWAVE_MOUNT=$(hdiutil attach "$TIDEWAVE_DMG" -nobrowse 2>/dev/null | grep '/Volumes/' | sed 's|.*\(/Volumes/[^\t]*\)|\1|' | xargs)
 
   echo "    Installing Tidewave.app to /Applications…"
   cp -R "$TIDEWAVE_MOUNT/Tidewave.app" /Applications/
 
-  hdiutil detach "$TIDEWAVE_MOUNT" -quiet
+  hdiutil detach "$TIDEWAVE_MOUNT" -quiet 2>/dev/null
   rm "$TIDEWAVE_DMG"
 
   echo "    Tidewave installed!"
