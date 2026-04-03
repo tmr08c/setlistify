@@ -34,10 +34,12 @@
         <span class="hidden sm:inline">Spotify</span>
       </.link>
 
-      <%= if apple_music_developer_token() do %>
+      <% am_token = apple_music_developer_token() %>
+      <%= if am_token do %>
         <button
-          data-apple-music-signin
-          data-developer-token={apple_music_developer_token()}
+          id="apple-music-signin"
+          phx-hook="AppleMusicAuth"
+          data-developer-token={am_token}
           data-redirect-to={@redirect_to || "/"}
           class="flex items-center gap-2 text-white hover:text-pink-400 text-sm sm:text-base whitespace-nowrap"
           title="Sign in with Apple Music"

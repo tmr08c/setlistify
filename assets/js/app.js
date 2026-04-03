@@ -21,51 +21,10 @@ import "phoenix_html"
 import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
+import AppleMusicAuth from "./hooks/apple_music_auth"
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
-let Hooks = {}
-
-document.addEventListener("click", async (e) => {
-  const btn = e.target.closest("[data-apple-music-signin]")
-  if (!btn) return
-  e.preventDefault()
-
-  const originalHTML = btn.innerHTML
-  btn.disabled = true
-  btn.innerHTML = btn.innerHTML.replace(/Apple Music/, "Connecting\u2026")
-
-  try {
-    const music = await MusicKit.configure({
-      developerToken: btn.dataset.developerToken,
-      app: { name: "Setlistify", build: "1.0" }
-    })
-    const userToken = await music.authorize()
-    const storefront = music.storefrontId
-
-    const form = document.createElement("form")
-    form.method = "POST"
-    form.action = "/oauth/callbacks/apple_music"
-
-    for (const [name, value] of Object.entries({
-      _csrf_token: csrfToken,
-      user_token: userToken,
-      storefront: storefront,
-      redirect_to: btn.dataset.redirectTo || "/"
-    })) {
-      const input = document.createElement("input")
-      input.type = "hidden"
-      input.name = name
-      input.value = value
-      form.appendChild(input)
-    }
-
-    document.body.appendChild(form)
-    form.submit()
-  } catch (_error) {
-    btn.disabled = false
-    btn.innerHTML = originalHTML
-  }
-})
+let Hooks = {AppleMusicAuth}
 
 Hooks.RotatingText = {
   mounted() {
