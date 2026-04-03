@@ -10,6 +10,7 @@ defmodule SetlistifyWeb.Plugs.RestoreAppleMusicToken do
   require Logger
 
   alias Setlistify.AppleMusic.{SessionManager, SessionSupervisor, API}
+  alias Setlistify.Auth.TokenSalts
 
   def init(opts), do: opts
 
@@ -49,7 +50,7 @@ defmodule SetlistifyWeb.Plugs.RestoreAppleMusicToken do
   defp decrypt_token(nil), do: {:error, :missing}
 
   defp decrypt_token(encrypted) do
-    Phoenix.Token.verify(SetlistifyWeb.Endpoint, "apple music user token", encrypted,
+    Phoenix.Token.verify(SetlistifyWeb.Endpoint, TokenSalts.apple_music_user_token(), encrypted,
       max_age: 86_400 * 180
     )
   end

@@ -57,6 +57,7 @@ defmodule SetlistifyWeb.OAuthCallbackController do
   alias Setlistify.Spotify
   alias Setlistify.AppleMusic
   alias Setlistify.Spotify.API
+  alias Setlistify.Auth.TokenSalts
 
   use SetlistifyWeb, :controller
 
@@ -69,7 +70,11 @@ defmodule SetlistifyWeb.OAuthCallbackController do
         {:ok, user_session} ->
           # Create encrypted token for session storage
           encrypted_refresh_token =
-            Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", user_session.refresh_token)
+            Phoenix.Token.sign(
+              SetlistifyWeb.Endpoint,
+              TokenSalts.spotify_refresh_token(),
+              user_session.refresh_token
+            )
 
           # Start session manager process with UserSession
           # TODO Consider if this should be called in `exchange_code`
@@ -99,7 +104,7 @@ defmodule SetlistifyWeb.OAuthCallbackController do
     {:ok, _pid} = AppleMusic.SessionSupervisor.start_user_token(user_id, user_session)
 
     encrypted_user_token =
-      Phoenix.Token.sign(SetlistifyWeb.Endpoint, "apple music user token", user_token)
+      Phoenix.Token.sign(SetlistifyWeb.Endpoint, TokenSalts.apple_music_user_token(), user_token)
 
     conn
     |> put_session(:auth_provider, "apple_music")

@@ -3,6 +3,7 @@ defmodule SetlistifyWeb.OAuthCallbackSessionTest do
   import Hammox
 
   alias Setlistify.Spotify.UserSession
+  alias Setlistify.Auth.TokenSalts
   import Setlistify.Test.RegistryHelpers
 
   describe "OAuth callback session handling" do
@@ -99,7 +100,11 @@ defmodule SetlistifyWeb.OAuthCallbackSessionTest do
       user_id = unique_user_id()
 
       encrypted_refresh_token =
-        Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", "test_refresh")
+        Phoenix.Token.sign(
+          SetlistifyWeb.Endpoint,
+          TokenSalts.spotify_refresh_token(),
+          "test_refresh"
+        )
 
       # Setup initial session
       conn =

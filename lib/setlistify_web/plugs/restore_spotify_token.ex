@@ -9,6 +9,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
   require Logger
 
   alias Setlistify.Spotify.{SessionSupervisor, SessionManager, API}
+  alias Setlistify.Auth.TokenSalts
 
   def init(opts), do: opts
 
@@ -31,7 +32,10 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
          {:error, :not_found} <- SessionManager.get_session(user_id),
          encrypted_token when not is_nil(encrypted_token) <- refresh_token,
          {:ok, refresh_token} <-
-           Phoenix.Token.verify(SetlistifyWeb.Endpoint, "user auth", encrypted_token,
+           Phoenix.Token.verify(
+             SetlistifyWeb.Endpoint,
+             TokenSalts.spotify_refresh_token(),
+             encrypted_token,
              max_age: 86400 * 30
            ) do
       case API.refresh_to_user_session(refresh_token) do
