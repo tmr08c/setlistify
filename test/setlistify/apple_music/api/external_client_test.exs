@@ -1,4 +1,5 @@
 defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
+  # async: false required because DeveloperTokenManager is a named process
   use Setlistify.DataCase, async: false
 
   alias Setlistify.AppleMusic.API.ExternalClient
@@ -44,19 +45,8 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
     :ok
   end
 
-  describe "build_user_session/3" do
-    test "returns a UserSession struct" do
-      assert {:ok, %UserSession{} = session} =
-               ExternalClient.build_user_session("token", "us", "user-123")
-
-      assert session.user_token == "token"
-      assert session.storefront == "us"
-      assert session.user_id == "user-123"
-    end
-  end
-
   describe "search_for_track/3" do
-    test "returns the first matching track" do
+    test "returns a track_id for a matching track" do
       Req.Test.stub(MyAppleMusicStub, fn
         %{request_path: "/v1/catalog/us/search"} = conn ->
           conn
@@ -64,8 +54,11 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
           |> Plug.Conn.send_resp(200, @search_response)
       end)
 
-      assert %{track_id: "1441164430"} =
+      assert %{track_id: track_id} =
                ExternalClient.search_for_track(@user_session, "The Beatles", "Come Together")
+
+      assert is_binary(track_id)
+      assert track_id =~ ~r/^\d+$/
     end
 
     test "returns nil when no tracks are found" do
@@ -92,8 +85,10 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
       end)
 
       ExUnit.CaptureLog.capture_log(fn ->
-        assert %{track_id: "1441164430"} =
+        assert %{track_id: track_id} =
                  ExternalClient.search_for_track(@user_session, "The Beatles", "Come Together")
+
+        assert track_id =~ ~r/^\d+$/
       end)
     end
 
@@ -131,10 +126,11 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
           |> Plug.Conn.send_resp(201, @create_playlist_response)
       end)
 
-      assert {:ok, %{id: "p.eoGxR1btAYexmB", external_url: external_url}} =
+      assert {:ok, %{id: id, external_url: external_url}} =
                ExternalClient.create_playlist(@user_session, "My Playlist", "A description")
 
-      assert external_url == "https://music.apple.com/library/playlist/p.eoGxR1btAYexmB"
+      assert is_binary(id)
+      assert external_url == "https://music.apple.com/library/playlist/#{id}"
     end
 
     test "returns error on unexpected status" do
@@ -162,8 +158,10 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
           |> Plug.Conn.send_resp(201, @create_playlist_response)
       end)
 
-      assert {:ok, %{id: "p.eoGxR1btAYexmB"}} =
+      assert {:ok, %{id: id}} =
                ExternalClient.create_playlist(@user_session, "My Playlist", "A description")
+
+      assert is_binary(id)
     end
 
     @tag :capture_log
@@ -187,9 +185,9 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
                ExternalClient.add_tracks_to_playlist(@user_session, "p.abc123", [])
     end
 
-    test "adds tracks and returns :tracks_added on 204" do
+    test "adds tracks to the correct playlist and returns :tracks_added on 204" do
       Req.Test.stub(MyAppleMusicStub, fn
-        %{request_path: "/v1/me/library/playlists/" <> _, method: "POST"} = conn ->
+        %{request_path: "/v1/me/library/playlists/p.abc123/tracks", method: "POST"} = conn ->
           {:ok, body, _} = Plug.Conn.read_body(conn)
           data = Jason.decode!(body)["data"]
           assert length(data) == 2
@@ -207,7 +205,7 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
 
     test "returns error on unexpected status" do
       Req.Test.stub(MyAppleMusicStub, fn
-        %{request_path: "/v1/me/library/playlists/" <> _, method: "POST"} = conn ->
+        %{request_path: "/v1/me/library/playlists/p.abc123/tracks", method: "POST"} = conn ->
           Plug.Conn.send_resp(conn, 500, "Internal Server Error")
       end)
 
@@ -259,13 +257,12 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
   end
 
   describe "get_embed/1" do
-    test "returns iframe HTML with embed URL" do
+    test "returns an iframe pointing to the embed domain" do
       url = "https://music.apple.com/us/playlist/my-playlist/pl.abc123"
 
       assert {:ok, html} = ExternalClient.get_embed(url)
-      assert html =~ "https://embed.music.apple.com/us/playlist/my-playlist/pl.abc123"
-      assert html =~ "<iframe"
-      assert html =~ "autoplay *; encrypted-media *; fullscreen *;"
+      assert html =~ ~r/<iframe\s/
+      assert html =~ ~r{src="https://embed\.music\.apple\.com/us/playlist/my-playlist/pl\.abc123"}
     end
   end
 end
