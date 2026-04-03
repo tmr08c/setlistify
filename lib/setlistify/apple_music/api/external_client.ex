@@ -224,13 +224,14 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
 
       embed_url = String.replace(url, "music.apple.com", "embed.music.apple.com")
 
-      html =
-        ~s(<iframe src="#{embed_url}" height="450" frameborder="0") <>
-          ~s( sandbox="allow-forms allow-popups allow-same-origin allow-scripts) <>
-          ~s( allow-storage-access-by-user-activation allow-top-navigation-by-user-activation") <>
-          ~s( allow="autoplay *; encrypted-media *; fullscreen *;") <>
-          ~s( style="width: 100%; max-width: 660px; overflow: hidden;) <>
-          ~s( border-radius: 10px; background-color: transparent;"></iframe>)
+      html = """
+      <iframe src="#{embed_url}" height="450" frameborder="0" \
+      sandbox="allow-forms allow-popups allow-same-origin allow-scripts \
+      allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" \
+      allow="autoplay *; encrypted-media *; fullscreen *;" \
+      style="width: 100%; max-width: 660px; overflow: hidden; \
+      border-radius: 10px; background-color: transparent;"></iframe>
+      """
 
       OpenTelemetry.Tracer.set_status(:ok, "")
       {:ok, html}
