@@ -46,12 +46,6 @@ defmodule Setlistify.Application do
            expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
           id: :spotify_track_cache
         ),
-        Supervisor.child_spec(
-          {Cachex,
-           name: :apple_music_track_cache,
-           expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
-          id: :apple_music_track_cache
-        )
       ] ++ apple_music_children()
 
     # See https://hexdocs.pm/elixir/Supervisor.html
