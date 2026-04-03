@@ -1,13 +1,6 @@
 defmodule Setlistify.AppleMusic.API do
   @moduledoc """
   Interface module for Apple Music API operations.
-
-  `build_user_session/3` is a pure struct constructor — it makes no network
-  calls. Both the sign-in flow and session restoration use it to reconstruct a
-  `UserSession` from its component parts.
-
-  HTTP operations (`search_for_track/3`, `create_playlist/3`, etc.) will be
-  added in Phase 4 (#68) via an `ExternalClient` implementation.
   """
 
   alias Setlistify.AppleMusic.UserSession
