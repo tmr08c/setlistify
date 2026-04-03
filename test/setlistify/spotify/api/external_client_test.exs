@@ -231,18 +231,21 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       assert tokens.expires_in == 3600
     end
 
+    @tag :capture_log
     test "returns error on invalid token" do
       Req.Test.expect(MySpotifyStub, fn conn -> Plug.Conn.send_resp(conn, 401, "Unauthorized") end)
 
       assert {:error, :invalid_token} = ExternalClient.refresh_token("invalid_token")
     end
 
+    @tag :capture_log
     test "returns error on bad request" do
       Req.Test.expect(MySpotifyStub, fn conn -> Plug.Conn.send_resp(conn, 400, "Bad Request") end)
 
       assert {:error, :invalid_token} = ExternalClient.refresh_token("bad_token")
     end
 
+    @tag :capture_log
     test "returns error on server error" do
       Req.Test.expect(MySpotifyStub, fn conn ->
         Plug.Conn.send_resp(conn, 500, "Internal Server Error")
