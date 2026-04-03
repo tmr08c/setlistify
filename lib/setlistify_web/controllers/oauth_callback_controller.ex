@@ -54,7 +54,8 @@ defmodule SetlistifyWeb.OAuthCallbackController do
   """
 
   alias SetlistifyWeb.UserAuth
-  alias Setlistify.Spotify.SessionSupervisor
+  alias Setlistify.Spotify
+  alias Setlistify.AppleMusic
   alias Setlistify.Spotify.API
 
   use SetlistifyWeb, :controller
@@ -72,7 +73,7 @@ defmodule SetlistifyWeb.OAuthCallbackController do
 
           # Start session manager process with UserSession
           # TODO Consider if this should be called in `exchange_code`
-          SessionSupervisor.start_user_token(user_session.user_id, user_session)
+          Spotify.SessionSupervisor.start_user_token(user_session.user_id, user_session)
 
           conn
           |> put_session(:auth_provider, "spotify")
@@ -90,6 +91,26 @@ defmodule SetlistifyWeb.OAuthCallbackController do
       |> put_flash(:error, "Response from Spotify did not match. Please try again.")
       |> redirect(to: ~p"/")
     end
+  end
+
+  def new_apple_music(conn, %{"user_token" => user_token, "storefront" => storefront} = params) do
+    user_id = Ecto.UUID.generate()
+    {:ok, user_session} = AppleMusic.API.build_user_session(user_token, storefront, user_id)
+    {:ok, _pid} = AppleMusic.SessionSupervisor.start_user_token(user_id, user_session)
+
+    encrypted_user_token =
+      Phoenix.Token.sign(SetlistifyWeb.Endpoint, "apple music user token", user_token)
+
+    conn
+    |> put_session(:auth_provider, "apple_music")
+    |> put_session(:user_token, encrypted_user_token)
+    |> put_session(:storefront, storefront)
+    |> then(fn c ->
+      if params["redirect_to"] not in [nil, ""],
+        do: put_session(c, :redirect_to, params["redirect_to"]),
+        else: c
+    end)
+    |> UserAuth.auth_user(user_id)
   end
 
   @state_length 10
@@ -130,16 +151,16 @@ defmodule SetlistifyWeb.OAuthCallbackController do
 
   def sign_out(conn, _) do
     user_id = get_session(conn, :user_id)
+    auth_provider = get_session(conn, :auth_provider)
 
-    # Log out user (which now handles clearing refresh token and the entire session)
     conn = UserAuth.log_out_user(conn)
 
-    # Stop the session process
-    if user_id do
-      SessionSupervisor.stop_user_token(user_id)
+    case {auth_provider, user_id} do
+      {"spotify", id} when not is_nil(id) -> Spotify.SessionSupervisor.stop_user_token(id)
+      {"apple_music", id} when not is_nil(id) -> AppleMusic.SessionSupervisor.stop_user_token(id)
+      _ -> :ok
     end
 
-    # Return the updated conn
     conn
   end
 end

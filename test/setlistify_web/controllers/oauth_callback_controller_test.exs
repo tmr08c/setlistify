@@ -102,6 +102,7 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
         conn
         |> init_test_session(%{})
         |> fetch_flash()
+        |> put_session(:auth_provider, "spotify")
         |> put_session(:refresh_token, "some_token")
         |> put_session(:user_id, test_user)
 

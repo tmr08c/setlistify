@@ -24,7 +24,7 @@ defmodule SetlistifyWeb.Live.AuthIntegrationTest do
       # Setup conn with user_id in session
       conn =
         conn
-        |> init_test_session(%{"user_id" => user_id})
+        |> init_test_session(%{"user_id" => user_id, "auth_provider" => "spotify"})
         |> fetch_flash()
 
       # Load a LiveView page
@@ -33,7 +33,7 @@ defmodule SetlistifyWeb.Live.AuthIntegrationTest do
       # Verify the user is shown as logged in
       assert html =~ "Signed in as test_user"
       assert html =~ "Sign Out"
-      refute html =~ "Sign in with Spotify"
+      refute html =~ "Sign in"
     end
 
     test "unauthenticated user sees sign in prompt in LiveView", %{conn: conn} do
@@ -47,7 +47,7 @@ defmodule SetlistifyWeb.Live.AuthIntegrationTest do
       {:ok, _view, html} = live(conn, ~p"/")
 
       # Verify the user is shown as logged out
-      assert html =~ "Sign in with Spotify"
+      assert html =~ "Sign in"
       refute html =~ "Sign Out"
       refute html =~ "Signed in as"
     end
@@ -65,7 +65,7 @@ defmodule SetlistifyWeb.Live.AuthIntegrationTest do
       {:ok, _view, html} = live(conn, ~p"/")
 
       # Should show as logged out since SessionManager lookup fails
-      assert html =~ "Sign in with Spotify"
+      assert html =~ "Sign in"
       refute html =~ "Sign Out"
     end
   end

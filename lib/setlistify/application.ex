@@ -45,6 +45,12 @@ defmodule Setlistify.Application do
            name: :spotify_track_cache,
            expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
           id: :spotify_track_cache
+        ),
+        Supervisor.child_spec(
+          {Cachex,
+           name: :apple_music_track_cache,
+           expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
+          id: :apple_music_track_cache
         )
       ] ++ apple_music_children()
 

@@ -3,7 +3,7 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
   LiveView authentication hooks for mounting protected views.
   """
 
-  alias Setlistify.Spotify.SessionManager
+  alias Setlistify.UserSessionManager
 
   def on_mount(:default, _params, session, socket) do
     case fetch_user_session(session) do
@@ -25,15 +25,19 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
     end
   end
 
-  # Helper to fetch user session from the session data
   defp fetch_user_session(session) do
     with {:ok, user_id} <- Map.fetch(session, "user_id"),
-         {:ok, user_session} <- SessionManager.get_session(user_id) do
+         {:ok, auth_provider} <- Map.fetch(session, "auth_provider"),
+         key = to_provider_key(auth_provider, user_id),
+         {:ok, user_session} <- UserSessionManager.get_session(key) do
       {:ok, user_id, user_session}
     else
       _ -> :error
     end
   end
+
+  defp to_provider_key("spotify", user_id), do: {:spotify, user_id}
+  defp to_provider_key("apple_music", user_id), do: {:apple_music, user_id}
 
   # Helper to assign authenticated user data to socket
   defp assign_authenticated_user(socket, user_id, user_session) do

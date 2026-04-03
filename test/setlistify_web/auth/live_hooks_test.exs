@@ -34,7 +34,7 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
         }
       }
 
-      session = %{"user_id" => user_id}
+      session = %{"user_id" => user_id, "auth_provider" => "spotify"}
 
       {:cont, updated_socket} = LiveHooks.on_mount(:default, %{}, session, socket)
 
@@ -129,7 +129,7 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
         }
       }
 
-      session = %{"user_id" => user_id}
+      session = %{"user_id" => user_id, "auth_provider" => "spotify"}
 
       {:cont, updated_socket} = LiveHooks.on_mount(:ensure_authenticated, %{}, session, socket)
 

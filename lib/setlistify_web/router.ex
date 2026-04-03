@@ -10,6 +10,7 @@ defmodule SetlistifyWeb.Router do
     plug :put_secure_browser_headers
 
     plug SetlistifyWeb.Plugs.RestoreSpotifyToken
+    plug SetlistifyWeb.Plugs.RestoreAppleMusicToken
   end
 
   pipeline :require_authenticated_user do
@@ -24,6 +25,7 @@ defmodule SetlistifyWeb.Router do
     pipe_through :browser
 
     get "/oauth/callbacks/:provider", OAuthCallbackController, :new
+    post "/oauth/callbacks/apple_music", OAuthCallbackController, :new_apple_music
     get "/signin/:provider", OAuthCallbackController, :sign_in
     get "/signout", OAuthCallbackController, :sign_out
 
