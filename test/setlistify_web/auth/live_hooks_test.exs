@@ -58,6 +58,23 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
       assert updated_socket.assigns.user_id == nil
       assert updated_socket.assigns.user_session == nil
     end
+
+    test "assigns nil when auth_provider is unknown" do
+      socket = %Phoenix.LiveView.Socket{
+        assigns: %{__changed__: %{}, flash: %{}},
+        private: %{
+          connect_info: %{request_path: "/test-path"},
+          live_temp: %{flash: %{}}
+        }
+      }
+
+      session = %{"user_id" => "user-123", "auth_provider" => "unknown_provider"}
+
+      {:cont, updated_socket} = LiveHooks.on_mount(:default, %{}, session, socket)
+
+      assert updated_socket.assigns.user_id == nil
+      assert updated_socket.assigns.user_session == nil
+    end
   end
 
   describe "on_mount: ensure_authenticated" do
