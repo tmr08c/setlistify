@@ -18,7 +18,8 @@ defmodule SetlistifyWeb.Layouts do
   defp user_signed_in_label(%Setlistify.Spotify.UserSession{username: username}),
     do: "Signed in as #{username}"
 
-  defp user_signed_in_label(%Setlistify.AppleMusic.UserSession{}), do: "Signed in with Apple Music"
+  defp user_signed_in_label(%Setlistify.AppleMusic.UserSession{}),
+    do: "Signed in with Apple Music"
 
   defp apple_music_developer_token do
     try do
