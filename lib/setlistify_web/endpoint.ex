@@ -23,6 +23,11 @@ defmodule SetlistifyWeb.Endpoint do
     gzip: false,
     only: SetlistifyWeb.static_paths()
 
+  # Tidewave AI assistant plug
+  if Mix.env() == :dev do
+    plug Tidewave
+  end
+
   # Code reloading can be explicitly enabled under the
   # :code_reloader configuration of your endpoint.
   if code_reloading? do
@@ -34,11 +39,6 @@ defmodule SetlistifyWeb.Endpoint do
   plug Phoenix.LiveDashboard.RequestLogger,
     param_key: "request_logger",
     cookie_key: "request_logger"
-
-  # Tidewave AI assistant plug
-  if Mix.env() == :dev do
-    plug Tidewave
-  end
 
   plug Plug.RequestId
   plug Plug.Telemetry, event_prefix: [:phoenix, :endpoint]
