@@ -1,0 +1,25 @@
+{
+  "data": [
+    {
+      "attributes": {
+        "canEdit": true,
+        "dateAdded": "2026-04-03T20:51:30Z",
+        "description": {
+          "standard": "Delete me"
+        },
+        "hasCatalog": false,
+        "isPublic": false,
+        "lastModifiedDate": "2026-04-03T20:51:30Z",
+        "name": "Fixture Capture Playlist",
+        "playParams": {
+          "id": "p.eoGxR1btAYexmB",
+          "isLibrary": true,
+          "kind": "playlist"
+        }
+      },
+      "href": "/v1/me/library/playlists/p.eoGxR1btAYexmB",
+      "id": "p.eoGxR1btAYexmB",
+      "type": "library-playlists"
+    }
+  ]
+}
