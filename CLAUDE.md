@@ -94,6 +94,17 @@ Optional environment variables for Grafana Cloud observability:
 
 These values are automatically loaded from `.env` in development. You can copy `.env.example` to `.env` and fill in the values.
 
+## Tidewave MCP
+
+When the server is running, Tidewave MCP tools are available. Prefer them over static analysis when they can give a more direct answer.
+
+- **Debugging errors or unexpected behavior** — call `get_logs` first to see what actually happened at runtime before reading code
+- **Inspecting live state** — use `project_eval` to query the running app (e.g., check Registry entries, GenServer state, ETS tables)
+- **Looking up library APIs** — use `package_docs_search` instead of relying on training data; Elixir ecosystem moves fast
+- **Finding where something is defined** — `get_source_location` resolves module/function to file + line faster than grepping deps
+
+If Tidewave tools are unavailable (server not running), fall back to static tools normally.
+
 ## Development Reminders
 
 - run mix format after making changes
