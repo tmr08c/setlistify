@@ -483,6 +483,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
       assert {:error, {:api_error, "HTTP 429"}} = ExternalClient.search("test artist", 1)
     end
 
+    @tag :capture_log
     test "search/2 returns error tuple on network failure" do
       Req.Test.expect(MySetlistFmStub, fn
         %{request_path: "/rest/1.0/search/setlists", method: "GET"} = _conn ->
