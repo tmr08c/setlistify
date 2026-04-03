@@ -36,9 +36,10 @@ const AppleMusicAuth = {
 
         document.body.appendChild(form)
         form.submit()
-      } catch (_error) {
+      } catch (error) {
         btn.disabled = false
         btn.innerHTML = originalHTML
+        this.pushEvent("apple_music_auth_failed", { reason: error.message || "Unknown error" })
       }
     })
   }
