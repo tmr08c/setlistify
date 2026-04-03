@@ -13,6 +13,14 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
   -----END PRIVATE KEY-----
   """
 
+  @search_response fixture_dir()
+                   |> Path.join("apple_music_track_search_response.json")
+                   |> File.read!()
+
+  @create_playlist_response fixture_dir()
+                            |> Path.join("apple_music_create_playlist_response.json")
+                            |> File.read!()
+
   @user_session %UserSession{
     user_token: "test_user_token",
     user_id: "test-user-id",
@@ -51,18 +59,12 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
     test "returns the first matching track" do
       Req.Test.stub(MyAppleMusicStub, fn
         %{request_path: "/v1/catalog/us/search"} = conn ->
-          response = %{
-            "results" => %{
-              "songs" => %{
-                "data" => [%{"id" => "1440857781", "type" => "songs"}]
-              }
-            }
-          }
-
-          Req.Test.json(conn, response)
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(200, @search_response)
       end)
 
-      assert %{track_id: "1440857781"} =
+      assert %{track_id: "1441164430"} =
                ExternalClient.search_for_track(@user_session, "The Beatles", "Come Together")
     end
 
@@ -79,25 +81,19 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
     end
 
     test "retries with refreshed developer token on 401 and succeeds" do
-      response_body = %{
-        "results" => %{
-          "songs" => %{
-            "data" => [%{"id" => "9999", "type" => "songs"}]
-          }
-        }
-      }
-
       Req.Test.expect(MyAppleMusicStub, fn conn ->
         Plug.Conn.send_resp(conn, 401, "Unauthorized")
       end)
 
       Req.Test.expect(MyAppleMusicStub, fn conn ->
-        Req.Test.json(conn, response_body)
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/json")
+        |> Plug.Conn.send_resp(200, @search_response)
       end)
 
       ExUnit.CaptureLog.capture_log(fn ->
-        assert %{track_id: "9999"} =
-                 ExternalClient.search_for_track(@user_session, "Artist", "Track")
+        assert %{track_id: "1441164430"} =
+                 ExternalClient.search_for_track(@user_session, "The Beatles", "Come Together")
       end)
     end
 
@@ -121,19 +117,24 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
     test "creates a playlist and returns id and external_url" do
       Req.Test.stub(MyAppleMusicStub, fn
         %{request_path: "/v1/me/library/playlists", method: "POST"} = conn ->
-          response = %{
-            "data" => [%{"id" => "p.abc123", "type" => "library-playlists"}]
-          }
+          {:ok, body, _} = Plug.Conn.read_body(conn)
+
+          assert Jason.decode!(body) == %{
+                   "attributes" => %{
+                     "name" => "My Playlist",
+                     "description" => "A description"
+                   }
+                 }
 
           conn
-          |> Plug.Conn.put_status(201)
-          |> Req.Test.json(response)
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(201, @create_playlist_response)
       end)
 
-      assert {:ok, %{id: "p.abc123", external_url: external_url}} =
+      assert {:ok, %{id: "p.eoGxR1btAYexmB", external_url: external_url}} =
                ExternalClient.create_playlist(@user_session, "My Playlist", "A description")
 
-      assert external_url == "https://music.apple.com/library/playlist/p.abc123"
+      assert external_url == "https://music.apple.com/library/playlist/p.eoGxR1btAYexmB"
     end
 
     test "returns error on unexpected status" do
@@ -146,6 +147,37 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
         assert {:error, :playlist_creation_failed} =
                  ExternalClient.create_playlist(@user_session, "My Playlist", "A description")
       end)
+    end
+
+    @tag :capture_log
+    test "retries with refreshed developer token on 401 and succeeds" do
+      Req.Test.expect(MyAppleMusicStub, fn conn ->
+        Plug.Conn.send_resp(conn, 401, "Unauthorized")
+      end)
+
+      Req.Test.expect(MyAppleMusicStub, fn
+        %{request_path: "/v1/me/library/playlists", method: "POST"} = conn ->
+          conn
+          |> Plug.Conn.put_resp_header("content-type", "application/json")
+          |> Plug.Conn.send_resp(201, @create_playlist_response)
+      end)
+
+      assert {:ok, %{id: "p.eoGxR1btAYexmB"}} =
+               ExternalClient.create_playlist(@user_session, "My Playlist", "A description")
+    end
+
+    @tag :capture_log
+    test "returns error when still unauthorized after retry" do
+      Req.Test.expect(MyAppleMusicStub, fn conn ->
+        Plug.Conn.send_resp(conn, 401, "Unauthorized")
+      end)
+
+      Req.Test.expect(MyAppleMusicStub, fn conn ->
+        Plug.Conn.send_resp(conn, 401, "Unauthorized")
+      end)
+
+      assert {:error, :unauthorized} =
+               ExternalClient.create_playlist(@user_session, "My Playlist", "A description")
     end
   end
 
@@ -169,7 +201,7 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
                ExternalClient.add_tracks_to_playlist(
                  @user_session,
                  "p.abc123",
-                 ["1440857781", "9999"]
+                 ["1441164430", "1440857781"]
                )
     end
 
@@ -184,9 +216,45 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
                  ExternalClient.add_tracks_to_playlist(
                    @user_session,
                    "p.abc123",
-                   ["1440857781"]
+                   ["1441164430"]
                  )
       end)
+    end
+
+    @tag :capture_log
+    test "retries with refreshed developer token on 401 and succeeds" do
+      Req.Test.expect(MyAppleMusicStub, fn conn ->
+        Plug.Conn.send_resp(conn, 401, "Unauthorized")
+      end)
+
+      Req.Test.expect(MyAppleMusicStub, fn conn ->
+        Plug.Conn.send_resp(conn, 204, "")
+      end)
+
+      assert {:ok, :tracks_added} =
+               ExternalClient.add_tracks_to_playlist(
+                 @user_session,
+                 "p.abc123",
+                 ["1441164430"]
+               )
+    end
+
+    @tag :capture_log
+    test "returns error when still unauthorized after retry" do
+      Req.Test.expect(MyAppleMusicStub, fn conn ->
+        Plug.Conn.send_resp(conn, 401, "Unauthorized")
+      end)
+
+      Req.Test.expect(MyAppleMusicStub, fn conn ->
+        Plug.Conn.send_resp(conn, 401, "Unauthorized")
+      end)
+
+      assert {:error, :unauthorized} =
+               ExternalClient.add_tracks_to_playlist(
+                 @user_session,
+                 "p.abc123",
+                 ["1441164430"]
+               )
     end
   end
 
