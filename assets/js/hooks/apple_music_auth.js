@@ -27,8 +27,18 @@ export const AppleMusicAuth = {
 
 export const AppleMusicSignOut = {
   mounted() {
-    this.el.addEventListener("click", () => {
-      MusicKit.getInstance?.()?.unauthorize?.()
+    this.el.addEventListener("click", async (e) => {
+      e.preventDefault()
+      try {
+        const music = await MusicKit.configure({
+          developerToken: this.el.dataset.developerToken,
+          app: { name: "Setlistify", build: "1.0" }
+        })
+        await music.unauthorize()
+      } catch (_) {
+        // best effort — proceed with sign-out regardless
+      }
+      window.location = "/signout"
     })
   }
 }
