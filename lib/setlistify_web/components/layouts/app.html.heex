@@ -13,6 +13,8 @@
       <span class="text-gray-400 sm:hidden text-sm">{user_display_name(@user_session)}</span>
       <.link
         navigate={~p"/signout"}
+        id="sign-out-link"
+        phx-hook={sign_out_hook(@user_session)}
         class="text-white hover:text-emerald-400 text-sm sm:text-base"
       >
         Sign Out

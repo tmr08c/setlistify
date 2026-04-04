@@ -22,10 +22,11 @@ import {Socket} from "phoenix"
 import {LiveSocket} from "phoenix_live_view"
 import topbar from "../vendor/topbar"
 import AppleMusicAuth from "./hooks/apple_music_auth"
+import SignOut from "./hooks/sign_out"
 
 let csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
 
-let Hooks = {AppleMusicAuth}
+let Hooks = {AppleMusicAuth, SignOut}
 
 Hooks.RotatingText = {
   mounted() {

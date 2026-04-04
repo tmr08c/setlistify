@@ -21,6 +21,9 @@ defmodule SetlistifyWeb.Layouts do
   defp user_signed_in_label(%Setlistify.AppleMusic.UserSession{}),
     do: "Signed in with Apple Music"
 
+  defp sign_out_hook(%Setlistify.AppleMusic.UserSession{}), do: "SignOut"
+  defp sign_out_hook(_), do: nil
+
   defp apple_music_developer_token do
     try do
       Setlistify.AppleMusic.DeveloperTokenManager.get_token()
