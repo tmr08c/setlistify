@@ -110,11 +110,7 @@ defmodule SetlistifyWeb.OAuthCallbackController do
     |> put_session(:auth_provider, "apple_music")
     |> put_session(:user_token, encrypted_user_token)
     |> put_session(:storefront, storefront)
-    |> then(fn c ->
-      if params["redirect_to"] not in [nil, ""],
-        do: put_session(c, :redirect_to, params["redirect_to"]),
-        else: c
-    end)
+    |> maybe_put_redirect_to(params)
     |> UserAuth.auth_user(user_id)
   end
 
