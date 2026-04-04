@@ -1,4 +1,4 @@
-const AppleMusicAuth = {
+export const AppleMusicAuth = {
   mounted() {
     this.el.addEventListener("click", async (e) => {
       e.preventDefault()
@@ -25,4 +25,10 @@ const AppleMusicAuth = {
   }
 }
 
-export default AppleMusicAuth
+export const AppleMusicSignOut = {
+  mounted() {
+    this.el.addEventListener("click", () => {
+      MusicKit.getInstance?.()?.unauthorize?.()
+    })
+  }
+}
