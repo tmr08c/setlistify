@@ -37,7 +37,6 @@ defmodule SetlistifyWeb.Router do
       live "/", HomeLive
       live "/setlists", SearchLive
       live "/setlist/:id", Setlists.ShowLive
-      live "/apple-music-spike", AppleMusicSpikeLive
     end
 
     live_session :require_authenticated_user,
