@@ -6,7 +6,6 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
   If not, it attempts to use the stored refresh token to create a new session process.
   """
   import Plug.Conn
-  require Logger
 
   alias Setlistify.Spotify.{SessionSupervisor, SessionManager, API}
   alias Setlistify.Auth.TokenSalts

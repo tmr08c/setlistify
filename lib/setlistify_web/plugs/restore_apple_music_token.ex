@@ -7,7 +7,6 @@ defmodule SetlistifyWeb.Plugs.RestoreAppleMusicToken do
   (user_id, encrypted user_token, storefront) — no network call required.
   """
   import Plug.Conn
-  require Logger
 
   alias Setlistify.AppleMusic.{SessionManager, SessionSupervisor, API}
   alias Setlistify.Auth.TokenSalts
