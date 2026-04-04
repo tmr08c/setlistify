@@ -56,7 +56,6 @@ defmodule SetlistifyWeb.OAuthCallbackController do
   alias SetlistifyWeb.UserAuth
   alias Setlistify.Spotify
   alias Setlistify.AppleMusic
-  alias Setlistify.Spotify.API
   alias Setlistify.Auth.TokenSalts
 
   use SetlistifyWeb, :controller
@@ -66,7 +65,7 @@ defmodule SetlistifyWeb.OAuthCallbackController do
       # Exchange authorization code for access and refresh tokens
       redirect_uri = url(~p"/oauth/callbacks/spotify")
 
-      case API.exchange_code(code, redirect_uri) do
+      case Spotify.API.exchange_code(code, redirect_uri) do
         {:ok, user_session} ->
           # Create encrypted token for session storage
           encrypted_refresh_token =
