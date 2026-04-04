@@ -1,3 +1,7 @@
+<%= if needs_music_kit?(@user_session) do %>
+  <script async src="https://js-cdn.music.apple.com/musickit/v3/musickit.js">
+  </script>
+<% end %>
 <header class="fixed top-0 left-0 right-0 bg-black z-50 px-4 sm:px-6 lg:px-8 border-b border-gray-800">
   <div class="flex items-center justify-between h-16 sm:h-20">
     <div class="flex items-center gap-2 sm:gap-4">
@@ -12,9 +16,10 @@
       </span>
       <span class="text-gray-400 sm:hidden text-sm">{user_display_name(@user_session)}</span>
       <.link
-        navigate={~p"/signout"}
+        href={~p"/signout"}
         id="sign-out-link"
         phx-hook={sign_out_hook(@user_session)}
+        data-developer-token={sign_out_developer_token(@user_session)}
         class="text-white hover:text-emerald-400 text-sm sm:text-base"
       >
         Sign Out

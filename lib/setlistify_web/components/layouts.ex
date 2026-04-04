@@ -21,8 +21,17 @@ defmodule SetlistifyWeb.Layouts do
   defp user_signed_in_label(%Setlistify.AppleMusic.UserSession{}),
     do: "Signed in with Apple Music"
 
+  defp needs_music_kit?(%Setlistify.AppleMusic.UserSession{}), do: true
+  defp needs_music_kit?(nil), do: apple_music_developer_token() != nil
+  defp needs_music_kit?(_), do: false
+
   defp sign_out_hook(%Setlistify.AppleMusic.UserSession{}), do: "AppleMusicSignOut"
   defp sign_out_hook(_), do: nil
+
+  defp sign_out_developer_token(%Setlistify.AppleMusic.UserSession{}),
+    do: apple_music_developer_token()
+
+  defp sign_out_developer_token(_), do: nil
 
   defp apple_music_developer_token do
     try do
