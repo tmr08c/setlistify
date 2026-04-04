@@ -15,27 +15,7 @@ const AppleMusicAuth = {
         })
         const userToken = await music.authorize()
         const storefront = music.storefrontId
-        const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute("content")
-
-        const form = document.createElement("form")
-        form.method = "POST"
-        form.action = "/oauth/callbacks/apple_music"
-
-        for (const [name, value] of Object.entries({
-          _csrf_token: csrfToken,
-          user_token: userToken,
-          storefront: storefront,
-          redirect_to: btn.dataset.redirectTo || "/"
-        })) {
-          const input = document.createElement("input")
-          input.type = "hidden"
-          input.name = name
-          input.value = value
-          form.appendChild(input)
-        }
-
-        document.body.appendChild(form)
-        form.submit()
+        this.pushEvent("apple_music_authorized", { user_token: userToken, storefront })
       } catch (error) {
         btn.disabled = false
         btn.innerHTML = originalHTML

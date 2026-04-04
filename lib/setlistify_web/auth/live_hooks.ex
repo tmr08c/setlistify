@@ -70,11 +70,19 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
           :handle_event,
           &handle_apple_music_auth_failed/3
         )
+        |> Phoenix.LiveView.attach_hook(
+          :apple_music_authorized,
+          :handle_event,
+          &handle_apple_music_authorized/3
+        )
       else
         socket
       end
       |> Phoenix.Component.assign(:user_id, nil)
       |> Phoenix.Component.assign(:user_session, nil)
+      |> Phoenix.Component.assign(:apple_music_trigger, false)
+      |> Phoenix.Component.assign(:apple_music_user_token, nil)
+      |> Phoenix.Component.assign(:apple_music_storefront, nil)
 
     {:cont, socket}
   end
@@ -84,6 +92,20 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
   defp track_redirect_to(_params, uri, socket) do
     {:cont, Phoenix.Component.assign(socket, :redirect_to, uri)}
   end
+
+  defp handle_apple_music_authorized(
+         "apple_music_authorized",
+         %{"user_token" => token, "storefront" => storefront},
+         socket
+       ) do
+    {:halt,
+     socket
+     |> Phoenix.Component.assign(:apple_music_trigger, true)
+     |> Phoenix.Component.assign(:apple_music_user_token, token)
+     |> Phoenix.Component.assign(:apple_music_storefront, storefront)}
+  end
+
+  defp handle_apple_music_authorized(_event, _params, socket), do: {:cont, socket}
 
   defp handle_apple_music_auth_failed("apple_music_auth_failed", _params, socket) do
     {:halt,

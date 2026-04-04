@@ -64,6 +64,18 @@
     </div>
   </div>
 </header>
+<form
+  :if={!@user_session}
+  id="apple-music-auth-form"
+  method="post"
+  action="/oauth/callbacks/apple_music"
+  phx-trigger-action={@apple_music_trigger}
+>
+  <input type="hidden" name="_csrf_token" value={Plug.CSRFProtection.get_csrf_token()} />
+  <input type="hidden" name="user_token" value={@apple_music_user_token || ""} />
+  <input type="hidden" name="storefront" value={@apple_music_storefront || ""} />
+  <input type="hidden" name="redirect_to" value={@redirect_to || "/"} />
+</form>
 <main class="pt-16 sm:pt-24 min-h-screen">
   <.flash_group flash={@flash} />
   <div class="pb-20">
