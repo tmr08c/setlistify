@@ -51,6 +51,6 @@ defmodule SetlistifyWeb.ConnCase do
   end
 
   def authenticate_conn(conn, user_id) do
-    Plug.Test.init_test_session(conn, user_id: user_id)
+    Plug.Test.init_test_session(conn, user_id: user_id, auth_provider: "spotify")
   end
 end

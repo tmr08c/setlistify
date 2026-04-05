@@ -3,6 +3,8 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
   import Hammox
   alias Setlistify.Spotify.SessionManager
   alias Setlistify.Spotify.SessionSupervisor
+  alias Setlistify.AppleMusic
+  alias Setlistify.Auth.TokenSalts
 
   # We don't need to set up the registry and supervisor here as they're already started with the application
 
@@ -102,6 +104,7 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
         conn
         |> init_test_session(%{})
         |> fetch_flash()
+        |> put_session(:auth_provider, "spotify")
         |> put_session(:refresh_token, "some_token")
         |> put_session(:user_id, test_user)
 
@@ -183,7 +186,7 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       assert redirect_url =~ redirect_to
 
       # No need to verify the refresh token in the session since we can't access it easily
-      # from our test. The fact that the session process got started is enough to verify 
+      # from our test. The fact that the session process got started is enough to verify
       # this part of the flow works.
     end
 
@@ -199,6 +202,55 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
                "Response from Spotify did not match"
 
       assert redirected_to(conn) == "/"
+    end
+  end
+
+  describe "new_apple_music" do
+    test "starts session process, stores encrypted token, and redirects", %{conn: conn} do
+      conn =
+        conn
+        |> init_test_session(%{})
+        |> fetch_flash()
+        |> post("/oauth/callbacks/apple_music", %{
+          "user_token" => "test_user_token",
+          "storefront" => "us"
+        })
+
+      assert conn.status == 302
+      assert redirected_to(conn) =~ "/"
+
+      user_id = get_session(conn, :user_id)
+      assert user_id != nil
+      assert get_session(conn, :auth_provider) == "apple_music"
+      assert get_session(conn, :storefront) == "us"
+
+      encrypted_token = get_session(conn, :user_token)
+
+      assert {:ok, "test_user_token"} =
+               Phoenix.Token.verify(
+                 SetlistifyWeb.Endpoint,
+                 TokenSalts.apple_music_user_token(),
+                 encrypted_token,
+                 max_age: :infinity
+               )
+
+      assert {:ok, %AppleMusic.UserSession{user_token: "test_user_token", storefront: "us"}} =
+               AppleMusic.SessionManager.get_session(user_id)
+    end
+
+    test "redirects to redirect_to when provided", %{conn: conn} do
+      conn =
+        conn
+        |> init_test_session(%{})
+        |> fetch_flash()
+        |> post("/oauth/callbacks/apple_music", %{
+          "user_token" => "test_user_token",
+          "storefront" => "us",
+          "redirect_to" => "/playlists"
+        })
+
+      assert conn.status == 302
+      assert redirected_to(conn) =~ "/playlists"
     end
   end
 end

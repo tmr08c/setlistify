@@ -5,6 +5,7 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
 
   alias SetlistifyWeb.Plugs.RestoreSpotifyToken
   alias Setlistify.Spotify.SessionManager
+  alias Setlistify.Auth.TokenSalts
 
   @refresh_token "test_refresh_token"
 
@@ -62,7 +63,12 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
         [] -> :ok
       end
 
-      encrypted_token = Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", @refresh_token)
+      encrypted_token =
+        Phoenix.Token.sign(
+          SetlistifyWeb.Endpoint,
+          TokenSalts.spotify_refresh_token(),
+          @refresh_token
+        )
 
       # Mock the new refresh_to_user_session function
       expect(Setlistify.Spotify.API.MockClient, :refresh_to_user_session, fn token ->
@@ -104,7 +110,12 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
     end
 
     test "clears session and continues on refresh failure", %{conn: conn, user_id: user_id} do
-      encrypted_token = Phoenix.Token.sign(SetlistifyWeb.Endpoint, "user auth", @refresh_token)
+      encrypted_token =
+        Phoenix.Token.sign(
+          SetlistifyWeb.Endpoint,
+          TokenSalts.spotify_refresh_token(),
+          @refresh_token
+        )
 
       # Mock failed token refresh using the new function
       expect(Setlistify.Spotify.API.MockClient, :refresh_to_user_session, fn token ->

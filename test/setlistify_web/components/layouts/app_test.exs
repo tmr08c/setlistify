@@ -5,19 +5,13 @@ defmodule SetlistifyWeb.Layouts.AppTest do
   alias Setlistify.Spotify.{SessionManager, UserSession}
 
   describe "authentication UI elements" do
-    test "displays sign in link when user is not authenticated", %{conn: conn} do
-      {:ok, view, _html} = live(conn, ~p"/")
+    test "displays sign in links when user is not authenticated", %{conn: conn} do
+      {:ok, view, html} = live(conn, ~p"/")
 
-      # Assert that the sign in link is shown
-      assert has_element?(view, "a", "Sign in with Spotify")
+      assert html =~ "Spotify"
+      assert has_element?(view, "a[title='Sign in with Spotify']")
 
-      # When we click the link, we should be redirected to the Spotify OAuth flow
-      # with the current page as the redirect_to
-      signin_link = element(view, "a", "Sign in with Spotify")
-
-      # The LiveView test doesn't follow external redirects automatically,
-      # so we need to use assert_redirect to check the redirect
-      render_click(signin_link)
+      render_click(element(view, "a[title='Sign in with Spotify']"))
       {path, _flash} = assert_redirect(view)
       assert path =~ "/signin/spotify"
       assert path =~ "redirect_to"
@@ -43,6 +37,7 @@ defmodule SetlistifyWeb.Layouts.AppTest do
         conn
         |> init_test_session(%{})
         |> put_session("user_id", user_id)
+        |> put_session("auth_provider", "spotify")
 
       {:ok, view, html} = live(conn, ~p"/")
 

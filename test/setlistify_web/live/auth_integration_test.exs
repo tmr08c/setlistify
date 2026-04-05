@@ -3,6 +3,7 @@ defmodule SetlistifyWeb.Live.AuthIntegrationTest do
   import Phoenix.LiveViewTest
 
   alias Setlistify.Spotify.{SessionManager, UserSession}
+  alias Setlistify.AppleMusic
   import Setlistify.Test.RegistryHelpers
 
   describe "LiveView authentication integration" do
@@ -24,7 +25,7 @@ defmodule SetlistifyWeb.Live.AuthIntegrationTest do
       # Setup conn with user_id in session
       conn =
         conn
-        |> init_test_session(%{"user_id" => user_id})
+        |> init_test_session(%{"user_id" => user_id, "auth_provider" => "spotify"})
         |> fetch_flash()
 
       # Load a LiveView page
@@ -33,7 +34,7 @@ defmodule SetlistifyWeb.Live.AuthIntegrationTest do
       # Verify the user is shown as logged in
       assert html =~ "Signed in as test_user"
       assert html =~ "Sign Out"
-      refute html =~ "Sign in with Spotify"
+      refute html =~ "Sign in"
     end
 
     test "unauthenticated user sees sign in prompt in LiveView", %{conn: conn} do
@@ -47,7 +48,7 @@ defmodule SetlistifyWeb.Live.AuthIntegrationTest do
       {:ok, _view, html} = live(conn, ~p"/")
 
       # Verify the user is shown as logged out
-      assert html =~ "Sign in with Spotify"
+      assert html =~ "Sign in"
       refute html =~ "Sign Out"
       refute html =~ "Signed in as"
     end
@@ -65,7 +66,42 @@ defmodule SetlistifyWeb.Live.AuthIntegrationTest do
       {:ok, _view, html} = live(conn, ~p"/")
 
       # Should show as logged out since SessionManager lookup fails
-      assert html =~ "Sign in with Spotify"
+      assert html =~ "Sign in"
+      refute html =~ "Sign Out"
+    end
+
+    test "authenticated Apple Music user session is properly loaded in LiveView", %{conn: conn} do
+      user_id = unique_user_id()
+
+      user_session = %AppleMusic.UserSession{
+        user_token: "test_user_token",
+        storefront: "us",
+        user_id: user_id
+      }
+
+      {:ok, _pid} = AppleMusic.SessionManager.start_link({user_id, user_session})
+
+      conn =
+        conn
+        |> init_test_session(%{"user_id" => user_id, "auth_provider" => "apple_music"})
+        |> fetch_flash()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "Signed in with Apple Music"
+      assert html =~ "Sign Out"
+      refute html =~ "Sign in"
+    end
+
+    test "LiveView handles missing Apple Music SessionManager gracefully", %{conn: conn} do
+      conn =
+        conn
+        |> init_test_session(%{"user_id" => unique_user_id(), "auth_provider" => "apple_music"})
+        |> fetch_flash()
+
+      {:ok, _view, html} = live(conn, ~p"/")
+
+      assert html =~ "Sign in"
       refute html =~ "Sign Out"
     end
   end

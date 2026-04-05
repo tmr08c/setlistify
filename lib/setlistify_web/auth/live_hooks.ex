@@ -3,7 +3,7 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
   LiveView authentication hooks for mounting protected views.
   """
 
-  alias Setlistify.Spotify.SessionManager
+  alias Setlistify.UserSessionManager
 
   def on_mount(:default, _params, session, socket) do
     case fetch_user_session(session) do
@@ -25,15 +25,20 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
     end
   end
 
-  # Helper to fetch user session from the session data
   defp fetch_user_session(session) do
     with {:ok, user_id} <- Map.fetch(session, "user_id"),
-         {:ok, user_session} <- SessionManager.get_session(user_id) do
+         {:ok, auth_provider} <- Map.fetch(session, "auth_provider"),
+         {:ok, key} <- to_provider_key(auth_provider, user_id),
+         {:ok, user_session} <- UserSessionManager.get_session(key) do
       {:ok, user_id, user_session}
     else
       _ -> :error
     end
   end
+
+  defp to_provider_key("spotify", user_id), do: {:ok, {:spotify, user_id}}
+  defp to_provider_key("apple_music", user_id), do: {:ok, {:apple_music, user_id}}
+  defp to_provider_key(_, _), do: {:error, :unknown_provider}
 
   # Helper to assign authenticated user data to socket
   defp assign_authenticated_user(socket, user_id, user_session) do
@@ -60,11 +65,24 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
           :handle_params,
           &track_redirect_to/3
         )
+        |> Phoenix.LiveView.attach_hook(
+          :apple_music_auth_failed,
+          :handle_event,
+          &handle_apple_music_auth_failed/3
+        )
+        |> Phoenix.LiveView.attach_hook(
+          :apple_music_authorized,
+          :handle_event,
+          &handle_apple_music_authorized/3
+        )
       else
         socket
       end
       |> Phoenix.Component.assign(:user_id, nil)
       |> Phoenix.Component.assign(:user_session, nil)
+      |> Phoenix.Component.assign(:apple_music_trigger, false)
+      |> Phoenix.Component.assign(:apple_music_user_token, nil)
+      |> Phoenix.Component.assign(:apple_music_storefront, nil)
 
     {:cont, socket}
   end
@@ -73,6 +91,29 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
   # log in, we can redirect them back to where they came from.
   defp track_redirect_to(_params, uri, socket) do
     {:cont, Phoenix.Component.assign(socket, :redirect_to, uri)}
+  end
+
+  defp handle_apple_music_authorized(
+         "apple_music_authorized",
+         %{"user_token" => token, "storefront" => storefront},
+         socket
+       ) do
+    {:halt,
+     socket
+     |> Phoenix.Component.assign(:apple_music_trigger, true)
+     |> Phoenix.Component.assign(:apple_music_user_token, token)
+     |> Phoenix.Component.assign(:apple_music_storefront, storefront)}
+  end
+
+  defp handle_apple_music_authorized(_event, _params, socket), do: {:cont, socket}
+
+  defp handle_apple_music_auth_failed("apple_music_auth_failed", _params, socket) do
+    {:halt,
+     Phoenix.LiveView.put_flash(socket, :error, "Apple Music sign-in failed. Please try again.")}
+  end
+
+  defp handle_apple_music_auth_failed(_event, _params, socket) do
+    {:cont, socket}
   end
 
   defp redirect_socket_with_return_to(socket) do

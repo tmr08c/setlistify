@@ -65,12 +65,18 @@ defmodule SetlistifyWeb.UserAuth do
   def auth_user(conn, user_id) do
     # Get values we need to preserve before clearing session
     encrypted_refresh_token = get_session(conn, :refresh_token)
+    auth_provider = get_session(conn, :auth_provider)
+    user_token = get_session(conn, :user_token)
+    storefront = get_session(conn, :storefront)
     redirect_to = get_session(conn, :redirect_to)
 
     conn
     |> renew_session()
     |> put_session(:user_id, user_id)
+    |> put_session(:auth_provider, auth_provider)
     |> put_session(:refresh_token, encrypted_refresh_token)
+    |> put_session(:user_token, user_token)
+    |> put_session(:storefront, storefront)
     |> put_session(:live_socket_id, "users_sessions:#{user_id}")
     |> redirect(external: redirect_to || url(~p"/"))
   end

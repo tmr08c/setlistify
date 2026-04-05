@@ -71,6 +71,7 @@ defmodule SetlistifyWeb.OAuthFlowTest do
       # Step 3: Test sign out
       signout_conn =
         callback_conn
+        |> put_session(:auth_provider, "spotify")
         |> put_session(:refresh_token, "test_refresh_token")
         |> put_session(:user_id, test_user)
 
