@@ -230,7 +230,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
       {:ok, :tracks_added}
     end)
 
-    result = view |> element("button", "Create Spotify Playlist") |> render_click()
+    result = view |> element("button", "Create Playlist") |> render_click()
     {:error, {:live_redirect, %{kind: :push, to: redirect_to}}} = result
 
     assert redirect_to == "/playlists?provider=spotify&url=" <> URI.encode_www_form(external_url)
