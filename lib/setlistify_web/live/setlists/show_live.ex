@@ -4,7 +4,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   require OpenTelemetry.Tracer
   require OpentelemetryPhoenixLiveViewProcessPropagator.LiveView
 
-  alias Setlistify.{MusicService, SetlistFm}
+  alias Setlistify.{MusicService, SetlistFm, Spotify, AppleMusic}
 
   def mount(%{"id" => id}, _session, socket) do
     case SetlistFm.API.get_setlist(id) do
@@ -126,7 +126,9 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
           case MusicService.API.add_tracks_to_playlist(user_session, playlist_id, track_ids) do
             {:ok, _} ->
               {:noreply,
-               push_navigate(socket, to: ~p"/playlists?provider=spotify&url=#{external_url}")}
+               push_navigate(socket,
+                 to: ~p"/playlists?provider=#{provider(user_session)}&url=#{external_url}"
+               )}
 
             {:error, reason} ->
               {:noreply,
@@ -138,7 +140,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
       end
     else
       {:noreply,
-       put_flash(socket, :error, "Unable to access Spotify session. Please log in again.")}
+       put_flash(socket, :error, "Unable to access your music session. Please log in again.")}
     end
   end
 
@@ -228,10 +230,10 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
             <%= if @user_session do %>
               <div class="space-y-4">
                 <p class="text-gray-400 mb-4">
-                  Ready to create your playlist? We'll add all available tracks to your Spotify account.
+                  Ready to create your playlist? We'll add all available tracks to your music library.
                 </p>
                 <.button type="button" phx-click="create_playlist" class="w-full sm:w-auto">
-                  <.icon name="hero-musical-note" class="mr-2" /> Create Spotify Playlist
+                  <.icon name="hero-musical-note" class="mr-2" /> Create Playlist
                 </.button>
               </div>
             <% else %>
@@ -266,6 +268,9 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     # Remove trailing colon if present for consistency with encore format
     String.trim_trailing(name, ":")
   end
+
+  defp provider(%Spotify.UserSession{}), do: "spotify"
+  defp provider(%AppleMusic.UserSession{}), do: "apple_music"
 
   defp format_location(%{city: city, state: state, country: country}) do
     [city, state, country]

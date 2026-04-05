@@ -4,17 +4,41 @@ defmodule SetlistifyWeb.Playlists.ShowLive do
   alias Setlistify.MusicService
 
   def mount(_params, _session, socket) do
-    {:ok, assign(socket, error: nil, playlist_href: nil)}
+    {:ok, assign(socket, error: nil, playlist_href: nil, provider: nil, embed_html: nil)}
   end
 
   def handle_params(%{"provider" => "spotify", "url" => url}, _uri, socket) do
     case MusicService.API.get_embed("spotify", url) do
       {:ok, embed_html} ->
-        {:noreply, assign(socket, playlist_href: url, embed_html: embed_html, error: nil)}
+        {:noreply,
+         assign(socket,
+           playlist_href: url,
+           embed_html: embed_html,
+           error: nil,
+           provider: "spotify"
+         )}
 
       {:error, _reason} ->
-        {:noreply, assign(socket, playlist_href: url, error: "Failed to load Spotify embed")}
+        {:noreply,
+         assign(socket,
+           playlist_href: url,
+           error: "Failed to load Spotify embed",
+           provider: "spotify"
+         )}
     end
+  end
+
+  def handle_params(%{"provider" => "apple_music", "url" => _url}, _uri, socket) do
+    # Apple Music library playlists (p. IDs) cannot be embedded or linked directly —
+    # the embed player only supports public catalog content, and the p. URL is not
+    # a publicly navigable address. Link to the library root instead.
+    {:noreply,
+     assign(socket,
+       playlist_href: "https://music.apple.com",
+       embed_html: nil,
+       error: nil,
+       provider: "apple_music"
+     )}
   end
 
   def handle_params(%{"provider" => provider, "url" => _url}, _uri, socket) do
@@ -44,7 +68,7 @@ defmodule SetlistifyWeb.Playlists.ShowLive do
             <div class="space-y-6">
               <div class="text-center mb-6">
                 <p class="text-lg text-gray-300 mb-4">
-                  Your playlist has been successfully created on Spotify!
+                  Your playlist has been successfully created!
                 </p>
                 <.link
                   href={@playlist_href}
@@ -56,7 +80,7 @@ defmodule SetlistifyWeb.Playlists.ShowLive do
                     "hover:bg-emerald-400 transition-colors"
                   ]}
                 >
-                  <.icon name="hero-musical-note" class="mr-2" /> Open in Spotify
+                  <.icon name="hero-musical-note" class="mr-2" /> Open Playlist
                   <.icon name="hero-arrow-top-right-on-square" class="ml-2" />
                 </.link>
               </div>
@@ -71,7 +95,8 @@ defmodule SetlistifyWeb.Playlists.ShowLive do
                     <p class="text-red-300">{@error}</p>
                   </div>
                 </div>
-              <% else %>
+              <% end %>
+              <%= if @embed_html do %>
                 <div class="bg-gray-900 rounded-lg p-4 border border-gray-800">
                   <div class="[&>iframe]:rounded-lg [&>iframe]:w-full [&>iframe]:min-h-[380px]">
                     {raw(@embed_html)}
