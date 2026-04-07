@@ -38,7 +38,11 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
 
           case request_fn.(new_req) do
             {:ok, %{status: 401}} ->
-              Logger.error("Unauthorized during #{context} for user_id #{user_session.user_id}")
+              Logger.error(
+                "Received 401 after developer token regeneration during #{context} — will not retry",
+                %{user_id: user_session.user_id}
+              )
+
               OpenTelemetry.Tracer.set_status(:error, "Unauthorized after token regeneration")
               {:error, :unauthorized}
 
