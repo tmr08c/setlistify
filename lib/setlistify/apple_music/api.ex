@@ -5,8 +5,6 @@ defmodule Setlistify.AppleMusic.API do
 
   @behaviour Setlistify.MusicService.API
 
-  require OpenTelemetry.Tracer
-
   alias Setlistify.AppleMusic.UserSession
 
   @callback build_user_session(String.t(), String.t(), String.t()) ::
@@ -17,19 +15,11 @@ defmodule Setlistify.AppleMusic.API do
   end
 
   @callback search_for_track(UserSession.t(), String.t(), String.t()) ::
-              nil | %{track_id: String.t()}
+              nil | %{track_id: String.t()} | {:error, atom()}
   def search_for_track(user_session, artist, track) do
-    parent_ctx = OpenTelemetry.Ctx.get_current()
-    parent_span = OpenTelemetry.Tracer.current_span_ctx(parent_ctx)
-
-    :apple_music_track_cache
-    |> Cachex.fetch({artist, track}, fn {artist, track} ->
-      OpenTelemetry.Ctx.attach(parent_ctx)
-      OpenTelemetry.Tracer.set_current_span(parent_span)
-
+    Setlistify.Cache.fetch(:apple_music_track_cache, {artist, track}, fn {artist, track} ->
       impl().search_for_track(user_session, artist, track)
     end)
-    |> elem(1)
   end
 
   @callback create_playlist(UserSession.t(), String.t(), String.t()) ::
