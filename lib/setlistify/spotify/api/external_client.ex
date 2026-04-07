@@ -43,7 +43,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
             "Token expired during #{context}, attempting to refresh for user_id: #{user_session.user_id}"
           )
 
-          OpenTelemetry.Tracer.with_span "session_token_refresh_retry" do
+          OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.with_token_refresh" do
             case SessionManager.refresh_session(user_session.user_id) do
               {:ok, new_session} ->
                 Logger.debug("Successfully refreshed token during #{context}, retrying request")
