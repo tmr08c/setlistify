@@ -137,13 +137,6 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
   def create_playlist(user_session, name, description) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.create_playlist" do
-      OpenTelemetry.Tracer.set_attributes([
-        {"peer.service", "spotify"},
-        {"playlist.name", name},
-        {"user.id", user_session.user_id},
-        {"enduser.id", user_session.user_id}
-      ])
-
       Logger.info("Creating playlist", %{
         name: name,
         user_id: user_session.user_id
@@ -205,14 +198,6 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
   def add_tracks_to_playlist(user_session, playlist_id, tracks) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.add_tracks_to_playlist" do
-      OpenTelemetry.Tracer.set_attributes([
-        {"peer.service", "spotify"},
-        {"playlist.id", playlist_id},
-        {"tracks.count", length(tracks)},
-        {"user.id", user_session.user_id},
-        {"enduser.id", user_session.user_id}
-      ])
-
       Logger.info("Adding tracks to playlist", %{
         playlist_id: playlist_id,
         track_count: length(tracks),
