@@ -96,6 +96,7 @@ defmodule SetlistifyWeb.Playlists.ShowLive do
                   </div>
                 </div>
               <% end %>
+
               <%= if @embed_html do %>
                 <div class="bg-gray-900 rounded-lg p-4 border border-gray-800">
                   <div class="[&>iframe]:rounded-lg [&>iframe]:w-full [&>iframe]:min-h-[380px]">
