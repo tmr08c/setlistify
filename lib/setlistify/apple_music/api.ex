@@ -73,18 +73,6 @@ defmodule Setlistify.AppleMusic.API do
     end
   end
 
-  @callback get_embed(String.t()) :: {:ok, String.t()} | {:error, atom()}
-  def get_embed(url) do
-    OpenTelemetry.Tracer.with_span "Setlistify.AppleMusic.API.get_embed" do
-      OpenTelemetry.Tracer.set_attributes([
-        {"peer.service", "apple_music"},
-        {"embed.url", url}
-      ])
-
-      impl().get_embed(url)
-    end
-  end
-
   defp impl do
     Application.get_env(
       :setlistify,

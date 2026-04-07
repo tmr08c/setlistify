@@ -217,24 +217,4 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
       end
     end
   end
-
-  def get_embed(url) do
-    OpenTelemetry.Tracer.with_span "Setlistify.AppleMusic.API.ExternalClient.get_embed" do
-      OpenTelemetry.Tracer.set_attributes([{"embed.url", url}])
-
-      embed_url = String.replace(url, "music.apple.com", "embed.music.apple.com")
-
-      html = """
-      <iframe src="#{embed_url}" height="450" frameborder="0" \
-      sandbox="allow-forms allow-popups allow-same-origin allow-scripts \
-      allow-storage-access-by-user-activation allow-top-navigation-by-user-activation" \
-      allow="autoplay *; encrypted-media *; fullscreen *;" \
-      style="width: 100%; max-width: 660px; overflow: hidden; \
-      border-radius: 10px; background-color: transparent;"></iframe>
-      """
-
-      OpenTelemetry.Tracer.set_status(:ok, "")
-      {:ok, html}
-    end
-  end
 end
