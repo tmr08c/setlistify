@@ -4,7 +4,13 @@ defmodule Setlistify.MusicService.API do
 
   Dispatch is based on the type of the user_session struct, so callers do not
   need to reference a specific provider (e.g. Spotify) directly.
+
+  This module opens OTel spans and sets shared attributes for each operation.
+  Provider modules (`Spotify.API`, `AppleMusic.API`) add only their own
+  `peer.service` attribute to the current span before delegating to `impl()`.
   """
+
+  require OpenTelemetry.Tracer
 
   alias Setlistify.{AppleMusic, Spotify}
 
@@ -19,17 +25,53 @@ defmodule Setlistify.MusicService.API do
   @callback add_tracks_to_playlist(user_session(), String.t(), [String.t()]) ::
               {:ok, atom()} | {:error, atom()}
 
-  defp impl(%Spotify.UserSession{}), do: Spotify.API
-  defp impl(%AppleMusic.UserSession{}), do: AppleMusic.API
+  defp impl(%Spotify.UserSession{}) do
+    OpenTelemetry.Tracer.set_attribute("peer.service", "spotify")
+    Spotify.API
+  end
 
-  def search_for_track(user_session, artist, track),
-    do: impl(user_session).search_for_track(user_session, artist, track)
+  defp impl(%AppleMusic.UserSession{}) do
+    OpenTelemetry.Tracer.set_attribute("peer.service", "apple_music")
+    AppleMusic.API
+  end
 
-  def create_playlist(user_session, name, description),
-    do: impl(user_session).create_playlist(user_session, name, description)
+  def search_for_track(user_session, artist, track) do
+    OpenTelemetry.Tracer.with_span "Setlistify.MusicService.API.search_for_track" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", user_session.user_id},
+        {"enduser.id", user_session.user_id},
+        {"music.artist", artist},
+        {"music.track", track}
+      ])
 
-  def add_tracks_to_playlist(user_session, playlist_id, tracks),
-    do: impl(user_session).add_tracks_to_playlist(user_session, playlist_id, tracks)
+      impl(user_session).search_for_track(user_session, artist, track)
+    end
+  end
+
+  def create_playlist(user_session, name, description) do
+    OpenTelemetry.Tracer.with_span "Setlistify.MusicService.API.create_playlist" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", user_session.user_id},
+        {"enduser.id", user_session.user_id},
+        {"playlist.name", name}
+      ])
+
+      impl(user_session).create_playlist(user_session, name, description)
+    end
+  end
+
+  def add_tracks_to_playlist(user_session, playlist_id, tracks) do
+    OpenTelemetry.Tracer.with_span "Setlistify.MusicService.API.add_tracks_to_playlist" do
+      OpenTelemetry.Tracer.set_attributes([
+        {"user.id", user_session.user_id},
+        {"enduser.id", user_session.user_id},
+        {"playlist.id", playlist_id},
+        {"tracks.count", length(tracks)}
+      ])
+
+      impl(user_session).add_tracks_to_playlist(user_session, playlist_id, tracks)
+    end
+  end
 
   def get_embed("spotify", url), do: Spotify.API.get_embed(url)
 end
