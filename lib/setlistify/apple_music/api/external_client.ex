@@ -32,7 +32,7 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
       {:ok, %{status: 401}} ->
         Logger.warning("401 during #{context}, regenerating developer token and retrying")
 
-        OpenTelemetry.Tracer.with_span "developer_token_refresh_retry" do
+        OpenTelemetry.Tracer.with_span "Setlistify.AppleMusic.API.ExternalClient.with_developer_token_refresh" do
           DeveloperTokenManager.regenerate_token()
           new_req = client(user_session)
 
