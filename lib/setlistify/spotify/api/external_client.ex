@@ -43,20 +43,27 @@ defmodule Setlistify.Spotify.API.ExternalClient do
             "Token expired during #{context}, attempting to refresh for user_id: #{user_session.user_id}"
           )
 
-          # Attempt to refresh the token
-          case SessionManager.refresh_session(user_session.user_id) do
-            {:ok, new_session} ->
-              Logger.debug("Successfully refreshed token during #{context}, retrying request")
-              # Create new client and retry the request
-              new_req = client(new_session)
-              request_fn.(new_req)
+          OpenTelemetry.Tracer.with_span "session_token_refresh_retry" do
+            case SessionManager.refresh_session(user_session.user_id) do
+              {:ok, new_session} ->
+                Logger.debug("Successfully refreshed token during #{context}, retrying request")
+                new_req = client(new_session)
+                result = request_fn.(new_req)
+                OpenTelemetry.Tracer.set_status(:ok, "")
+                result
 
-            {:error, reason} ->
-              Logger.error(
-                "Failed to refresh token during #{context} for user_id #{user_session.user_id}: #{inspect(reason)}"
-              )
+              {:error, reason} ->
+                Logger.error(
+                  "Failed to refresh token during #{context} for user_id #{user_session.user_id}: #{inspect(reason)}"
+                )
 
-              {:error, :token_refresh_failed}
+                OpenTelemetry.Tracer.set_status(
+                  :error,
+                  "Token refresh failed: #{inspect(reason)}"
+                )
+
+                {:error, :token_refresh_failed}
+            end
           end
         else
           # Non-token 401 error, just pass it through
@@ -104,13 +111,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
           result
 
         {:error, reason} = error ->
-          Logger.error("Search failed", %{
-            artist: artist,
-            track: track,
-            error: reason
-          })
-
-          OpenTelemetry.Tracer.set_status(:error, "Search failed: #{inspect(reason)}")
+          OpenTelemetry.Tracer.set_status(:error, inspect(reason))
           error
 
         {:ok, %{status: 401} = response} ->
@@ -183,12 +184,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
           {:error, :playlist_creation_failed}
 
         {:error, reason} = error ->
-          Logger.error("Failed to create playlist", %{
-            name: name,
-            error: reason
-          })
-
-          OpenTelemetry.Tracer.set_status(:error, "Creation failed: #{inspect(reason)}")
+          OpenTelemetry.Tracer.set_status(:error, inspect(reason))
           error
       end
     end
@@ -227,12 +223,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
           {:error, :tracks_addition_failed}
 
         {:error, reason} = error ->
-          Logger.error("Failed to add tracks", %{
-            playlist_id: playlist_id,
-            error: reason
-          })
-
-          OpenTelemetry.Tracer.set_status(:error, "Addition failed: #{inspect(reason)}")
+          OpenTelemetry.Tracer.set_status(:error, inspect(reason))
           error
       end
     end
