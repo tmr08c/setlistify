@@ -1,4 +1,4 @@
-defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
+defmodule Setlistify.AppleMusic.API.ExternalClientTest do
   # async: false required because DeveloperTokenManager is a named process
   use Setlistify.DataCase, async: false
 
@@ -253,16 +253,6 @@ defmodule Setlistify.AppleMusic.Api.ExternalClientTest do
                  "p.abc123",
                  ["1441164430"]
                )
-    end
-  end
-
-  describe "get_embed/1" do
-    test "returns an iframe pointing to the embed domain" do
-      url = "https://music.apple.com/us/playlist/my-playlist/pl.abc123"
-
-      assert {:ok, html} = ExternalClient.get_embed(url)
-      assert html =~ ~r/<iframe\s/
-      assert html =~ ~r{src="https://embed\.music\.apple\.com/us/playlist/my-playlist/pl\.abc123"}
     end
   end
 end

@@ -32,5 +32,4 @@ defmodule Setlistify.MusicService.API do
     do: impl(user_session).add_tracks_to_playlist(user_session, playlist_id, tracks)
 
   def get_embed("spotify", url), do: Spotify.API.get_embed(url)
-  def get_embed("apple_music", url), do: AppleMusic.API.get_embed(url)
 end
