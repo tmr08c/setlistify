@@ -237,22 +237,9 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                 </.button>
               </div>
             <% else %>
-              <div class="space-y-4">
-                <p class="text-gray-400 mb-4">
-                  Sign in to create a Spotify playlist from this setlist
-                </p>
-                <.link
-                  navigate={~p"/signin/spotify?redirect_to=#{@redirect_to}"}
-                  class={[
-                    "inline-flex items-center justify-center",
-                    "bg-emerald-500 text-black font-semibold",
-                    "px-6 py-3 rounded-full",
-                    "hover:bg-emerald-400 transition-colors"
-                  ]}
-                >
-                  <.icon name="hero-arrow-right-end-on-rectangle" class="mr-2" /> Sign in with Spotify
-                </.link>
-              </div>
+              <p class="text-gray-400">
+                Sign in to create a playlist from this setlist
+              </p>
             <% end %>
           </div>
         </div>
