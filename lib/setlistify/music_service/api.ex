@@ -4,9 +4,6 @@ defmodule Setlistify.MusicService.API do
 
   Dispatch is based on the type of the user_session struct, so callers do not
   need to reference a specific provider (e.g. Spotify) directly.
-
-  This module opens OTel spans and sets all shared attributes for each operation,
-  including `peer.service` (set by `impl/1` as a side effect of provider dispatch).
   """
 
   require OpenTelemetry.Tracer
