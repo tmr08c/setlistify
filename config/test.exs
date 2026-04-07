@@ -28,9 +28,11 @@ config :setlistify,
     retry: false
   ]
 
-# Disable OpenTelemetry exports in test
+# Disable OpenTelemetry exports in test, but keep the simple processor running
+# so tests can redirect spans to themselves via :otel_simple_processor.set_exporter/2
 config :opentelemetry,
-  traces_exporter: :none
+  traces_exporter: :none,
+  processors: [{:otel_simple_processor, %{}}]
 
 # Disable PromEx for tests
 config :setlistify, Setlistify.PromEx,
