@@ -9,61 +9,30 @@ defmodule Setlistify.Spotify.API do
   @callback search_for_track(UserSession.t(), String.t(), String.t()) ::
               nil | %{track_id: String.t()}
   def search_for_track(user_session, artist, track) do
-    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.search_for_track" do
-      OpenTelemetry.Tracer.set_attributes([
-        {"peer.service", "spotify"},
-        {"music.artist", artist},
-        {"music.track", track},
-        {"user.id", user_session.user_id},
-        {"enduser.id", user_session.user_id}
-      ])
+    # Cachex uses a separate process, so we need to propogate OpenTelemetry context
+    # TODO: If we do this enough we should consider making a helper
+    parent_ctx = OpenTelemetry.Ctx.get_current()
+    parent_span = OpenTelemetry.Tracer.current_span_ctx(parent_ctx)
 
-      # Cachex uses a separate process, so we need to propogate OpenTelemetry context
-      # TODO: If we do this enough we should consider making a helper
-      parent_ctx = OpenTelemetry.Ctx.get_current()
-      parent_span = OpenTelemetry.Tracer.current_span_ctx(parent_ctx)
+    :spotify_track_cache
+    |> Cachex.fetch({artist, track}, fn {artist, track} ->
+      OpenTelemetry.Ctx.attach(parent_ctx)
+      OpenTelemetry.Tracer.set_current_span(parent_span)
 
-      :spotify_track_cache
-      |> Cachex.fetch({artist, track}, fn {artist, track} ->
-        OpenTelemetry.Ctx.attach(parent_ctx)
-        OpenTelemetry.Tracer.set_current_span(parent_span)
-
-        impl().search_for_track(user_session, artist, track)
-      end)
-      |> elem(1)
-    end
+      impl().search_for_track(user_session, artist, track)
+    end)
+    |> elem(1)
   end
 
   @callback create_playlist(UserSession.t(), String.t(), String.t()) ::
               {:ok, %{id: String.t(), external_url: String.t()}} | {:error, atom()}
-  def create_playlist(user_session, name, description) do
-    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.create_playlist" do
-      OpenTelemetry.Tracer.set_attributes([
-        {"peer.service", "spotify"},
-        {"playlist.name", name},
-        {"user.id", user_session.user_id},
-        {"enduser.id", user_session.user_id}
-      ])
-
-      impl().create_playlist(user_session, name, description)
-    end
-  end
+  def create_playlist(user_session, name, description),
+    do: impl().create_playlist(user_session, name, description)
 
   @callback add_tracks_to_playlist(UserSession.t(), String.t(), [String.t()]) ::
               {:ok, atom()} | {:error, atom()}
-  def add_tracks_to_playlist(user_session, playlist_id, tracks) do
-    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.add_tracks_to_playlist" do
-      OpenTelemetry.Tracer.set_attributes([
-        {"peer.service", "spotify"},
-        {"playlist.id", playlist_id},
-        {"tracks.count", length(tracks)},
-        {"user.id", user_session.user_id},
-        {"enduser.id", user_session.user_id}
-      ])
-
-      impl().add_tracks_to_playlist(user_session, playlist_id, tracks)
-    end
-  end
+  def add_tracks_to_playlist(user_session, playlist_id, tracks),
+    do: impl().add_tracks_to_playlist(user_session, playlist_id, tracks)
 
   @callback get_embed(String.t()) :: {:ok, String.t()} | {:error, atom()}
   def get_embed(url) do
