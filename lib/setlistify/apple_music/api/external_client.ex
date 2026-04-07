@@ -31,16 +31,21 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
     case request_fn.(req) do
       {:ok, %{status: 401}} ->
         Logger.warning("401 during #{context}, regenerating developer token and retrying")
-        DeveloperTokenManager.regenerate_token()
-        new_req = client(user_session)
 
-        case request_fn.(new_req) do
-          {:ok, %{status: 401}} ->
-            Logger.error("Unauthorized during #{context} for user_id #{user_session.user_id}")
-            {:error, :unauthorized}
+        OpenTelemetry.Tracer.with_span "developer_token_refresh_retry" do
+          DeveloperTokenManager.regenerate_token()
+          new_req = client(user_session)
 
-          other ->
-            other
+          case request_fn.(new_req) do
+            {:ok, %{status: 401}} ->
+              Logger.error("Unauthorized during #{context} for user_id #{user_session.user_id}")
+              OpenTelemetry.Tracer.set_status(:error, "Unauthorized after token regeneration")
+              {:error, :unauthorized}
+
+            other ->
+              OpenTelemetry.Tracer.set_status(:ok, "")
+              other
+          end
         end
 
       other ->
