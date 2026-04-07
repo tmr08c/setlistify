@@ -35,8 +35,12 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
         new_req = client(user_session)
 
         case request_fn.(new_req) do
-          {:ok, %{status: 401}} -> {:error, :unauthorized}
-          other -> other
+          {:ok, %{status: 401}} ->
+            Logger.error("Unauthorized during #{context} for user_id #{user_session.user_id}")
+            {:error, :unauthorized}
+
+          other ->
+            other
         end
 
       other ->
@@ -79,14 +83,8 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
               %{track_id: song["id"]}
           end
 
-        {:error, :unauthorized} = error ->
-          Logger.error("Unauthorized search request for user_id #{user_session.user_id}")
-          OpenTelemetry.Tracer.set_status(:error, "Unauthorized")
-          error
-
         {:error, reason} = error ->
-          Logger.error("Search failed", %{artist: artist, track: track, error: reason})
-          OpenTelemetry.Tracer.set_status(:error, "Search failed: #{inspect(reason)}")
+          OpenTelemetry.Tracer.set_status(:error, inspect(reason))
           error
 
         {:ok, response} ->
@@ -133,14 +131,8 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
 
           {:ok, %{id: playlist_id, external_url: external_url}}
 
-        {:error, :unauthorized} = error ->
-          Logger.error("Unauthorized playlist creation for user_id #{user_session.user_id}")
-          OpenTelemetry.Tracer.set_status(:error, "Unauthorized")
-          error
-
         {:error, reason} = error ->
-          Logger.error("Failed to create playlist", %{name: name, error: reason})
-          OpenTelemetry.Tracer.set_status(:error, "Creation failed: #{inspect(reason)}")
+          OpenTelemetry.Tracer.set_status(:error, inspect(reason))
           error
 
         {:ok, response} ->
@@ -185,14 +177,8 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
           OpenTelemetry.Tracer.set_status(:ok, "")
           {:ok, :tracks_added}
 
-        {:error, :unauthorized} = error ->
-          Logger.error("Unauthorized adding tracks for user_id #{user_session.user_id}")
-          OpenTelemetry.Tracer.set_status(:error, "Unauthorized")
-          error
-
         {:error, reason} = error ->
-          Logger.error("Failed to add tracks", %{playlist_id: playlist_id, error: reason})
-          OpenTelemetry.Tracer.set_status(:error, "Addition failed: #{inspect(reason)}")
+          OpenTelemetry.Tracer.set_status(:error, inspect(reason))
           error
 
         {:ok, response} ->
