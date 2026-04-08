@@ -1,10 +1,11 @@
 // MusicKit.configure() app options affect the authorization dialog UI.
-// - app.name: The display name shown in the auth dialog (may be overridden by
-//   the app name set in App Store Connect / Apple Developer portal).
-// - app.icon: A URL to the icon shown in the auth dialog (may likewise be
-//   overridden by the icon configured in the Apple Developer portal).
-// The authoritative source for the dialog's name and icon is the MusicKit
-// service configuration in App Store Connect, not these JS values.
+// - app.name: Passed to MusicKit, but Apple's auth dialog always shows the
+//   requesting domain (e.g. "setlistify.fly.dev would like to access...") as a
+//   security transparency feature — app.name does not override this.
+// - app.icon: A URL to the icon shown in the auth dialog. This does take effect
+//   (the favicon is visible in the dialog).
+// To change the app name displayed, the MusicKit service may need to be
+// configured in App Store Connect, though the domain display may be fixed.
 const MUSICKIT_APP_CONFIG = {
   name: "Setlistify",
   build: "1.0",
