@@ -1,3 +1,16 @@
+// MusicKit.configure() app options affect the authorization dialog UI.
+// - app.name: The display name shown in the auth dialog (may be overridden by
+//   the app name set in App Store Connect / Apple Developer portal).
+// - app.icon: A URL to the icon shown in the auth dialog (may likewise be
+//   overridden by the icon configured in the Apple Developer portal).
+// The authoritative source for the dialog's name and icon is the MusicKit
+// service configuration in App Store Connect, not these JS values.
+const MUSICKIT_APP_CONFIG = {
+  name: "Setlistify",
+  build: "1.0",
+  icon: `${window.location.origin}/favicon.ico`
+}
+
 export const AppleMusicAuth = {
   mounted() {
     this.el.addEventListener("click", async (e) => {
@@ -11,7 +24,7 @@ export const AppleMusicAuth = {
       try {
         const music = await MusicKit.configure({
           developerToken: btn.dataset.developerToken,
-          app: { name: "Setlistify", build: "1.0" }
+          app: MUSICKIT_APP_CONFIG
         })
         const userToken = await music.authorize()
         const storefront = music.storefrontId
@@ -32,7 +45,7 @@ export const AppleMusicSignOut = {
       try {
         const music = await MusicKit.configure({
           developerToken: this.el.dataset.developerToken,
-          app: { name: "Setlistify", build: "1.0" }
+          app: MUSICKIT_APP_CONFIG
         })
         await music.unauthorize()
       } catch (_) {
