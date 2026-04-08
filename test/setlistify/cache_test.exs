@@ -6,6 +6,8 @@ defmodule Setlistify.CacheTest do
 
   alias Setlistify.Cache
 
+  doctest Setlistify.Cache
+
   Record.defrecord(
     :span,
     :span,

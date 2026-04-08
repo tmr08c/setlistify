@@ -17,29 +17,42 @@ defmodule Setlistify.Cache do
   require OpenTelemetry.Tracer
 
   @doc """
-  Fetches a value from the cache, calling `fetch_fn` on a miss.
+  Fetches a value from `cache` by `key`, calling `fetch_fn` on a miss.
 
-  The callback receives the key and its return value determines caching behaviour.
-  We mirror Cachex's semantics and intend to maintain this contract even if the
+  The return value of `fetch_fn` determines caching behaviour. We mirror
+  Cachex's semantics and intend to maintain this contract even if the
   underlying library changes:
 
-  - Returning a plain value (e.g. `%{track_id: id}` or `nil`) commits it to
-    cache and returns it.
-  - Returning `{:commit, value}` explicitly commits `value` to cache and returns
-    it. Useful when the callback needs to signal intent clearly.
-  - Returning `{:ignore, value}` returns `value` without storing it in cache.
-    Use this for transient errors or other results that should not be cached.
-  - Returning `{:error, reason}` is treated by Cachex as a failed fetch — the
-    value is not cached and `{:error, reason}` is returned to the caller.
+    * Plain value (e.g. `%{track_id: id}` or `nil`) — committed to cache
+      and returned.
+    * `{:commit, value}` — `value` committed to cache and returned.
+    * `{:ignore, value}` — `value` returned without caching.
+    * `{:error, reason}` — treated as a failed fetch; not cached, and
+      `{:error, reason}` is returned to the caller.
 
-  Note: `{:ignore, value}` and `{:error, reason}` both skip caching, but they
-  differ in what Cachex returns: `{:ignore, value}` preserves the full value
-  (useful for structured error tuples like `{:error, reason}`), while `{:error,
-  reason}` only preserves the reason atom.
+  `{:ignore, value}` and `{:error, reason}` are equivalent when `value` is
+  an error tuple — both skip caching and return `{:error, reason}`. Prefer
+  `{:ignore, {:error, reason}}` to make the intent explicit.
 
-  Sets `cache.hit` on the current OpenTelemetry span:
-  - `true` when the value was already in cache
-  - `false` when the callback was invoked (miss, error, or ignored result)
+  ## OpenTelemetry
+
+  Sets `cache.hit` on the current span:
+
+    * `true` — value was served from cache
+    * `false` — callback was invoked (miss, ignored, or error)
+
+  ## Examples
+
+      iex> {:ok, _} = Cachex.start_link(name: :cachex_doctest_fetch)
+      iex> Setlistify.Cache.fetch(:cachex_doctest_fetch, "hit", fn _ -> %{track_id: "abc"} end)
+      %{track_id: "abc"}
+      iex> Cachex.exists?(:cachex_doctest_fetch, "hit")
+      {:ok, true}
+      iex> Setlistify.Cache.fetch(:cachex_doctest_fetch, "miss", fn _ -> {:ignore, {:error, :transient}} end)
+      {:error, :transient}
+      iex> Cachex.exists?(:cachex_doctest_fetch, "miss")
+      {:ok, false}
+
   """
   def fetch(cache, key, fetch_fn) do
     parent_ctx = OpenTelemetry.Ctx.get_current()
