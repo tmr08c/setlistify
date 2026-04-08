@@ -32,6 +32,11 @@ defmodule Setlistify.Cache do
   - Returning `{:error, reason}` is treated by Cachex as a failed fetch — the
     value is not cached and `{:error, reason}` is returned to the caller.
 
+  Note: `{:ignore, value}` and `{:error, reason}` both skip caching, but they
+  differ in what Cachex returns: `{:ignore, value}` preserves the full value
+  (useful for structured error tuples like `{:error, reason}`), while `{:error,
+  reason}` only preserves the reason atom.
+
   Sets `cache.hit` on the current OpenTelemetry span:
   - `true` when the value was already in cache
   - `false` when the callback was invoked (miss, error, or ignored result)
@@ -52,6 +57,10 @@ defmodule Setlistify.Cache do
         result
 
       {:commit, result} ->
+        OpenTelemetry.Tracer.set_attribute("cache.hit", false)
+        result
+
+      {:ignore, result} ->
         OpenTelemetry.Tracer.set_attribute("cache.hit", false)
         result
 

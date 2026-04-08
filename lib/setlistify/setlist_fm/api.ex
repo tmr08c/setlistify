@@ -61,32 +61,15 @@ defmodule Setlistify.SetlistFm.API do
         {"setlist_fm.search.page", page}
       ])
 
-      # Cachex uses a separate process, so we need to propagate OpenTelemetry context
-      parent_ctx = OpenTelemetry.Ctx.get_current()
-      parent_span = OpenTelemetry.Tracer.current_span_ctx(parent_ctx)
-
       # Warning: different pages may have different expiration times in cache,
       # which could cause consistency issues if this becomes problematic
-      cache_key = {query, page}
-
-      result =
-        :setlist_fm_search_cache
-        |> Cachex.fetch(cache_key, fn _cache_key ->
-          OpenTelemetry.Ctx.attach(parent_ctx)
-          OpenTelemetry.Tracer.set_current_span(parent_span)
-
-          case impl().search(query, page) do
-            {:ok, _} = success -> {:commit, success}
-            {:error, :not_found} = error -> {:commit, error}
-            {:error, _} = error -> {:ignore, error}
-          end
-        end)
-
-      case result do
-        {:ok, response} -> response
-        {:commit, response} -> response
-        {:ignore, result} -> result
-      end
+      Setlistify.Cache.fetch(:setlist_fm_search_cache, {query, page}, fn _cache_key ->
+        case impl().search(query, page) do
+          {:ok, _} = success -> {:commit, success}
+          {:error, :not_found} = error -> {:commit, error}
+          {:error, _} = error -> {:ignore, error}
+        end
+      end)
     end
   end
 
@@ -99,27 +82,12 @@ defmodule Setlistify.SetlistFm.API do
         {"setlist_fm.setlist.id", id}
       ])
 
-      # Cachex uses a separate process, so we need to propagate OpenTelemetry context
-      parent_ctx = OpenTelemetry.Ctx.get_current()
-      parent_span = OpenTelemetry.Tracer.current_span_ctx(parent_ctx)
-
-      result =
-        :setlist_fm_setlist_cache
-        |> Cachex.fetch(id, fn id ->
-          OpenTelemetry.Ctx.attach(parent_ctx)
-          OpenTelemetry.Tracer.set_current_span(parent_span)
-
-          case impl().get_setlist(id) do
-            {:ok, setlist} -> {:commit, setlist}
-            {:error, reason} -> {:ignore, {:error, reason}}
-          end
-        end)
-
-      case result do
-        {:ok, setlist} -> {:ok, setlist}
-        {:commit, setlist} -> {:ok, setlist}
-        {:ignore, {:error, reason}} -> {:error, reason}
-      end
+      Setlistify.Cache.fetch(:setlist_fm_setlist_cache, id, fn id ->
+        case impl().get_setlist(id) do
+          {:ok, _} = result -> {:commit, result}
+          {:error, reason} -> {:ignore, {:error, reason}}
+        end
+      end)
     end
   end
 
