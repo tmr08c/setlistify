@@ -1,4 +1,9 @@
 defmodule Setlistify.CacheTest do
+  # async: false for two reasons:
+  # 1. :otel_simple_processor.set_exporter/2 is a global side effect — concurrent
+  #    tests would overwrite each other's exporter and receive wrong spans
+  # 2. start_supervised! starts a named process (:cache_test) — concurrent tests
+  #    would race to register the same name and crash
   use Setlistify.DataCase, async: false
 
   require OpenTelemetry.Tracer
@@ -8,6 +13,10 @@ defmodule Setlistify.CacheTest do
 
   doctest Setlistify.Cache
 
+  # Record.defrecord extracts the :span record field names from the Erlang include
+  # at compile time, giving us named access (span(s, :attributes)) rather than
+  # positional access (elem(s, 9)), which would silently break if OTel ever
+  # reorders the record fields.
   Record.defrecord(
     :span,
     :span,
@@ -21,6 +30,7 @@ defmodule Setlistify.CacheTest do
 
   describe "fetch/3 caching behavior" do
     test "stores successful result in cache on miss", %{cache: cache} do
+      assert {:ok, false} = Cachex.exists?(cache, "key")
       Cache.fetch(cache, "key", fn _ -> "value" end)
       assert {:ok, "value"} = Cachex.get(cache, "key")
     end

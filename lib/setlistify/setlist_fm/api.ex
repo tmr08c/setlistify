@@ -67,7 +67,7 @@ defmodule Setlistify.SetlistFm.API do
         case impl().search(query, page) do
           {:ok, _} = success -> {:commit, success}
           {:error, :not_found} = error -> {:commit, error}
-          {:error, _} = error -> {:ignore, error}
+          {:error, _} = error -> error
         end
       end)
     end
@@ -83,15 +83,8 @@ defmodule Setlistify.SetlistFm.API do
       ])
 
       Setlistify.Cache.fetch(:setlist_fm_setlist_cache, id, fn _ ->
-        case impl().get_setlist(id) do
-          {:ok, setlist} -> {:commit, setlist}
-          {:error, reason} -> {:ignore, {:error, reason}}
-        end
+        impl().get_setlist(id)
       end)
-      |> case do
-        {:error, _} = error -> error
-        setlist -> {:ok, setlist}
-      end
     end
   end
 

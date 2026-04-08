@@ -36,8 +36,6 @@ defmodule Setlistify.Spotify.APITest do
         {:error, :token_refresh_failed}
       end)
 
-      # Without the fix, elem(1) on Cachex's {:error, :token_refresh_failed} return
-      # yields just :token_refresh_failed (the atom), not the full error tuple
       assert {:error, :token_refresh_failed} =
                API.search_for_track(user_session, "Artist", "Track")
     end
