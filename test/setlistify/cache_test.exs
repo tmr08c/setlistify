@@ -76,12 +76,12 @@ defmodule Setlistify.CacheTest do
       :ok
     end
 
-    test "sets cache.hit=false on cache miss", %{cache: cache} do
+    test "sets cache.hit=false on first fetch (commit)", %{cache: cache} do
       OpenTelemetry.Tracer.with_span "test" do
         Cache.fetch(cache, "key", fn _ -> "value" end)
       end
 
-      assert_receive {:span, s}
+      assert_receive {:span, span(name: "test") = s}
       assert %{"cache.hit" => false} = span_attributes(s)
     end
 
@@ -92,7 +92,7 @@ defmodule Setlistify.CacheTest do
         Cache.fetch(cache, "key", fn _ -> "other_value" end)
       end
 
-      assert_receive {:span, s}
+      assert_receive {:span, span(name: "test") = s}
       assert %{"cache.hit" => true} = span_attributes(s)
     end
 
@@ -101,7 +101,7 @@ defmodule Setlistify.CacheTest do
         Cache.fetch(cache, "key", fn _ -> {:error, :some_error} end)
       end
 
-      assert_receive {:span, s}
+      assert_receive {:span, span(name: "test") = s}
       assert %{"cache.hit" => false} = span_attributes(s)
     end
 
@@ -110,7 +110,7 @@ defmodule Setlistify.CacheTest do
         Cache.fetch(cache, "key", fn _ -> {:ignore, "not_cached"} end)
       end
 
-      assert_receive {:span, s}
+      assert_receive {:span, span(name: "test") = s}
       assert %{"cache.hit" => false} = span_attributes(s)
     end
   end

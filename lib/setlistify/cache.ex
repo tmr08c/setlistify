@@ -8,10 +8,11 @@ defmodule Setlistify.Cache do
   and callers stay the same.
 
   In addition to delegating to Cachex, this module:
-  - Propagates OpenTelemetry context into Cachex's worker process, so traces
-    aren't broken across the process boundary
-  - Sets a `cache.hit` span attribute on the current span, enabling cache hit
-    rate tracking in traces
+
+    * Propagates OpenTelemetry context into Cachex's worker process, so traces
+      aren't broken across the process boundary
+    * Sets a `cache.hit` span attribute on the current span, enabling cache hit
+      rate tracking in traces
   """
 
   require OpenTelemetry.Tracer
