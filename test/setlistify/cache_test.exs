@@ -57,6 +57,15 @@ defmodule Setlistify.CacheTest do
     test "returns full error tuple on error", %{cache: cache} do
       assert {:error, :some_error} = Cache.fetch(cache, "key", fn _ -> {:error, :some_error} end)
     end
+
+    test "does not store {:ignore, value} results in cache", %{cache: cache} do
+      Cache.fetch(cache, "key", fn _ -> {:ignore, "not_cached"} end)
+      assert {:ok, false} = Cachex.exists?(cache, "key")
+    end
+
+    test "returns the value from {:ignore, value}", %{cache: cache} do
+      assert "not_cached" == Cache.fetch(cache, "key", fn _ -> {:ignore, "not_cached"} end)
+    end
   end
 
   describe "fetch/3 OpenTelemetry" do
@@ -88,6 +97,15 @@ defmodule Setlistify.CacheTest do
     test "sets cache.hit=false on error", %{cache: cache} do
       OpenTelemetry.Tracer.with_span "test" do
         Cache.fetch(cache, "key", fn _ -> {:error, :some_error} end)
+      end
+
+      assert_receive {:span, s}
+      assert %{"cache.hit" => false} = span_attributes(s)
+    end
+
+    test "sets cache.hit=false on {:ignore, value}", %{cache: cache} do
+      OpenTelemetry.Tracer.with_span "test" do
+        Cache.fetch(cache, "key", fn _ -> {:ignore, "not_cached"} end)
       end
 
       assert_receive {:span, s}
