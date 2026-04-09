@@ -45,8 +45,8 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                   OpenTelemetry.Tracer.with_span "SetlistifyWeb.Setlists.ShowLive.search_song_async" do
                     OpenTelemetry.Tracer.set_attributes([
                       {"music.service", provider(user_session)},
-                      {"song.title", song.title},
-                      {"song.artist", setlist.artist},
+                      {"music.track", song.title},
+                      {"music.artist", setlist.artist},
                       {"song.set_index", set_index},
                       {"song.song_index", song_index}
                     ])
