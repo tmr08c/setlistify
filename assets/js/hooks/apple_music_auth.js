@@ -4,8 +4,6 @@
 //   security transparency feature — app.name does not override this.
 // - app.icon: A URL to the icon shown in the auth dialog. This does take effect
 //   (the favicon is visible in the dialog).
-// To change the app name displayed, the MusicKit service may need to be
-// configured in App Store Connect, though the domain display may be fixed.
 const MUSICKIT_APP_CONFIG = {
   name: "Setlistify",
   build: "1.0",
