@@ -37,6 +37,90 @@ You will also touch:
 
 ---
 
+## Step 0: Validate the provider
+
+Before writing any code, answer the following questions about your provider's API. The
+answers determine which variant to follow at every subsequent step — getting them wrong
+late is expensive.
+
+Read the provider's developer documentation carefully. Where possible, make real API calls
+to confirm behaviour; documentation is often incomplete or out of date.
+
+### Does the provider have a user identity endpoint?
+
+Spotify exposes `/me` which returns a stable user ID and display name. Many providers do
+the same. Some do not.
+
+Apple Music is the counterexample: the Music User Token is opaque and app-scoped. There
+is no `/me` equivalent and no way to decode a stable user identifier from the token. The
+application generates a `UUID.uuid4()` on first authentication and stores it in the session
+cookie as the user's identity for the lifetime of that session.
+
+**Answer determines:** how you populate `UserSession.user_id` (fetched vs. generated),
+and whether a `username` field is meaningful.
+
+### Are access tokens short-lived with a server-side refresh endpoint?
+
+Spotify access tokens expire after one hour. There is a server-side refresh endpoint that
+exchanges a `refresh_token` for a new access token. The `SessionManager` schedules a timer
+to refresh before expiry.
+
+Apple Music user tokens are valid for approximately six months and there is no server-side
+refresh endpoint. The user must re-authenticate when the token expires.
+
+**Answer determines:** which `SessionManager` variant (Step 2) — OAuth with refresh timer,
+or long-lived token with no timer. It also determines whether the session restoration plug
+(Step 8) needs to make a network call or can reconstruct the session from the cookie alone.
+
+### Is authentication a server-side OAuth redirect flow, or browser-initiated?
+
+Spotify uses a standard server-side OAuth redirect: the server builds the authorization
+URL, the browser follows it, and the provider redirects back to the server's callback
+endpoint with a code.
+
+Apple Music uses MusicKit JS: the authorization happens entirely in the browser via a
+JavaScript SDK call. The browser receives the Music User Token and POSTs it to the server.
+There is no authorization code to exchange.
+
+**Answer determines:** the shape of the `OAuthCallbackController` handler (Step 14) —
+whether to implement a `sign_in/2` redirect and a `new/2` code-exchange, or a single
+POST handler that reads the token from the request body.
+
+### Does the provider require an app-level signed token alongside the user token?
+
+Apple Music requires an ES256 JWT (signed with your Apple `.p8` private key) on every API
+call, in addition to the per-user Music User Token. This developer token is app-global, not
+per-user, and must be generated and rotated independently of user sessions.
+
+Standard OAuth providers (including Spotify) do not require this — the access token alone
+is sufficient.
+
+**Answer determines:** whether you need to build a `DeveloperTokenManager` (Step 7), how
+`ExternalClient.client/1` sets auth headers (one header vs. two), and whether
+`with_developer_token_refresh/3` is needed (Step 4b).
+
+### What are the API shapes for the three required operations?
+
+Before building anything, verify that the provider's API exposes these three operations
+and understand their exact auth requirements:
+
+- **Track search** — what endpoint, what query parameters, what does a match look like in
+  the response, what identifier does a track carry?
+- **Playlist creation** — does the provider support user-owned playlists via the API? What
+  fields are required?
+- **Adding tracks to a playlist** — are tracks added by URI, catalog ID, or some other
+  identifier? Is it a single call or paginated?
+
+These must exist and be usable with the auth model you confirmed above. Discovering that
+playlist creation requires a scope you cannot request, or that track IDs from search cannot
+be used in playlist add calls, after building the full integration is painful.
+
+**Answer determines:** the `ExternalClient` implementation details throughout Step 4b, and
+whether any provider-specific abstractions (like Apple Music's storefront-scoped catalog
+URLs) are needed.
+
+---
+
 ## Step 1: Create the UserSession struct
 
 Create `lib/setlistify/tidal/user_session.ex`.
@@ -162,7 +246,51 @@ then implements each callback declared in `Tidal.API`.
 
 ---
 
-## Step 5: Create DeveloperTokenManager (only if needed)
+## Step 5: Register the test mock
+
+Edit `test/test_helper.exs`. Add two lines before `ExUnit.start()`:
+
+```elixir
+Hammox.defmock(Setlistify.Tidal.API.MockClient, for: Setlistify.Tidal.API)
+Application.put_env(:setlistify, :tidal_api_client, Setlistify.Tidal.API.MockClient)
+```
+
+If you added a `DeveloperTokenManager`, also add:
+
+```elixir
+Application.put_env(:setlistify, :start_tidal_token_manager, false)
+```
+
+Tests set expectations with `Hammox.expect/3` or `Hammox.stub/3`.
+
+The mock must be registered here before writing any tests for the `ExternalClient` or any
+component that calls through `Tidal.API`. Without this, `Application.get_env` returns the
+real `ExternalClient` and your unit tests make live HTTP calls.
+
+---
+
+## Step 6: Add the track cache
+
+Edit `lib/setlistify/application.ex`. Add the Cachex cache for this provider to `children`:
+
+```elixir
+Supervisor.child_spec(
+  {Cachex, name: :tidal_track_cache, expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
+  id: :tidal_track_cache
+)
+```
+
+The atom (`:tidal_track_cache`) must match what you pass to `Cachex.fetch/3` in
+`Tidal.API.search_for_track/3`.
+
+Do this now rather than at the end: the Cachex process must be started before
+`search_for_track/3` can run. If you leave it until later, calling that function from any
+context — including tests that start the application — will crash with a missing process
+error.
+
+---
+
+## Step 7: Create DeveloperTokenManager (only if needed)
 
 Skip this step for standard OAuth providers.
 
@@ -183,7 +311,7 @@ generates a signed token on startup and refreshes it before expiry.
 
 ---
 
-## Step 6: Add the session restoration plug
+## Step 8: Add the session restoration plug
 
 Create `lib/setlistify_web/plugs/restore_tidal_token.ex`.
 
@@ -200,7 +328,7 @@ encrypted cookie.
 - Guard with `get_session(conn, :auth_provider) == "tidal"` — return `conn` unchanged for
   all other providers
 - Verify the encrypted token with `Phoenix.Token.verify/4` using your `TokenSalts`
-  constant (see Step 9)
+  constant (see Step 11)
 - OAuth: on missing session, call `API.refresh_to_user_session/1` with the decrypted
   refresh token, then `SessionSupervisor.start_user_token/2`
 - Long-lived token: on missing session, decrypt the stored user token and call
@@ -210,7 +338,7 @@ encrypted cookie.
 
 ---
 
-## Step 7: Update MusicService.API dispatch
+## Step 9: Update MusicService.API dispatch
 
 Edit `lib/setlistify/music_service/api.ex`.
 
@@ -232,7 +360,7 @@ def get_embed("tidal", url), do: Tidal.API.get_embed(url)
 
 ---
 
-## Step 8: Update UserSessionManager dispatch
+## Step 10: Update UserSessionManager dispatch
 
 Edit `lib/setlistify/user_session_manager.ex`.
 
@@ -247,7 +375,7 @@ defp impl({:tidal, _}), do: Tidal.SessionManager
 
 ---
 
-## Step 9: Add a TokenSalts constant
+## Step 11: Add a TokenSalts constant
 
 Edit `lib/setlistify/auth/token_salts.ex`.
 
@@ -259,9 +387,9 @@ must be identical at the sign site (controller) and the verify site (plug).
 
 ---
 
-## Step 10: Update auth wiring
+## Step 12: Update auth wiring
 
-### 10a. LiveHooks provider key mapping
+### 12a. LiveHooks provider key mapping
 
 Edit `lib/setlistify_web/auth/live_hooks.ex`. Add a clause to `to_provider_key/2` so the
 LiveView auth hook can resolve the session from the cookie:
@@ -270,7 +398,7 @@ LiveView auth hook can resolve the session from the cookie:
 defp to_provider_key("tidal", user_id), do: {:ok, {:tidal, user_id}}
 ```
 
-### 10b. UserAuth session preservation
+### 12b. UserAuth session preservation
 
 Edit `lib/setlistify_web/controllers/user_auth.ex`. The `auth_user/2` function reads
 session fields before clearing the session and re-writes them after. Add your
@@ -282,7 +410,7 @@ to avoid collisions if both providers could be active.
 
 ---
 
-## Step 11: Wire up the router
+## Step 13: Wire up the router
 
 Edit `lib/setlistify_web/router.ex`.
 
@@ -299,7 +427,7 @@ Apple Music's JS-based sign-in), add a dedicated POST route.
 
 ---
 
-## Step 12: Update OAuthCallbackController
+## Step 14: Update OAuthCallbackController
 
 Edit `lib/setlistify_web/controllers/oauth_callback_controller.ex`.
 
@@ -321,7 +449,7 @@ instead of exchanging a code.
 
 ---
 
-## Step 13: Add sign-in UI
+## Step 15: Add sign-in UI
 
 In `lib/setlistify_web/live/setlists/show_live.ex`:
 
@@ -337,29 +465,10 @@ Apple Music clause for an example).
 
 ---
 
-## Step 14: Update Application
+## Step 16: Start DeveloperTokenManager (only if needed)
 
-Edit `lib/setlistify/application.ex`.
-
-### 14a. Add the track cache
-
-Every provider needs its own Cachex cache for `search_for_track` results. Add it to
-`children`:
-
-```elixir
-Supervisor.child_spec(
-  {Cachex, name: :tidal_track_cache, expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
-  id: :tidal_track_cache
-)
-```
-
-The atom (`:tidal_track_cache`) must match what you pass to `Cachex.fetch/3` in
-`Tidal.API.search_for_track/3`.
-
-### 14b. Start DeveloperTokenManager (only if needed)
-
-If you created a `DeveloperTokenManager` in Step 5, start it conditionally so tests can
-disable it without valid credentials:
+If you created a `DeveloperTokenManager` in Step 7, start it conditionally in
+`lib/setlistify/application.ex` so tests can disable it without valid credentials:
 
 ```elixir
 defp tidal_children do
@@ -375,26 +484,7 @@ Append `tidal_children()` to the `children` list alongside the existing provider
 
 ---
 
-## Step 15: Register the test mock
-
-Edit `test/test_helper.exs`. Add two lines before `ExUnit.start()`:
-
-```elixir
-Hammox.defmock(Setlistify.Tidal.API.MockClient, for: Setlistify.Tidal.API)
-Application.put_env(:setlistify, :tidal_api_client, Setlistify.Tidal.API.MockClient)
-```
-
-If you added a `DeveloperTokenManager`, also add:
-
-```elixir
-Application.put_env(:setlistify, :start_tidal_token_manager, false)
-```
-
-Tests set expectations with `Hammox.expect/3` or `Hammox.stub/3`.
-
----
-
-## Step 16: Add environment variables
+## Step 17: Add environment variables
 
 Add credentials to `.env` (copy `.env.example` as a starting point) and wire them into
 `config/runtime.exs`.
@@ -421,11 +511,14 @@ Read them in `ExternalClient` (and `DeveloperTokenManager` if applicable) via
 
 Work through these in order:
 
+- [ ] Answer Step 0 questions before writing any code
 - [ ] `lib/setlistify/tidal/user_session.ex` — `@enforce_keys`, provider fields
 - [ ] `lib/setlistify/tidal/session_manager.ex` — GenServer, `{:tidal, user_id}` Registry key, refresh timer if needed
 - [ ] `lib/setlistify/tidal/session_supervisor.ex` — `start_user_token`, `stop_user_token`, `get_session`
 - [ ] `lib/setlistify/tidal/api.ex` — `@behaviour Setlistify.MusicService.API`, three required callbacks, Cachex propagation in `search_for_track`, `impl/0`
 - [ ] `lib/setlistify/tidal/api/external_client.ex` — `client/1`, `with_token_refresh/3` or `with_developer_token_refresh/3`, three required functions
+- [ ] `test/test_helper.exs` — mock registration (do this before writing any tests)
+- [ ] `lib/setlistify/application.ex` — Cachex cache (do this before running the app)
 - [ ] `lib/setlistify/tidal/developer_token_manager.ex` — only if provider uses app-level JWTs
 - [ ] `lib/setlistify_web/plugs/restore_tidal_token.ex` — checks `auth_provider == "tidal"`, decrypts cookie, restarts GenServer
 - [ ] `lib/setlistify/music_service/api.ex` — add alias, `@type` union, `impl/1` clause
@@ -437,7 +530,6 @@ Work through these in order:
 - [ ] `lib/setlistify_web/controllers/oauth_callback_controller.ex` — `sign_in/2`, `new/2`, `sign_out/2` clauses
 - [ ] `lib/setlistify_web/live/setlists/show_live.ex` — `provider/1` clause, sign-in link
 - [ ] `lib/setlistify_web/live/playlists/show_live.ex` — `handle_params/3` clause for provider
-- [ ] `lib/setlistify/application.ex` — Cachex cache; `DeveloperTokenManager` if needed
-- [ ] `test/test_helper.exs` — mock registration
+- [ ] `lib/setlistify/application.ex` — `DeveloperTokenManager` if needed (Step 16)
 - [ ] `.env` / `config/runtime.exs` — environment variables
 - [ ] `mix format && mix test` — verify everything compiles and passes
