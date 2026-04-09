@@ -1,7 +1,7 @@
 # Architecture Decision Record: Apple Music Integration
 
 **Title**: Apple Music Integration with Shared Dispatch Layer
-**Status**: Proposed
+**Status**: Completed
 **Date**: 2026-03-26
 **Decision Makers**: Troy (Project Lead), Claude Code (Development Assistant)
 
@@ -765,15 +765,19 @@ If any step fails, fix it before committing. Do not use `--no-verify` or skip st
 
 ### Completed
 
-*(None — proposed)*
+- Phase 0: Apple Music auth spike — completed 2026-03-31
+- Phase 1: Spotify preparatory refactors — completed 2026-03-31
+- Phase 2: Shared dispatch extraction — completed 2026-03-31
+- Phase 3: Full Apple Music implementation — completed 2026-04-01
+- Phase 4: Wrap-up — completed 2026-04-09
 
 ### Remaining Work
 
-- Phase 0: Apple Music auth spike
-- Phase 1: Spotify preparatory refactors
-- Phase 2: Shared dispatch extraction
-- Phase 3: Full Apple Music implementation
-- Phase 4: Wrap-up — extraction review + provider extension guide
+*(None)*
+
+### Design Divergences
+
+- **Sign-in UX**: The ADR specified a dedicated `SignInLive` LiveView at `/sign-in`. The implementation instead puts sign-in buttons directly in the app layout header, with Apple Music auth handled via a `phx-hook` on the header button and Spotify via a link to `/signin/spotify`. This is a valid simplification — sign-in is available from any page without requiring a redirect.
 
 ## Success Metrics
 
