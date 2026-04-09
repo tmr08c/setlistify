@@ -1,3 +1,15 @@
+// MusicKit.configure() app options affect the authorization dialog UI.
+// - app.name: Passed to MusicKit, but Apple's auth dialog always shows the
+//   requesting domain (e.g. "setlistify.fly.dev would like to access...") as a
+//   security transparency feature — app.name does not override this.
+// - app.icon: A URL to the icon shown in the auth dialog. This does take effect
+//   (the favicon is visible in the dialog).
+const MUSICKIT_APP_CONFIG = {
+  name: "Setlistify",
+  build: "1.0",
+  icon: `${window.location.origin}/favicon.ico`
+}
+
 export const AppleMusicAuth = {
   mounted() {
     this.el.addEventListener("click", async (e) => {
@@ -11,7 +23,7 @@ export const AppleMusicAuth = {
       try {
         const music = await MusicKit.configure({
           developerToken: btn.dataset.developerToken,
-          app: { name: "Setlistify", build: "1.0" }
+          app: MUSICKIT_APP_CONFIG
         })
         const userToken = await music.authorize()
         const storefront = music.storefrontId
@@ -32,7 +44,7 @@ export const AppleMusicSignOut = {
       try {
         const music = await MusicKit.configure({
           developerToken: this.el.dataset.developerToken,
-          app: { name: "Setlistify", build: "1.0" }
+          app: MUSICKIT_APP_CONFIG
         })
         await music.unauthorize()
       } catch (_) {
