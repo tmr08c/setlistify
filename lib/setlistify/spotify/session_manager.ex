@@ -92,6 +92,7 @@ defmodule Setlistify.Spotify.SessionManager do
 
   @behaviour Setlistify.UserSessionManager
 
+  alias Setlistify.SessionRegistry
   alias Setlistify.Spotify.API
   alias Setlistify.Spotify.UserSession
 
@@ -110,7 +111,7 @@ defmodule Setlistify.Spotify.SessionManager do
         {"session.operation", "start"}
       ])
 
-      name = via_tuple(user_id)
+      name = SessionRegistry.via_tuple(:spotify, user_id)
 
       case GenServer.start_link(__MODULE__, {user_id, initial_tokens_or_session}, name: name) do
         {:ok, pid} = result ->
@@ -139,7 +140,7 @@ defmodule Setlistify.Spotify.SessionManager do
         {"session.operation", "get_token"}
       ])
 
-      case lookup(user_id) do
+      case SessionRegistry.lookup(:spotify, user_id) do
         {:ok, pid} ->
           result = GenServer.call(pid, :get_token)
 
@@ -172,7 +173,7 @@ defmodule Setlistify.Spotify.SessionManager do
         {"session.operation", "refresh"}
       ])
 
-      case lookup(user_id) do
+      case SessionRegistry.lookup(:spotify, user_id) do
         {:ok, pid} ->
           result = GenServer.call(pid, :refresh_session)
 
@@ -210,7 +211,7 @@ defmodule Setlistify.Spotify.SessionManager do
         {"session.operation", "get"}
       ])
 
-      case lookup(user_id) do
+      case SessionRegistry.lookup(:spotify, user_id) do
         {:ok, pid} ->
           result = GenServer.call(pid, :get_session)
 
@@ -240,7 +241,7 @@ defmodule Setlistify.Spotify.SessionManager do
         {"session.operation", "stop"}
       ])
 
-      case lookup(user_id) do
+      case SessionRegistry.lookup(:spotify, user_id) do
         {:ok, pid} ->
           result = GenServer.stop(pid, :normal)
           Logger.info("Session manager stopped", %{user_id: user_id})
@@ -375,20 +376,11 @@ defmodule Setlistify.Spotify.SessionManager do
 
   # Helper functions
 
-  defp via_tuple(user_id) do
-    {:via, Registry, {Setlistify.UserSessionRegistry, {:spotify, user_id}}}
-  end
-
   @doc """
   Looks up a token manager process by user ID.
   Returns {:ok, pid} if found, :error otherwise.
   """
-  def lookup(user_id) do
-    case Registry.lookup(Setlistify.UserSessionRegistry, {:spotify, user_id}) do
-      [{pid, _}] -> {:ok, pid}
-      [] -> :error
-    end
-  end
+  def lookup(user_id), do: SessionRegistry.lookup(:spotify, user_id)
 
   defp schedule_refresh(after_seconds) when after_seconds > 0 do
     Process.send_after(self(), :refresh_token, :timer.seconds(after_seconds))
