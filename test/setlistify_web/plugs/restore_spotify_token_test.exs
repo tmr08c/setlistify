@@ -19,6 +19,19 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyTokenTest do
   end
 
   describe "call/2" do
+    test "does nothing when auth_provider is apple_music", %{conn: conn, user_id: user_id} do
+      conn =
+        conn
+        |> init_test_session(%{})
+        |> fetch_flash()
+        |> put_session(:auth_provider, "apple_music")
+        |> put_session(:user_id, user_id)
+        |> RestoreSpotifyToken.call([])
+
+      refute conn.halted
+      assert get_session(conn, :user_id) == user_id
+    end
+
     test "does nothing when no user_id in session", %{conn: conn} do
       conn =
         conn

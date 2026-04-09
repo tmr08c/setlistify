@@ -128,6 +128,51 @@ defmodule Setlistify.Spotify.SessionManagerTest do
     end
   end
 
+  describe "stop/1" do
+    test "terminates the process", %{user_id: user_id, initial_token: initial_token} do
+      user_session = %UserSession{
+        access_token: initial_token.access_token,
+        refresh_token: initial_token.refresh_token,
+        expires_at: System.system_time(:second) + initial_token.expires_in,
+        user_id: user_id,
+        username: "test_user"
+      }
+
+      {:ok, pid} = SessionManager.start_link({user_id, user_session})
+      assert Process.alive?(pid)
+      assert :ok = SessionManager.stop(user_id)
+      refute Process.alive?(pid)
+    end
+
+    test "returns :not_found when no process exists", %{user_id: _user_id} do
+      nonexistent_user = unique_user_id()
+      assert {:error, :not_found} = SessionManager.stop(nonexistent_user)
+    end
+  end
+
+  describe "lookup/1" do
+    test "returns {:ok, pid} when process is registered", %{
+      user_id: user_id,
+      initial_token: initial_token
+    } do
+      user_session = %UserSession{
+        access_token: initial_token.access_token,
+        refresh_token: initial_token.refresh_token,
+        expires_at: System.system_time(:second) + initial_token.expires_in,
+        user_id: user_id,
+        username: "test_user"
+      }
+
+      {:ok, pid} = SessionManager.start_link({user_id, user_session})
+      assert {:ok, ^pid} = SessionManager.lookup(user_id)
+    end
+
+    test "returns :error when no process is registered", %{user_id: _user_id} do
+      nonexistent_user = unique_user_id()
+      assert :error = SessionManager.lookup(nonexistent_user)
+    end
+  end
+
   describe "refresh_session/1" do
     test "refreshes token and returns UserSession", %{
       user_id: user_id,
