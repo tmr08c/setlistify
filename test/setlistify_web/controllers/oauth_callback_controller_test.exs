@@ -144,6 +144,53 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       refute_in_registry({:spotify, test_user})
     end
 
+    test "sign out stops Apple Music session process and clears session", %{
+      conn: conn
+    } do
+      user_id = "apple_user_#{System.unique_integer([:positive])}"
+
+      user_session = %AppleMusic.UserSession{
+        user_token: "test_apple_token",
+        user_id: user_id,
+        storefront: "us"
+      }
+
+      {:ok, original_pid} = AppleMusic.SessionSupervisor.start_user_token(user_id, user_session)
+      assert Process.alive?(original_pid)
+
+      assert [{^original_pid, _}] =
+               Registry.lookup(Setlistify.UserSessionRegistry, {:apple_music, user_id})
+
+      encrypted_user_token =
+        Phoenix.Token.sign(
+          SetlistifyWeb.Endpoint,
+          TokenSalts.apple_music_user_token(),
+          "test_apple_token"
+        )
+
+      conn =
+        conn
+        |> init_test_session(%{})
+        |> fetch_flash()
+        |> put_session(:auth_provider, "apple_music")
+        |> put_session(:user_id, user_id)
+        |> put_session(:user_token, encrypted_user_token)
+        |> put_session(:storefront, "us")
+
+      assert get_session(conn, :user_token) == encrypted_user_token
+
+      sign_out_conn = get(conn, "/signout")
+
+      refute Process.alive?(original_pid)
+      refute get_session(sign_out_conn, :user_token)
+      refute get_session(sign_out_conn, :storefront)
+      refute get_session(sign_out_conn, :user_id)
+      refute_in_registry({:apple_music, user_id})
+
+      assert sign_out_conn.status == 302
+      assert redirected_to(sign_out_conn) == "/"
+    end
+
     test "successful callback with redirect_to redirects to provided path", %{
       conn: conn,
       test_user: test_user
