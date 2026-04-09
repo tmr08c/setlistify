@@ -26,6 +26,59 @@ defmodule Setlistify.Spotify.APITest do
     {:ok, user_session: user_session}
   end
 
+  describe "create_playlist/3" do
+    test "delegates to the impl and returns the result", %{user_session: user_session} do
+      expect(Setlistify.Spotify.API.MockClient, :create_playlist, 1, fn _session,
+                                                                        _name,
+                                                                        _description ->
+        {:ok, %{id: "playlist-1", external_url: "https://open.spotify.com/playlist/1"}}
+      end)
+
+      assert {:ok, %{id: "playlist-1", external_url: "https://open.spotify.com/playlist/1"}} =
+               API.create_playlist(user_session, "My Setlist", "Songs from a concert")
+    end
+
+    test "returns the error when impl returns an error", %{user_session: user_session} do
+      expect(Setlistify.Spotify.API.MockClient, :create_playlist, 1, fn _session,
+                                                                        _name,
+                                                                        _description ->
+        {:error, :unauthorized}
+      end)
+
+      assert {:error, :unauthorized} =
+               API.create_playlist(user_session, "My Setlist", "Songs from a concert")
+    end
+  end
+
+  describe "add_tracks_to_playlist/3" do
+    test "delegates to the impl and returns the result", %{user_session: user_session} do
+      expect(Setlistify.Spotify.API.MockClient, :add_tracks_to_playlist, 1, fn _session,
+                                                                               _playlist_id,
+                                                                               _tracks ->
+        {:ok, :tracks_added}
+      end)
+
+      assert {:ok, :tracks_added} =
+               API.add_tracks_to_playlist(user_session, "playlist-1", [
+                 "spotify:track:abc",
+                 "spotify:track:def"
+               ])
+    end
+
+    test "returns the error when impl returns an error", %{user_session: user_session} do
+      expect(Setlistify.Spotify.API.MockClient, :add_tracks_to_playlist, 1, fn _session,
+                                                                               _playlist_id,
+                                                                               _tracks ->
+        {:error, :rate_limited}
+      end)
+
+      assert {:error, :rate_limited} =
+               API.add_tracks_to_playlist(user_session, "playlist-1", [
+                 "spotify:track:abc"
+               ])
+    end
+  end
+
   describe "search_for_track/3" do
     test "returns the full error tuple when impl returns an error", %{
       user_session: user_session
