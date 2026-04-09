@@ -5,8 +5,10 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
   import Hammox
   import SetlistifyWeb.AuthHelpers
 
-  alias Setlistify.{SetlistFm, Spotify}
+  alias Setlistify.{SetlistFm, Spotify, AppleMusic}
   alias Setlistify.Spotify.{SessionManager, UserSession}
+  alias Setlistify.AppleMusic.SessionManager, as: AppleMusicSessionManager
+  alias Setlistify.AppleMusic.UserSession, as: AppleMusicUserSession
 
   import Setlistify.Test.RegistryHelpers
 
@@ -21,6 +23,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
   setup do
     on_exit(:clear_cache, fn ->
       Cachex.clear!(:spotify_track_cache)
+      Cachex.clear!(:apple_music_track_cache)
     end)
   end
 
@@ -234,5 +237,181 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     {:error, {:live_redirect, %{kind: :push, to: redirect_to}}} = result
 
     assert redirect_to == "/playlists?provider=spotify&url=" <> URI.encode_www_form(external_url)
+  end
+
+  defp log_in_apple_music_user(conn, user_id) do
+    Plug.Test.init_test_session(conn, user_id: user_id, auth_provider: "apple_music")
+  end
+
+  test "viewing a setlist when authenticated with Apple Music searches for songs", %{conn: conn} do
+    user_id = unique_user_id()
+    setlist_id = Ecto.UUID.generate()
+    artist = "some artist"
+
+    user_session = %AppleMusicUserSession{
+      user_token: "test-user-token",
+      user_id: user_id,
+      storefront: "us"
+    }
+
+    {:ok, _pid} = AppleMusicSessionManager.start_link({user_id, user_session})
+
+    conn = log_in_apple_music_user(conn, user_id)
+
+    expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
+      {:ok,
+       %{
+         artist: artist,
+         venue: %{
+           name: "Madison Square Garden",
+           location: %{
+             city: "New York",
+             state: "NY",
+             country: "United States"
+           }
+         },
+         date: Date.utc_today(),
+         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
+       }}
+    end)
+
+    AppleMusic.API.MockClient
+    |> expect(:search_for_track, 2, fn _user_session, _artist, title ->
+      case title do
+        "song1" ->
+          %{track_id: "apple_music:track:456"}
+
+        "song2" ->
+          nil
+      end
+    end)
+
+    {:ok, view, html} = live(conn, ~p"/setlist/#{setlist_id}")
+
+    assert html =~ "song1"
+    assert html =~ "song2"
+
+    final_html = render_async(view)
+
+    assert_has_element(final_html, "[aria-label='found matching song']", count: 1)
+    assert_has_element(final_html, "[aria-label='no matching song found']", count: 1)
+  end
+
+  test "creating a playlist via Apple Music redirects to playlist page", %{conn: conn} do
+    user_id = unique_user_id()
+    setlist_id = Ecto.UUID.generate()
+    artist = "some artist"
+    venue = "some venue"
+    external_url = "https://music.apple.com/library/playlist/p.abc123"
+
+    user_session = %AppleMusicUserSession{
+      user_token: "test-user-token",
+      user_id: user_id,
+      storefront: "us"
+    }
+
+    {:ok, _pid} = AppleMusicSessionManager.start_link({user_id, user_session})
+
+    conn = log_in_apple_music_user(conn, user_id)
+
+    expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
+      {:ok,
+       %{
+         artist: artist,
+         venue: %{
+           name: venue,
+           location: %{
+             city: "New York",
+             state: "NY",
+             country: "United States"
+           }
+         },
+         date: Date.utc_today(),
+         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
+       }}
+    end)
+
+    AppleMusic.API.MockClient
+    |> expect(:search_for_track, 2, fn _user_session, _artist, title ->
+      case title do
+        "song1" ->
+          %{track_id: "apple_music:track:456"}
+
+        "song2" ->
+          nil
+      end
+    end)
+
+    {:ok, view, _html} = live(conn, ~p"/setlist/#{setlist_id}")
+
+    render_async(view)
+
+    AppleMusic.API.MockClient
+    |> expect(:create_playlist, fn ^user_session, name, description ->
+      formatted_date = Date.utc_today() |> Date.to_iso8601()
+      assert name =~ artist
+      assert name =~ venue
+      assert name =~ formatted_date
+
+      assert description =~ "Setlistify"
+      assert description =~ artist
+      assert description =~ venue
+      assert description =~ formatted_date
+
+      {:ok, %{id: "playlist_id_456", external_url: external_url}}
+    end)
+    |> expect(:add_tracks_to_playlist, fn ^user_session, "playlist_id_456", tracks ->
+      assert tracks == ["apple_music:track:456"]
+      {:ok, :tracks_added}
+    end)
+
+    result = view |> element("button", "Create Playlist") |> render_click()
+    {:error, {:live_redirect, %{kind: :push, to: redirect_to}}} = result
+
+    assert redirect_to ==
+             "/playlists?provider=apple_music&url=" <> URI.encode_www_form(external_url)
+  end
+
+  test "create playlist button is visible when logged in with Apple Music", %{conn: conn} do
+    user_id = unique_user_id()
+    setlist_id = Ecto.UUID.generate()
+
+    user_session = %AppleMusicUserSession{
+      user_token: "test-user-token",
+      user_id: user_id,
+      storefront: "us"
+    }
+
+    {:ok, _pid} = AppleMusicSessionManager.start_link({user_id, user_session})
+
+    conn = log_in_apple_music_user(conn, user_id)
+
+    expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
+      {:ok,
+       %{
+         artist: "The Beatles",
+         venue: %{
+           name: "Compaq Center",
+           location: %{
+             city: "Houston",
+             state: "TX",
+             country: "United States"
+           }
+         },
+         date: Date.utc_today(),
+         sets: [%{name: nil, songs: [%{title: "Hey Jude"}]}]
+       }}
+    end)
+
+    AppleMusic.API.MockClient
+    |> expect(:search_for_track, 1, fn _user_session, _artist, _title ->
+      %{track_id: "apple_music:track:789"}
+    end)
+
+    {:ok, view, _html} = live(conn, ~p"/setlist/#{setlist_id}")
+
+    render_async(view)
+
+    assert has_element?(view, "button", "Create Playlist")
   end
 end
