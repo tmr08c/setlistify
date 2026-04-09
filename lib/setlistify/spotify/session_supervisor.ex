@@ -44,6 +44,15 @@ defmodule Setlistify.Spotify.SessionSupervisor do
           OpenTelemetry.Tracer.set_status(:ok, "")
           result
 
+        {:error, {:already_started, pid}} ->
+          Logger.info("User token process already running", %{
+            user_id: user_id,
+            pid: inspect(pid)
+          })
+
+          OpenTelemetry.Tracer.set_status(:ok, "")
+          {:ok, pid}
+
         {:error, reason} = error ->
           Logger.error("Failed to start user token process", %{user_id: user_id, error: reason})
           OpenTelemetry.Tracer.set_status(:error, "Failed to start child: #{inspect(reason)}")

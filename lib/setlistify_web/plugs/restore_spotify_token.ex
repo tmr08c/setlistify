@@ -24,26 +24,18 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
 
   defp do_call(conn) do
     user_id = get_session(conn, :user_id)
-    refresh_token = get_session(conn, :refresh_token)
+    encrypted_token = get_session(conn, :refresh_token)
 
     with "spotify" <- get_session(conn, :auth_provider),
          user_id when not is_nil(user_id) <- user_id,
          {:error, :not_found} <- SessionManager.get_session(user_id),
-         encrypted_token when not is_nil(encrypted_token) <- refresh_token,
-         {:ok, refresh_token} <-
-           Phoenix.Token.verify(
-             SetlistifyWeb.Endpoint,
-             TokenSalts.spotify_refresh_token(),
-             encrypted_token,
-             max_age: 86400 * 30
-           ) do
+         {:ok, refresh_token} <- decrypt_token(encrypted_token) do
       case API.refresh_to_user_session(refresh_token) do
         {:ok, user_session} ->
           {:ok, _pid} = SessionSupervisor.start_user_token(user_id, user_session)
           conn
 
         {:error, _reason} ->
-          # If refresh fails, clear the session but continue with the request
           conn
           |> clear_session()
           |> Phoenix.Controller.put_flash(
@@ -54,5 +46,13 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
     else
       _ -> conn
     end
+  end
+
+  defp decrypt_token(nil), do: {:error, :missing}
+
+  defp decrypt_token(encrypted) do
+    Phoenix.Token.verify(SetlistifyWeb.Endpoint, TokenSalts.spotify_refresh_token(), encrypted,
+      max_age: 86_400 * 30
+    )
   end
 end

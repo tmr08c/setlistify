@@ -16,6 +16,7 @@ defmodule Setlistify.AppleMusic.SessionManager do
   @behaviour Setlistify.UserSessionManager
 
   alias Setlistify.AppleMusic.UserSession
+  alias Setlistify.SessionRegistry
 
   @impl Setlistify.UserSessionManager
   def start_link({user_id, %UserSession{} = session}) do
@@ -26,7 +27,9 @@ defmodule Setlistify.AppleMusic.SessionManager do
         {"session.operation", "start"}
       ])
 
-      case GenServer.start_link(__MODULE__, session, name: via_tuple(user_id)) do
+      case GenServer.start_link(__MODULE__, session,
+             name: SessionRegistry.via_tuple(:apple_music, user_id)
+           ) do
         {:ok, pid} = result ->
           Logger.info("Apple Music session manager started", %{
             user_id: user_id,
@@ -61,7 +64,7 @@ defmodule Setlistify.AppleMusic.SessionManager do
         {"session.operation", "get"}
       ])
 
-      case lookup(user_id) do
+      case SessionRegistry.lookup(:apple_music, user_id) do
         {:ok, pid} ->
           result = {:ok, GenServer.call(pid, :get_session)}
           OpenTelemetry.Tracer.set_status(:ok, "")
@@ -83,7 +86,7 @@ defmodule Setlistify.AppleMusic.SessionManager do
         {"session.operation", "stop"}
       ])
 
-      case lookup(user_id) do
+      case SessionRegistry.lookup(:apple_music, user_id) do
         {:ok, pid} ->
           GenServer.stop(pid, :normal)
           Logger.info("Apple Music session manager stopped", %{user_id: user_id})
@@ -97,19 +100,11 @@ defmodule Setlistify.AppleMusic.SessionManager do
     end
   end
 
-  def lookup(user_id) do
-    case Registry.lookup(Setlistify.UserSessionRegistry, {:apple_music, user_id}) do
-      [{pid, _}] -> {:ok, pid}
-      [] -> :error
-    end
-  end
+  def lookup(user_id), do: SessionRegistry.lookup(:apple_music, user_id)
 
   @impl true
   def init(%UserSession{} = session), do: {:ok, session}
 
   @impl true
   def handle_call(:get_session, _from, session), do: {:reply, session, session}
-
-  defp via_tuple(user_id),
-    do: {:via, Registry, {Setlistify.UserSessionRegistry, {:apple_music, user_id}}}
 end
