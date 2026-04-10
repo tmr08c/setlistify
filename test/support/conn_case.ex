@@ -20,6 +20,7 @@ defmodule SetlistifyWeb.ConnCase do
   using do
     quote do
       use SetlistifyWeb, :verified_routes
+
       import Phoenix.ConnTest
       import Plug.Conn
       import Setlistify.Test.RegistryHelpers
