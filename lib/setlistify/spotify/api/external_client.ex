@@ -18,60 +18,63 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     |> Req.merge(Keyword.merge(default_opts, config_opts))
   end
 
-  # Helper function to handle token refresh and retry logic
   defp with_token_refresh(user_session, request_fn, context) do
     req = client(user_session)
 
     case request_fn.(req) do
       {:ok, %{status: 401} = response} ->
-        # Check if this is a token expiration issue
-        authenticate_header =
-          Enum.find_value(response.headers, fn {header, value} ->
-            if String.downcase(header) == "www-authenticate", do: value
-          end)
-
-        # Handle both string and list formats
-        authenticate_value =
-          case authenticate_header do
-            nil -> ""
-            header when is_binary(header) -> header
-            [header | _] when is_binary(header) -> header
-            _ -> ""
-          end
-
-        if authenticate_header && String.contains?(authenticate_value, "invalid_token") do
-          Logger.debug("Token expired during #{context}, attempting to refresh for user_id: #{user_session.user_id}")
-
-          OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.with_token_refresh" do
-            case SessionManager.refresh_session(user_session.user_id) do
-              {:ok, new_session} ->
-                Logger.debug("Successfully refreshed token during #{context}, retrying request")
-                new_req = client(new_session)
-                result = request_fn.(new_req)
-                OpenTelemetry.Tracer.set_status(:ok, "")
-                result
-
-              {:error, reason} ->
-                Logger.error(
-                  "Failed to refresh token during #{context} for user_id #{user_session.user_id}: #{inspect(reason)}"
-                )
-
-                OpenTelemetry.Tracer.set_status(
-                  :error,
-                  "Token refresh failed: #{inspect(reason)}"
-                )
-
-                {:error, :token_refresh_failed}
-            end
-          end
+        if token_expired?(response) do
+          refresh_and_retry(user_session, request_fn, context)
         else
-          # Non-token 401 error, just pass it through
           {:ok, response}
         end
 
-      # Any other response passes through unchanged
       other ->
         other
+    end
+  end
+
+  defp token_expired?(response) do
+    authenticate_header =
+      Enum.find_value(response.headers, fn {header, value} ->
+        if String.downcase(header) == "www-authenticate", do: value
+      end)
+
+    authenticate_value =
+      case authenticate_header do
+        nil -> ""
+        header when is_binary(header) -> header
+        [header | _] when is_binary(header) -> header
+        _ -> ""
+      end
+
+    authenticate_header && String.contains?(authenticate_value, "invalid_token")
+  end
+
+  defp refresh_and_retry(user_session, request_fn, context) do
+    Logger.debug("Token expired during #{context}, attempting to refresh for user_id: #{user_session.user_id}")
+
+    OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.with_token_refresh" do
+      case SessionManager.refresh_session(user_session.user_id) do
+        {:ok, new_session} ->
+          Logger.debug("Successfully refreshed token during #{context}, retrying request")
+          new_req = client(new_session)
+          result = request_fn.(new_req)
+          OpenTelemetry.Tracer.set_status(:ok, "")
+          result
+
+        {:error, reason} ->
+          Logger.error(
+            "Failed to refresh token during #{context} for user_id #{user_session.user_id}: #{inspect(reason)}"
+          )
+
+          OpenTelemetry.Tracer.set_status(
+            :error,
+            "Token refresh failed: #{inspect(reason)}"
+          )
+
+          {:error, :token_refresh_failed}
+      end
     end
   end
 

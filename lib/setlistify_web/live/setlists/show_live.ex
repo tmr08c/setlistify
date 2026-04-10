@@ -25,53 +25,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
             redirect_to: "/setlist/#{id}"
           )
 
-        socket =
-          if user_session do
-            # Start async operations for all songs in parallel
-            setlist.sets
-            |> Enum.with_index()
-            |> Enum.flat_map(fn {set, set_index} ->
-              set.songs
-              |> Enum.with_index()
-              |> Enum.map(fn {song, song_index} ->
-                key = "song_#{set_index}_#{song_index}"
-                {key, set_index, song_index, song}
-              end)
-            end)
-            |> Enum.reduce(socket, fn {key, set_index, song_index, song}, acc_socket ->
-              atom_key = String.to_atom(key)
-
-              OpentelemetryPhoenixLiveViewProcessPropagator.LiveView.assign_async(
-                acc_socket,
-                atom_key,
-                fn ->
-                  OpenTelemetry.Tracer.with_span "SetlistifyWeb.Setlists.ShowLive.search_song_async" do
-                    OpenTelemetry.Tracer.set_attributes([
-                      {"music.service", provider(user_session)},
-                      {"music.track", song.title},
-                      {"music.artist", setlist.artist},
-                      {"song.set_index", set_index},
-                      {"song.song_index", song_index}
-                    ])
-
-                    track_info =
-                      MusicService.API.search_for_track(user_session, setlist.artist, song.title)
-
-                    {:ok,
-                     %{
-                       atom_key => %{
-                         track_info: track_info,
-                         set_index: set_index,
-                         song_index: song_index
-                       }
-                     }}
-                  end
-                end
-              )
-            end)
-          else
-            socket
-          end
+        socket = maybe_start_song_searches(socket, setlist, user_session)
 
         {:ok, socket}
 
@@ -93,53 +47,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     user_session = socket.assigns.user_session
 
     if user_session do
-      name = "#{socket.assigns.artist} @ #{socket.assigns.venue_name} (#{socket.assigns.date})"
-
-      description =
-        "Created by Setlistify: #{socket.assigns.artist} at #{socket.assigns.venue_name} on #{socket.assigns.date}"
-
-      case MusicService.API.create_playlist(user_session, name, description) do
-        {:ok, %{id: playlist_id, external_url: external_url}} ->
-          # Build a flatlist of track Ids from our setlist
-          track_ids =
-            socket.assigns.sets
-            |> Enum.with_index()
-            |> Enum.flat_map(fn {set, set_index} ->
-              set.songs
-              |> Enum.with_index()
-              |> Enum.filter(fn {_song, song_index} ->
-                async_key = String.to_atom("song_#{set_index}_#{song_index}")
-
-                case Map.get(socket.assigns, async_key) do
-                  %Phoenix.LiveView.AsyncResult{ok?: true, result: result} ->
-                    result[:track_info] != nil
-
-                  _ ->
-                    false
-                end
-              end)
-              |> Enum.map(fn {_song, song_index} ->
-                async_key = String.to_atom("song_#{set_index}_#{song_index}")
-                result = Map.get(socket.assigns, async_key).result
-
-                result[:track_info].track_id
-              end)
-            end)
-
-          case MusicService.API.add_tracks_to_playlist(user_session, playlist_id, track_ids) do
-            {:ok, _} ->
-              {:noreply,
-               push_navigate(socket,
-                 to: ~p"/playlists?provider=#{provider(user_session)}&url=#{external_url}"
-               )}
-
-            {:error, reason} ->
-              {:noreply, put_flash(socket, :error, "Failed to add tracks to playlist: #{inspect(reason)}")}
-          end
-
-        {:error, reason} ->
-          {:noreply, put_flash(socket, :error, "Failed to create playlist: #{inspect(reason)}")}
-      end
+      create_and_populate_playlist(socket, user_session)
     else
       {:noreply, put_flash(socket, :error, "Unable to access your music session. Please log in again.")}
     end
@@ -248,6 +156,103 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     </.section_container>
     """
   end
+
+  defp maybe_start_song_searches(socket, _setlist, nil), do: socket
+
+  defp maybe_start_song_searches(socket, setlist, user_session) do
+    setlist.sets
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {set, set_index} ->
+      set.songs
+      |> Enum.with_index()
+      |> Enum.map(fn {song, song_index} ->
+        key = "song_#{set_index}_#{song_index}"
+        {key, set_index, song_index, song}
+      end)
+    end)
+    |> Enum.reduce(socket, fn {key, set_index, song_index, song}, acc_socket ->
+      atom_key = String.to_atom(key)
+
+      OpentelemetryPhoenixLiveViewProcessPropagator.LiveView.assign_async(
+        acc_socket,
+        atom_key,
+        fn ->
+          OpenTelemetry.Tracer.with_span "SetlistifyWeb.Setlists.ShowLive.search_song_async" do
+            OpenTelemetry.Tracer.set_attributes([
+              {"music.service", provider(user_session)},
+              {"music.track", song.title},
+              {"music.artist", setlist.artist},
+              {"song.set_index", set_index},
+              {"song.song_index", song_index}
+            ])
+
+            track_info =
+              MusicService.API.search_for_track(user_session, setlist.artist, song.title)
+
+            {:ok,
+             %{
+               atom_key => %{
+                 track_info: track_info,
+                 set_index: set_index,
+                 song_index: song_index
+               }
+             }}
+          end
+        end
+      )
+    end)
+  end
+
+  defp create_and_populate_playlist(socket, user_session) do
+    name = "#{socket.assigns.artist} @ #{socket.assigns.venue_name} (#{socket.assigns.date})"
+
+    description =
+      "Created by Setlistify: #{socket.assigns.artist} at #{socket.assigns.venue_name} on #{socket.assigns.date}"
+
+    case MusicService.API.create_playlist(user_session, name, description) do
+      {:ok, %{id: playlist_id, external_url: external_url}} ->
+        track_ids = collect_track_ids(socket.assigns)
+
+        case MusicService.API.add_tracks_to_playlist(user_session, playlist_id, track_ids) do
+          {:ok, _} ->
+            {:noreply,
+             push_navigate(socket,
+               to: ~p"/playlists?provider=#{provider(user_session)}&url=#{external_url}"
+             )}
+
+          {:error, reason} ->
+            {:noreply, put_flash(socket, :error, "Failed to add tracks to playlist: #{inspect(reason)}")}
+        end
+
+      {:error, reason} ->
+        {:noreply, put_flash(socket, :error, "Failed to create playlist: #{inspect(reason)}")}
+    end
+  end
+
+  defp collect_track_ids(assigns) do
+    assigns.sets
+    |> Enum.with_index()
+    |> Enum.flat_map(fn {set, set_index} ->
+      Enum.with_index(set.songs, fn _song, song_index ->
+        String.to_atom("song_#{set_index}_#{song_index}")
+      end)
+    end)
+    |> Enum.flat_map(fn async_key ->
+      case async_track_id(Map.get(assigns, async_key)) do
+        nil -> []
+        track_id -> [track_id]
+      end
+    end)
+  end
+
+  defp async_track_id(%Phoenix.LiveView.AsyncResult{ok?: true, result: result}) do
+    case result[:track_info] do
+      nil -> nil
+      track_info -> track_info.track_id
+    end
+  end
+
+  defp async_track_id(_), do: nil
 
   defp set_name(%{encore: encore}) when is_number(encore), do: "Encore #{encore}"
   defp set_name(%{name: nil}), do: "Unnamed Setlist"

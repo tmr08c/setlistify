@@ -4,8 +4,6 @@ defmodule SetlistifyWeb.SearchLiveTest do
   import Hammox
   import Phoenix.LiveViewTest
 
-  alias Setlistify.SetlistFm
-
   # Cache fetching happens in another process, managed by Cachex. The process we
   # start in our application tree is a supervisor, so explictly `allow`ing with
   # that PID does not work. This will enable "global" mode which means  any
