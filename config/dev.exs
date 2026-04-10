@@ -5,10 +5,8 @@ config :logger, :console,
   format: "$time [$level] $message $metadata\n",
   metadata: [:request_id, :trace_id, :span_id, :user_id, :module, :function]
 
-# Logger configuration with Loki backend
-config :logger,
-  backends: [:console, Setlistify.LokiLogger],
-  level: :debug
+# Logger configuration
+config :logger, level: :debug
 
 # Initialize plugs at runtime for faster development compilation
 config :phoenix, :plug_init_mode, :runtime
