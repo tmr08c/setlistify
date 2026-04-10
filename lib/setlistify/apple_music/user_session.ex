@@ -1,4 +1,5 @@
 defmodule Setlistify.AppleMusic.UserSession do
+  @moduledoc false
   @type t :: %__MODULE__{
           user_token: String.t(),
           user_id: String.t(),

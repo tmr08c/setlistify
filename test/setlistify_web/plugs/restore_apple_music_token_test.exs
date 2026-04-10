@@ -1,9 +1,10 @@
 defmodule SetlistifyWeb.Plugs.RestoreAppleMusicTokenTest do
   use SetlistifyWeb.ConnCase, async: true
 
-  alias SetlistifyWeb.Plugs.RestoreAppleMusicToken
-  alias Setlistify.AppleMusic.{SessionManager, UserSession}
+  alias Setlistify.AppleMusic.SessionManager
+  alias Setlistify.AppleMusic.UserSession
   alias Setlistify.Auth.TokenSalts
+  alias SetlistifyWeb.Plugs.RestoreAppleMusicToken
 
   @user_token "test_apple_music_user_token"
   @storefront "us"

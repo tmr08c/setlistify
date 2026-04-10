@@ -86,15 +86,14 @@ defmodule Setlistify.Spotify.SessionManager do
   ```
   """
 
-  use GenServer
-  require Logger
-  require OpenTelemetry.Tracer
-
   @behaviour Setlistify.UserSessionManager
 
   alias Setlistify.SessionRegistry
   alias Setlistify.Spotify.API
   alias Setlistify.Spotify.UserSession
+
+  require Logger
+  require OpenTelemetry.Tracer
 
   # TODO: this name may not be the most clear for the goal. Does `  @refresh_buffer` make it more clear?
   # Refresh token 5 minutes before expiration
@@ -274,7 +273,7 @@ defmodule Setlistify.Spotify.SessionManager do
   end
 
   @impl true
-  def handle_continue(:schedule_refresh, state = %{expires_at: expires_at}) do
+  def handle_continue(:schedule_refresh, %{expires_at: expires_at} = state) do
     schedule_refresh(expires_at - timestamp() - @refresh_threshold)
 
     {:noreply, state}
@@ -383,7 +382,7 @@ defmodule Setlistify.Spotify.SessionManager do
   def lookup(user_id), do: SessionRegistry.lookup(:spotify, user_id)
 
   defp schedule_refresh(after_seconds) when after_seconds > 0 do
-    Process.send_after(self(), :refresh_token, :timer.seconds(after_seconds))
+    Process.send_after(self(), :refresh_token, to_timeout(second: after_seconds))
   end
 
   defp schedule_refresh(_), do: Process.send(self(), :refresh_token, [])

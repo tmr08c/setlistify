@@ -4,6 +4,7 @@ defmodule SetlistifyWeb.Telemetry.LiveViewTelemetry do
   """
 
   import Phoenix.LiveView
+
   require Logger
   require OpenTelemetry.Tracer
 

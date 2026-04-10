@@ -3,9 +3,9 @@ defmodule Setlistify.UserSessionManagerTest do
 
   import Setlistify.Test.RegistryHelpers
 
-  alias Setlistify.UserSessionManager
-  alias Setlistify.Spotify.UserSession, as: SpotifySession
   alias Setlistify.AppleMusic.UserSession, as: AppleMusicSession
+  alias Setlistify.Spotify.UserSession, as: SpotifySession
+  alias Setlistify.UserSessionManager
 
   setup do
     user_id = unique_user_id()

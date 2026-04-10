@@ -19,18 +19,17 @@ defmodule SetlistifyWeb.ConnCase do
 
   using do
     quote do
+      use SetlistifyWeb, :verified_routes
+      import Phoenix.ConnTest
+      import Plug.Conn
+      import Setlistify.Test.RegistryHelpers
+      import SetlistifyWeb.ConnCase
       # The default endpoint for testing
       @endpoint SetlistifyWeb.Endpoint
 
-      use SetlistifyWeb, :verified_routes
-
       # Import conveniences for testing with connections
-      import Plug.Conn
-      import Phoenix.ConnTest
-      import SetlistifyWeb.ConnCase
 
       # Import test helpers
-      import Setlistify.Test.RegistryHelpers
 
       # Find elements using the test-specific identifier pattern set up in
       # `UrlStordenerWeb.html_helper`

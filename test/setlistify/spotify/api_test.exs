@@ -4,6 +4,7 @@ defmodule Setlistify.Spotify.APITest do
   import Hammox
 
   alias Setlistify.Spotify.API
+  alias Setlistify.Spotify.API.MockClient
   alias Setlistify.Spotify.UserSession
 
   # Cachex runs in a separate process, so we need global mox mode
@@ -83,9 +84,7 @@ defmodule Setlistify.Spotify.APITest do
     test "returns the full error tuple when impl returns an error", %{
       user_session: user_session
     } do
-      expect(Setlistify.Spotify.API.MockClient, :search_for_track, 1, fn _session,
-                                                                         _artist,
-                                                                         _track ->
+      expect(MockClient, :search_for_track, 1, fn _session, _artist, _track ->
         {:error, :token_refresh_failed}
       end)
 
@@ -94,9 +93,7 @@ defmodule Setlistify.Spotify.APITest do
     end
 
     test "caches successful results — impl is called only once", %{user_session: user_session} do
-      expect(Setlistify.Spotify.API.MockClient, :search_for_track, 1, fn _session,
-                                                                         _artist,
-                                                                         _track ->
+      expect(MockClient, :search_for_track, 1, fn _session, _artist, _track ->
         %{track_id: "spotify:track:abc123"}
       end)
 

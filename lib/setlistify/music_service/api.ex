@@ -6,9 +6,10 @@ defmodule Setlistify.MusicService.API do
   need to reference a specific provider (e.g. Spotify) directly.
   """
 
-  require OpenTelemetry.Tracer
+  alias Setlistify.AppleMusic
+  alias Setlistify.Spotify
 
-  alias Setlistify.{AppleMusic, Spotify}
+  require OpenTelemetry.Tracer
 
   @type user_session :: Spotify.UserSession.t() | AppleMusic.UserSession.t()
 

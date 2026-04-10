@@ -7,6 +7,30 @@
 # General application configuration
 import Config
 
+# Configure esbuild (the version is required)
+config :esbuild,
+  version: "0.14.41",
+  default: [
+    args: ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
+    cd: Path.expand("../assets", __DIR__),
+    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
+  ]
+
+# Configures Elixir's Logger
+config :logger, :console,
+  format: "$time $metadata[$level] $message\n",
+  metadata: [:request_id]
+
+# This will be overridden in dev/prod
+config :opentelemetry, :resource,
+  service: [
+    name: "setlistify",
+    namespace: "setlistify"
+  ]
+
+# Use Jason for JSON parsing in Phoenix
+config :phoenix, :json_library, Jason
+
 # Configures the endpoint
 config :setlistify, SetlistifyWeb.Endpoint,
   url: [host: "localhost"],
@@ -17,16 +41,6 @@ config :setlistify, SetlistifyWeb.Endpoint,
   pubsub_server: Setlistify.PubSub,
   live_view: [signing_salt: "8A8eHyXo"]
 
-# Configure esbuild (the version is required)
-config :esbuild,
-  version: "0.14.41",
-  default: [
-    args:
-      ~w(js/app.js --bundle --target=es2017 --outdir=../priv/static/assets --external:/fonts/* --external:/images/*),
-    cd: Path.expand("../assets", __DIR__),
-    env: %{"NODE_PATH" => Path.expand("../deps", __DIR__)}
-  ]
-
 # Configure tailwind (the version is required)
 config :tailwind,
   version: "4.1.7",
@@ -35,24 +49,10 @@ config :tailwind,
       --input=assets/css/app.css
       --output=priv/static/assets/app.css
     ),
+
+    # Import environment specific config. This must remain at the bottom
+    # of this file so it overrides the configuration defined above.
     cd: Path.expand("..", __DIR__)
   ]
 
-# Configures Elixir's Logger
-config :logger, :console,
-  format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id]
-
-# Use Jason for JSON parsing in Phoenix
-config :phoenix, :json_library, Jason
-
-# This will be overridden in dev/prod
-config :opentelemetry, :resource,
-  service: [
-    name: "setlistify",
-    namespace: "setlistify"
-  ]
-
-# Import environment specific config. This must remain at the bottom
-# of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"

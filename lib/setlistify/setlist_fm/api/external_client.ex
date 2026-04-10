@@ -1,4 +1,5 @@
 defmodule Setlistify.SetlistFm.API.ExternalClient do
+  @moduledoc false
   @behaviour Setlistify.SetlistFm.API
 
   require Logger

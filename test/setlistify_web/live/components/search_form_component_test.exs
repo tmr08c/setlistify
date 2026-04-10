@@ -7,6 +7,7 @@ defmodule SetlistifyWeb.Components.SearchFormComponentTest do
 
   # Simple wrapper LiveView for testing component interactions
   defmodule TestLive do
+    @moduledoc false
     use Phoenix.LiveView
 
     def mount(_params, _session, socket) do

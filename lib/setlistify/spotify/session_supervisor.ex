@@ -3,9 +3,10 @@ defmodule Setlistify.Spotify.SessionSupervisor do
   Supervisor for managing Spotify user token processes.
   """
 
+  alias Setlistify.Spotify.SessionManager
+
   require Logger
   require OpenTelemetry.Tracer
-  alias Setlistify.Spotify.SessionManager
 
   def start_user_token(user_id, tokens_or_session) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.SessionSupervisor.start_user_token" do

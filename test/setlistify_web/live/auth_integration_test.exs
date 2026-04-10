@@ -1,10 +1,12 @@
 defmodule SetlistifyWeb.Live.AuthIntegrationTest do
   use SetlistifyWeb.ConnCase
-  import Phoenix.LiveViewTest
 
-  alias Setlistify.Spotify.{SessionManager, UserSession}
-  alias Setlistify.AppleMusic
+  import Phoenix.LiveViewTest
   import Setlistify.Test.RegistryHelpers
+
+  alias Setlistify.AppleMusic
+  alias Setlistify.Spotify.SessionManager
+  alias Setlistify.Spotify.UserSession
 
   describe "LiveView authentication integration" do
     test "authenticated user session is properly loaded in LiveView", %{conn: conn} do

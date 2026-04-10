@@ -1,11 +1,13 @@
 defmodule Setlistify.Spotify.SessionSupervisorTest do
   use ExUnit.Case, async: true
-  alias Setlistify.Spotify.SessionSupervisor
-  alias Setlistify.Spotify.UserSession
+
   import Setlistify.Test.RegistryHelpers
 
+  alias Setlistify.Spotify.SessionSupervisor
+  alias Setlistify.Spotify.UserSession
+
   # Generate unique user IDs for each test to prevent test pollution
-  def uniq_user_id(), do: "user_#{System.unique_integer([:positive])}"
+  def uniq_user_id, do: "user_#{System.unique_integer([:positive])}"
 
   setup do
     # Just generate a unique user ID for each test

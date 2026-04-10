@@ -24,8 +24,7 @@ defmodule Setlistify.AppleMusic.API do
 
   @callback create_playlist(UserSession.t(), String.t(), String.t()) ::
               {:ok, %{id: String.t(), external_url: String.t()}} | {:error, atom()}
-  def create_playlist(user_session, name, description),
-    do: impl().create_playlist(user_session, name, description)
+  def create_playlist(user_session, name, description), do: impl().create_playlist(user_session, name, description)
 
   @callback add_tracks_to_playlist(UserSession.t(), String.t(), [String.t()]) ::
               {:ok, atom()} | {:error, atom()}

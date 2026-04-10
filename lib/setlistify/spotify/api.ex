@@ -1,9 +1,10 @@
 defmodule Setlistify.Spotify.API do
+  @moduledoc false
   @behaviour Setlistify.MusicService.API
 
-  require OpenTelemetry.Tracer
-
   alias Setlistify.Spotify.UserSession
+
+  require OpenTelemetry.Tracer
 
   @callback search_for_track(UserSession.t(), String.t(), String.t()) ::
               nil | %{track_id: String.t()} | {:error, atom()}
@@ -15,8 +16,7 @@ defmodule Setlistify.Spotify.API do
 
   @callback create_playlist(UserSession.t(), String.t(), String.t()) ::
               {:ok, %{id: String.t(), external_url: String.t()}} | {:error, atom()}
-  def create_playlist(user_session, name, description),
-    do: impl().create_playlist(user_session, name, description)
+  def create_playlist(user_session, name, description), do: impl().create_playlist(user_session, name, description)
 
   @callback add_tracks_to_playlist(UserSession.t(), String.t(), [String.t()]) ::
               {:ok, atom()} | {:error, atom()}
@@ -50,7 +50,7 @@ defmodule Setlistify.Spotify.API do
   end
 
   @callback exchange_code(String.t(), String.t()) ::
-              {:ok, Setlistify.Spotify.UserSession.t()}
+              {:ok, UserSession.t()}
               | {:error, atom()}
   def exchange_code(code, redirect_uri) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.exchange_code" do
@@ -65,7 +65,7 @@ defmodule Setlistify.Spotify.API do
   end
 
   @callback refresh_to_user_session(String.t()) ::
-              {:ok, Setlistify.Spotify.UserSession.t()}
+              {:ok, UserSession.t()}
               | {:error, atom()}
   def refresh_to_user_session(refresh_token) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.refresh_to_user_session" do

@@ -98,19 +98,20 @@ case Config.config_env() do
   _ -> :ok
 end
 
+config :setlistify, apple_music_key_id: System.fetch_env!("APPLE_MUSIC_KEY_ID")
+config :setlistify, apple_music_private_key: System.fetch_env!("APPLE_MUSIC_PRIVATE_KEY")
+
+## Apple Music API
+config :setlistify, apple_music_team_id: System.fetch_env!("APPLE_MUSIC_TEAM_ID")
+
 ## Setlist.fm API
 config :setlistify, setlist_fm_api_key: System.fetch_env!("SETLIST_FM_API_SECRET")
 
 ## Spotify API
+## PromEx metrics server port configuration
 config :setlistify, spotify_client_id: System.fetch_env!("SPOTIFY_CLIENT_ID")
 config :setlistify, spotify_client_secret: System.fetch_env!("SPOTIFY_CLIENT_SECRET")
 
-## Apple Music API
-config :setlistify, apple_music_team_id: System.fetch_env!("APPLE_MUSIC_TEAM_ID")
-config :setlistify, apple_music_key_id: System.fetch_env!("APPLE_MUSIC_KEY_ID")
-config :setlistify, apple_music_private_key: System.fetch_env!("APPLE_MUSIC_PRIVATE_KEY")
-
-## PromEx metrics server port configuration
 if prom_ex_port = System.get_env("PROM_EX_PORT") do
   config :setlistify, Setlistify.PromEx,
     port: String.to_integer(prom_ex_port),
@@ -132,14 +133,10 @@ if use_grafana_cloud do
   grafana_tempo_user_id = System.get_env("GRAFANA_CLOUD_TEMPO_USER_ID")
   otel_auth = Base.encode64("#{grafana_tempo_user_id}:#{grafana_api_key}")
 
-  config :opentelemetry_exporter,
-    otlp_protocol: :grpc,
-    otlp_traces_endpoint: tempo_endpoint,
-    otlp_headers: [{"Authorization", "Basic #{otel_auth}"}]
-
   # Add zone to resource attributes if provided
   # TODO: Should this actually be from Fly
   zone_attrs = if grafana_zone, do: [{"cloud.zone", grafana_zone}], else: []
+  prometheus_endpoint = System.get_env("GRAFANA_CLOUD_PROMETHEUS_ENDPOINT")
 
   config :opentelemetry, :resource,
     service: [
@@ -148,7 +145,7 @@ if use_grafana_cloud do
       version: "1.0.0"
     ],
     deployment: [
-      environment: config_env() |> to_string()
+      environment: to_string(config_env())
     ],
     host: [
       name: System.get_env("FLY_ALLOC_ID", "local")
@@ -166,8 +163,10 @@ if use_grafana_cloud do
       ] ++ zone_attrs
 
   # Metrics / Prometheus
-
-  prometheus_endpoint = System.get_env("GRAFANA_CLOUD_PROMETHEUS_ENDPOINT")
+  config :opentelemetry_exporter,
+    otlp_protocol: :grpc,
+    otlp_traces_endpoint: tempo_endpoint,
+    otlp_headers: [{"Authorization", "Basic #{otel_auth}"}]
 
   if prometheus_endpoint do
     prometheus_username = System.get_env("GRAFANA_CLOUD_PROMETHEUS_USERNAME")
@@ -229,8 +228,6 @@ if use_grafana_cloud do
   loki_user_id = System.get_env("GRAFANA_CLOUD_LOKI_USER_ID")
 
   if loki_endpoint && loki_user_id do
-    config :logger, backends: [:console, Setlistify.LokiLogger]
-
     config :logger, Setlistify.LokiLogger,
       url: loki_endpoint,
       username: loki_user_id,
@@ -245,16 +242,12 @@ if use_grafana_cloud do
         "fly_app" => System.get_env("FLY_APP_NAME", "setlistify"),
         "fly_region" => System.get_env("FLY_REGION", "unknown")
       }
+
+    config :logger, backends: [:console, Setlistify.LokiLogger]
   end
 
   # Local OTEL-LGTM configuration (default)
 else
-  # OpenTelemetry / Tempo
-  config :opentelemetry_exporter,
-    otlp_protocol: :http_protobuf,
-    otlp_traces_endpoint: "http://localhost:4318/v1/traces",
-    otlp_headers: []
-
   config :opentelemetry, :resource,
     service: [
       name: "setlistify",
@@ -262,13 +255,19 @@ else
       version: "1.0.0"
     ],
     deployment: [
-      environment: config_env() |> to_string()
+      environment: to_string(config_env())
     ],
     host: [
       name: System.get_env("HOSTNAME", "localhost")
     ]
 
-  # Local PromEx configuration (skip for test environment)
+  # OpenTelemetry / Tempo
+  config :opentelemetry_exporter,
+    otlp_protocol: :http_protobuf,
+    otlp_traces_endpoint: "http://localhost:4318/v1/traces",
+    # Local PromEx configuration (skip for test environment)
+    otlp_headers: []
+
   if config_env() != :test do
     config :setlistify, Setlistify.PromEx,
       manual_metrics_start_delay: :no_delay,

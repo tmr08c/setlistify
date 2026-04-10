@@ -1,17 +1,19 @@
 defmodule SetlistifyWeb.Auth.LiveHooksTest do
   use SetlistifyWeb.ConnCase, async: false
 
-  alias Setlistify.Spotify.{SessionManager, UserSession}
+  alias Phoenix.LiveView.Socket
+  alias Setlistify.Spotify.SessionManager
+  alias Setlistify.Spotify.SessionSupervisor
+  alias Setlistify.Spotify.UserSession
+  alias Setlistify.Spotify.UserSessionRegistry
   alias SetlistifyWeb.Auth.LiveHooks
 
   describe "on_mount: default" do
     test "assigns user data when authenticated" do
       # Start the registry
-      Registry.start_link(keys: :unique, name: Setlistify.Spotify.UserSessionRegistry)
+      Registry.start_link(keys: :unique, name: UserSessionRegistry)
 
-      start_supervised!(
-        {DynamicSupervisor, strategy: :one_for_one, name: Setlistify.Spotify.SessionSupervisor}
-      )
+      start_supervised!({DynamicSupervisor, strategy: :one_for_one, name: SessionSupervisor})
 
       user_id = "user-123"
 
@@ -26,7 +28,7 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
       # Start the session manager
       {:ok, _pid} = SessionManager.start_link({user_id, user_session})
 
-      socket = %Phoenix.LiveView.Socket{
+      socket = %Socket{
         assigns: %{__changed__: %{}, flash: %{}},
         private: %{
           connect_info: %{request_path: "/test-path"},
@@ -43,7 +45,7 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
     end
 
     test "assigns nil when not authenticated" do
-      socket = %Phoenix.LiveView.Socket{
+      socket = %Socket{
         assigns: %{__changed__: %{}, flash: %{}},
         private: %{
           connect_info: %{request_path: "/test-path"},
@@ -60,7 +62,7 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
     end
 
     test "assigns nil when auth_provider is unknown" do
-      socket = %Phoenix.LiveView.Socket{
+      socket = %Socket{
         assigns: %{__changed__: %{}, flash: %{}},
         private: %{
           connect_info: %{request_path: "/test-path"},
@@ -79,7 +81,7 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
 
   describe "on_mount: ensure_authenticated" do
     test "redirects if user is not authenticated" do
-      socket = %Phoenix.LiveView.Socket{
+      socket = %Socket{
         assigns: %{__changed__: %{}, flash: %{}},
         private: %{
           connect_info: %{request_path: "/test-path"},
@@ -97,11 +99,11 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
 
     test "redirects if user session is not found" do
       # Start the registry
-      Registry.start_link(keys: :unique, name: Setlistify.Spotify.UserSessionRegistry)
+      Registry.start_link(keys: :unique, name: UserSessionRegistry)
 
       user_id = "non-existent-user"
 
-      socket = %Phoenix.LiveView.Socket{
+      socket = %Socket{
         assigns: %{__changed__: %{}, flash: %{}},
         private: %{
           connect_info: %{request_path: "/test-path"},
@@ -119,11 +121,9 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
 
     test "allows authenticated users to continue" do
       # Start the registry
-      Registry.start_link(keys: :unique, name: Setlistify.Spotify.UserSessionRegistry)
+      Registry.start_link(keys: :unique, name: UserSessionRegistry)
 
-      start_supervised!(
-        {DynamicSupervisor, strategy: :one_for_one, name: Setlistify.Spotify.SessionSupervisor}
-      )
+      start_supervised!({DynamicSupervisor, strategy: :one_for_one, name: SessionSupervisor})
 
       user_id = "user-123"
 
@@ -138,7 +138,7 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
       # Start the session manager
       {:ok, _pid} = SessionManager.start_link({user_id, user_session})
 
-      socket = %Phoenix.LiveView.Socket{
+      socket = %Socket{
         assigns: %{__changed__: %{}, flash: %{}},
         private: %{
           connect_info: %{request_path: "/test-path"},

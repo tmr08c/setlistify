@@ -1,10 +1,14 @@
 defmodule SetlistifyWeb.Setlists.ShowLive do
+  @moduledoc false
   use SetlistifyWeb, :live_view
+
+  alias Setlistify.AppleMusic
+  alias Setlistify.MusicService
+  alias Setlistify.SetlistFm
+  alias Setlistify.Spotify
 
   require OpenTelemetry.Tracer
   require OpentelemetryPhoenixLiveViewProcessPropagator.LiveView
-
-  alias Setlistify.{MusicService, SetlistFm, Spotify, AppleMusic}
 
   def mount(%{"id" => id}, _session, socket) do
     case SetlistFm.API.get_setlist(id) do
@@ -12,8 +16,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
         user_session = socket.assigns[:user_session]
 
         socket =
-          socket
-          |> assign(
+          assign(socket,
             sets: setlist.sets,
             artist: setlist.artist,
             venue_name: setlist.venue.name,
@@ -131,16 +134,14 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                )}
 
             {:error, reason} ->
-              {:noreply,
-               put_flash(socket, :error, "Failed to add tracks to playlist: #{inspect(reason)}")}
+              {:noreply, put_flash(socket, :error, "Failed to add tracks to playlist: #{inspect(reason)}")}
           end
 
         {:error, reason} ->
           {:noreply, put_flash(socket, :error, "Failed to create playlist: #{inspect(reason)}")}
       end
     else
-      {:noreply,
-       put_flash(socket, :error, "Unable to access your music session. Please log in again.")}
+      {:noreply, put_flash(socket, :error, "Unable to access your music session. Please log in again.")}
     end
   end
 

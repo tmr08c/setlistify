@@ -1,5 +1,11 @@
 import Config
 
+# Do not print debug messages in production
+config :logger, level: :info
+
+# Disable PromEx Grafana integration in production until monitoring is set up
+config :setlistify, Setlistify.PromEx, grafana: :disabled
+
 # For production, don't forget to configure the url host
 # to something meaningful, Phoenix uses this information
 # when generating URLs.
@@ -10,13 +16,6 @@ import Config
 # which you should run after static files are built and
 # before starting your production server.
 config :setlistify, SetlistifyWeb.Endpoint,
+  # Runtime production configuration, including reading
+  # of environment variables, is done on config/runtime.exs.
   cache_static_manifest: "priv/static/cache_manifest.json"
-
-# Do not print debug messages in production
-config :logger, level: :info
-
-# Disable PromEx Grafana integration in production until monitoring is set up
-config :setlistify, Setlistify.PromEx, grafana: :disabled
-
-# Runtime production configuration, including reading
-# of environment variables, is done on config/runtime.exs.

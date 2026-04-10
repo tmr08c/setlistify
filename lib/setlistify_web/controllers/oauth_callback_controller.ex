@@ -53,12 +53,12 @@ defmodule SetlistifyWeb.OAuthCallbackController do
   - SessionManager handles automatic token refresh
   """
 
-  alias SetlistifyWeb.UserAuth
-  alias Setlistify.Spotify
+  use SetlistifyWeb, :controller
+
   alias Setlistify.AppleMusic
   alias Setlistify.Auth.TokenSalts
-
-  use SetlistifyWeb, :controller
+  alias Setlistify.Spotify
+  alias SetlistifyWeb.UserAuth
 
   def new(conn, %{"provider" => "spotify", "code" => code, "state" => state}) do
     if state == get_session(conn, :oauth_state) do
@@ -116,7 +116,8 @@ defmodule SetlistifyWeb.OAuthCallbackController do
   @state_length 10
   def sign_in(conn, %{"provider" => "spotify"} = params) do
     state =
-      :crypto.strong_rand_bytes(@state_length)
+      @state_length
+      |> :crypto.strong_rand_bytes()
       |> Base.url_encode64()
       |> binary_part(0, @state_length)
 

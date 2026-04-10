@@ -1,6 +1,9 @@
 defmodule SetlistifyWeb.Router do
   use SetlistifyWeb, :router
 
+  alias SetlistifyWeb.Auth.LiveHooks
+  alias SetlistifyWeb.Telemetry.LiveViewTelemetry
+
   pipeline :browser do
     plug :accepts, ["html"]
     plug :fetch_session
@@ -31,8 +34,8 @@ defmodule SetlistifyWeb.Router do
 
     live_session :default,
       on_mount: [
-        {SetlistifyWeb.Telemetry.LiveViewTelemetry, :default},
-        SetlistifyWeb.Auth.LiveHooks
+        {LiveViewTelemetry, :default},
+        LiveHooks
       ] do
       live "/", HomeLive
       live "/setlists", SearchLive
@@ -41,8 +44,8 @@ defmodule SetlistifyWeb.Router do
 
     live_session :require_authenticated_user,
       on_mount: [
-        {SetlistifyWeb.Telemetry.LiveViewTelemetry, :default},
-        {SetlistifyWeb.Auth.LiveHooks, :ensure_authenticated}
+        {LiveViewTelemetry, :default},
+        {LiveHooks, :ensure_authenticated}
       ] do
       live "/playlists", Playlists.ShowLive
     end

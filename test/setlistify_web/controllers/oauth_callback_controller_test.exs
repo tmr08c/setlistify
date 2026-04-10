@@ -1,12 +1,15 @@
 defmodule SetlistifyWeb.OAuthCallbackControllerTest do
   use SetlistifyWeb.ConnCase, async: false
+
   import Hammox
-  alias Setlistify.Spotify.SessionManager
-  alias Setlistify.Spotify.SessionSupervisor
+
   alias Setlistify.AppleMusic
   alias Setlistify.Auth.TokenSalts
-
+  alias Setlistify.Spotify.API.MockClient
+  alias Setlistify.Spotify.SessionManager
+  alias Setlistify.Spotify.SessionSupervisor
   # We don't need to set up the registry and supervisor here as they're already started with the application
+  alias Setlistify.Spotify.UserSession
 
   setup do
     # Generate a unique user ID for each test to prevent test pollution
@@ -30,7 +33,7 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       conn = get(conn, ~p"/signin/spotify")
 
       # The controller should set the oauth_state in the session
-      assert get_session(conn, :oauth_state) != nil
+      assert get_session(conn, :oauth_state)
 
       # The controller should redirect to Spotify's authorization endpoint
       assert conn.status == 302
@@ -65,12 +68,12 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
         conn |> init_test_session(%{}) |> put_session(:oauth_state, oauth_state) |> fetch_flash()
 
       # Mock the exchange_code call to return UserSession
-      expect(Setlistify.Spotify.API.MockClient, :exchange_code, fn code, redirect_uri ->
+      expect(MockClient, :exchange_code, fn code, redirect_uri ->
         assert code == "test_code"
         assert redirect_uri =~ "/oauth/callbacks/spotify"
 
         {:ok,
-         %Setlistify.Spotify.UserSession{
+         %UserSession{
            access_token: "test_access_token",
            refresh_token: "test_refresh_token",
            expires_at: System.system_time(:second) + 3600,
@@ -114,7 +117,7 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       # Start a session process using the supervisor to properly register it
       assert Registry.lookup(Setlistify.UserSessionRegistry, {:spotify, test_user}) == []
 
-      user_session = %Setlistify.Spotify.UserSession{
+      user_session = %UserSession{
         access_token: "test",
         refresh_token: "test",
         expires_at: System.system_time(:second) + 3600,
@@ -207,12 +210,12 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
         |> fetch_flash()
 
       # Mock the exchange_code call
-      expect(Setlistify.Spotify.API.MockClient, :exchange_code, fn code, redirect_uri ->
+      expect(MockClient, :exchange_code, fn code, redirect_uri ->
         assert code == "test_code"
         assert redirect_uri =~ "/oauth/callbacks/spotify"
 
         {:ok,
-         %Setlistify.Spotify.UserSession{
+         %UserSession{
            access_token: "test_access_token",
            refresh_token: "test_refresh_token",
            expires_at: System.system_time(:second) + 3600,
@@ -267,7 +270,7 @@ defmodule SetlistifyWeb.OAuthCallbackControllerTest do
       assert redirected_to(conn) =~ "/"
 
       user_id = get_session(conn, :user_id)
-      assert user_id != nil
+      assert user_id
       assert get_session(conn, :auth_provider) == "apple_music"
       assert get_session(conn, :storefront) == "us"
 

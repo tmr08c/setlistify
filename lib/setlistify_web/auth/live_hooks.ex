@@ -57,7 +57,7 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
   # Helper to handle unauthenticated users
   defp assign_unauthenticated_user(socket) do
     # Only attach the hook if we're in a real LiveView context
-    socket =
+    if_result =
       if Map.has_key?(socket.private, :root_view) do
         socket
         |> Phoenix.LiveView.attach_hook(
@@ -78,6 +78,9 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
       else
         socket
       end
+
+    socket =
+      if_result
       |> Phoenix.Component.assign(:user_id, nil)
       |> Phoenix.Component.assign(:user_session, nil)
       |> Phoenix.Component.assign(:apple_music_trigger, false)
@@ -108,8 +111,7 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
   defp handle_apple_music_authorized(_event, _params, socket), do: {:cont, socket}
 
   defp handle_apple_music_auth_failed("apple_music_auth_failed", _params, socket) do
-    {:halt,
-     Phoenix.LiveView.put_flash(socket, :error, "Apple Music sign-in failed. Please try again.")}
+    {:halt, Phoenix.LiveView.put_flash(socket, :error, "Apple Music sign-in failed. Please try again.")}
   end
 
   defp handle_apple_music_auth_failed(_event, _params, socket) do

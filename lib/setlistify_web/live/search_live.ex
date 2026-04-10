@@ -1,4 +1,5 @@
 defmodule SetlistifyWeb.SearchLive do
+  @moduledoc false
   use SetlistifyWeb, :live_view
   use Gettext, backend: SetlistifyWeb.Gettext
 
@@ -16,8 +17,7 @@ defmodule SetlistifyWeb.SearchLive do
      )}
   end
 
-  def handle_params(%{"query" => query} = params, _uri, socket)
-      when is_binary(query) and byte_size(query) > 0 do
+  def handle_params(%{"query" => query} = params, _uri, socket) when is_binary(query) and byte_size(query) > 0 do
     case String.trim(query) do
       "" ->
         {:noreply, push_navigate(socket, to: ~p"/")}
@@ -148,9 +148,7 @@ defmodule SetlistifyWeb.SearchLive do
 
   defp should_show_pagination?(nil), do: false
 
-  defp should_show_pagination?(%{total: total, items_per_page: items_per_page})
-       when total > items_per_page,
-       do: true
+  defp should_show_pagination?(%{total: total, items_per_page: items_per_page}) when total > items_per_page, do: true
 
   defp should_show_pagination?(_), do: false
 

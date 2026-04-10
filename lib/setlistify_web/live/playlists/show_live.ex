@@ -1,4 +1,5 @@
 defmodule SetlistifyWeb.Playlists.ShowLive do
+  @moduledoc false
   use SetlistifyWeb, :live_view
 
   alias Setlistify.MusicService
