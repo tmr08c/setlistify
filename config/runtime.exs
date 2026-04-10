@@ -228,7 +228,7 @@ if use_grafana_cloud do
   loki_user_id = System.get_env("GRAFANA_CLOUD_LOKI_USER_ID")
 
   if loki_endpoint && loki_user_id do
-    config :logger, Setlistify.LokiLogger,
+    config :setlistify, Setlistify.LokiLogger,
       url: loki_endpoint,
       username: loki_user_id,
       password: grafana_api_key,
@@ -284,7 +284,7 @@ else
   end
 
   # Local Loki configuration
-  config :logger, Setlistify.LokiLogger,
+  config :setlistify, Setlistify.LokiLogger,
     url: "http://localhost:3100/loki/api/v1/push",
     level: :info,
     metadata: [:request_id, :trace_id, :span_id, :user_id],

@@ -53,7 +53,7 @@ defmodule Setlistify.Application do
     # Start the supervisor
     case Supervisor.start_link(children, opts) do
       {:ok, _pid} = result ->
-        maybe_add_loki_backend()
+        maybe_add_loki_handler()
         result
 
       error ->
@@ -69,9 +69,13 @@ defmodule Setlistify.Application do
     :ok
   end
 
-  defp maybe_add_loki_backend do
-    if Application.get_env(:logger, Setlistify.LokiLogger) do
-      LoggerBackends.add(Setlistify.LokiLogger)
+  defp maybe_add_loki_handler do
+    if config = Application.get_env(:setlistify, Setlistify.LokiLogger) do
+      handler_config = %{
+        config: Map.new(config)
+      }
+
+      :logger.add_handler(:loki, Setlistify.LokiLogger, handler_config)
     end
   end
 
