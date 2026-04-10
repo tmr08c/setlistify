@@ -48,25 +48,26 @@ defmodule Setlistify.MixProject do
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},
       {:finch, "~> 0.13"},
       {:floki, ">= 0.30.0", only: :test},
+      {:lazy_html, "~> 0.1", only: :test},
       {:gettext, "~> 0.20"},
       {:hammox, "~> 0.7", only: :test},
       {:heroicons, "~> 0.5"},
       {:jason, "~> 1.2"},
-      {:phoenix, "~> 1.7.0-rc.2", override: true},
+      {:phoenix, "~> 1.8", override: true},
       {:phoenix_ecto, "~> 4.4"},
-      {:phoenix_html, "~> 3.0"},
-      {:phoenix_live_dashboard, "~> 0.8.5"},
+      {:phoenix_html, "~> 4.1"},
+      {:phoenix_live_dashboard, "~> 0.8"},
       {:phoenix_live_reload, "~> 1.2", only: :dev},
-      {:phoenix_live_view, "~> 1.0.0"},
+      {:phoenix_live_view, "~> 1.1"},
       {:plug_cowboy, "~> 2.5"},
       {:req, "~> 0.3"},
-      {:tailwind, "~> 0.3.1", runtime: Mix.env() == :dev},
+      {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
       {:telemetry_metrics, "~> 0.6"},
       {:telemetry_poller, "~> 1.0"},
       {:prom_ex, "~> 1.9"},
 
       # OpenTelemetry
-      {:opentelemetry_exporter, "~> 1.8.0"},
+      {:opentelemetry_exporter, "~> 1.8"},
       {:opentelemetry, "~> 1.3"},
       {:opentelemetry_api, "~> 1.4"},
 
@@ -77,7 +78,7 @@ defmodule Setlistify.MixProject do
       {:opentelemetry_req, "~> 1.0.0"},
 
       # Telemetry
-      {:telemetry, "~> 1.2.1"},
+      {:telemetry, "~> 1.2"},
 
       # Logging - enabled in Phase 2
       {:opentelemetry_logger_metadata, "~> 0.2.0"},
