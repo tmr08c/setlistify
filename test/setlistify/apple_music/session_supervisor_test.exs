@@ -43,6 +43,7 @@ defmodule Setlistify.AppleMusic.SessionSupervisorTest do
       assert pid1 != pid2
     end
 
+    @tag :capture_log
     test "handles already_started gracefully", %{user_id: user_id, user_session: user_session} do
       assert {:ok, pid1} = SessionSupervisor.start_user_token(user_id, user_session)
       assert {:ok, pid2} = SessionSupervisor.start_user_token(user_id, user_session)
