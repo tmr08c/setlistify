@@ -75,8 +75,6 @@ defmodule SetlistifyWeb.OAuthCallbackController do
               user_session.refresh_token
             )
 
-          # Start session manager process with UserSession
-          # TODO Consider if this should be called in `exchange_code`
           Spotify.SessionSupervisor.start_user_token(user_session.user_id, user_session)
 
           conn
