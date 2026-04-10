@@ -53,8 +53,6 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
   defp decrypt_token(nil), do: {:error, :missing}
 
   defp decrypt_token(encrypted) do
-    Phoenix.Token.verify(SetlistifyWeb.Endpoint, TokenSalts.spotify_refresh_token(), encrypted,
-      max_age: 86_400 * 30
-    )
+    Phoenix.Token.verify(SetlistifyWeb.Endpoint, TokenSalts.spotify_refresh_token(), encrypted, max_age: 86_400 * 30)
   end
 end

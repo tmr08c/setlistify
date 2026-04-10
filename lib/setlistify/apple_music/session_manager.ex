@@ -28,9 +28,7 @@ defmodule Setlistify.AppleMusic.SessionManager do
         {"session.operation", "start"}
       ])
 
-      case GenServer.start_link(__MODULE__, session,
-             name: SessionRegistry.via_tuple(:apple_music, user_id)
-           ) do
+      case GenServer.start_link(__MODULE__, session, name: SessionRegistry.via_tuple(:apple_music, user_id)) do
         {:ok, pid} = result ->
           Logger.info("Apple Music session manager started", %{
             user_id: user_id,

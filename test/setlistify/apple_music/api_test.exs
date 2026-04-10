@@ -38,9 +38,7 @@ defmodule Setlistify.AppleMusic.APITest do
 
   describe "create_playlist/3" do
     test "delegates to the impl and returns the result", %{user_session: user_session} do
-      expect(Setlistify.AppleMusic.API.MockClient, :create_playlist, 1, fn _session,
-                                                                           _name,
-                                                                           _description ->
+      expect(MockClient, :create_playlist, 1, fn _session, _name, _description ->
         {:ok, %{id: "p.playlist-1", external_url: "https://music.apple.com/playlist/1"}}
       end)
 
@@ -49,9 +47,7 @@ defmodule Setlistify.AppleMusic.APITest do
     end
 
     test "returns the error when impl returns an error", %{user_session: user_session} do
-      expect(Setlistify.AppleMusic.API.MockClient, :create_playlist, 1, fn _session,
-                                                                           _name,
-                                                                           _description ->
+      expect(MockClient, :create_playlist, 1, fn _session, _name, _description ->
         {:error, :unauthorized}
       end)
 
@@ -62,9 +58,7 @@ defmodule Setlistify.AppleMusic.APITest do
 
   describe "add_tracks_to_playlist/3" do
     test "delegates to the impl and returns the result", %{user_session: user_session} do
-      expect(Setlistify.AppleMusic.API.MockClient, :add_tracks_to_playlist, 1, fn _session,
-                                                                                  _playlist_id,
-                                                                                  _tracks ->
+      expect(MockClient, :add_tracks_to_playlist, 1, fn _session, _playlist_id, _tracks ->
         {:ok, :tracks_added}
       end)
 
@@ -76,9 +70,7 @@ defmodule Setlistify.AppleMusic.APITest do
     end
 
     test "returns the error when impl returns an error", %{user_session: user_session} do
-      expect(Setlistify.AppleMusic.API.MockClient, :add_tracks_to_playlist, 1, fn _session,
-                                                                                  _playlist_id,
-                                                                                  _tracks ->
+      expect(MockClient, :add_tracks_to_playlist, 1, fn _session, _playlist_id, _tracks ->
         {:error, :rate_limited}
       end)
 
