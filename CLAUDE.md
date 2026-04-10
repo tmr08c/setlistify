@@ -107,6 +107,7 @@ If Tidewave tools are unavailable (server not running), fall back to static tool
 
 ## Development Reminders
 
-- run mix format after making changes
-- mix test to run all tests
+- Run `mix format` after making changes (includes Styler auto-rewrites)
+- Run `mix credo --strict` to check for static analysis issues
+- Run `mix test` to run all tests
 - Run format frequently to avoid style warnings, especially before planning to commit
