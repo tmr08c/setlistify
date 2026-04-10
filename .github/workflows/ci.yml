@@ -39,17 +39,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Step: Read .tool-versions to identify languge versions to use
-      - name: Read .tool-versions
-        uses: marocchino/tool-versions-action@v1
-        id: versions
-
-      # Step: Setup Elixir + Erlang image as the base.
+      # Step: Setup Elixir + Erlang using versions from .mise.toml
       - name: Set up Elixir
         uses: erlef/setup-beam@v1
         with:
-          otp-version: ${{steps.versions.outputs.erlang}}
-          elixir-version: ${{steps.versions.outputs.elixir}}
+          version-file: .mise.toml
+          version-type: strict
         id: beam
 
       # Step: Define how to cache deps. Restores existing cache if present.
