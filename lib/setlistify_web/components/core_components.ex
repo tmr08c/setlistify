@@ -127,7 +127,11 @@ defmodule SetlistifyWeb.CoreComponents do
         <.icon :if={@kind == :error} name="hero-exclamation-circle-mini" class="h-4 w-4" /> {@title}
       </p>
       <p class="mt-2 text-sm leading-5">{msg}</p>
-      <button type="button" class="group absolute top-1 right-1 p-2" aria-label={gettext("close")}>
+      <button
+        type="button"
+        class="group absolute top-1 right-1 p-2 cursor-pointer"
+        aria-label={gettext("close")}
+      >
         <.icon name="hero-x-mark-solid" class="h-5 w-5 opacity-40 group-hover:opacity-70" />
       </button>
     </div>
@@ -260,7 +264,7 @@ defmodule SetlistifyWeb.CoreComponents do
     * For live file uploads, see `Phoenix.Component.live_file_input/1`
 
   See https://developer.mozilla.org/en-US/docs/Web/HTML/Element/input
-  for more information. Unsupported types, such as hidden and radio,
+  for more information. Unsupported types, such as radio,
   are best written directly in your templates.
 
   ## Examples
@@ -275,7 +279,7 @@ defmodule SetlistifyWeb.CoreComponents do
 
   attr :type, :string,
     default: "text",
-    values: ~w(checkbox color date datetime-local email file month number password
+    values: ~w(checkbox color date datetime-local email file hidden month number password
                range search select tel text textarea time url week)
 
   attr :field, FormField, doc: "a form field struct retrieved from the form, for example: @form[:email]"
@@ -300,6 +304,18 @@ defmodule SetlistifyWeb.CoreComponents do
     |> input()
   end
 
+  def input(%{type: "hidden"} = assigns) do
+    ~H"""
+    <input
+      type={@type}
+      name={@name}
+      id={@id}
+      value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+      {@rest}
+    />
+    """
+  end
+
   def input(%{type: "checkbox"} = assigns) do
     assigns =
       assign_new(assigns, :checked, fn ->
@@ -309,7 +325,13 @@ defmodule SetlistifyWeb.CoreComponents do
     ~H"""
     <div>
       <label class="flex items-center gap-4 text-sm leading-6 text-gray-300">
-        <input type="hidden" name={@name} value="false" disabled={@rest[:disabled]} />
+        <input
+          type="hidden"
+          name={@name}
+          value="false"
+          disabled={@rest[:disabled]}
+          form={@rest[:form]}
+        />
         <input
           type="checkbox"
           id={@id}
@@ -585,7 +607,7 @@ defmodule SetlistifyWeb.CoreComponents do
       <.icon name="hero-arrow-path" class="ml-1 w-3 h-3 animate-spin" />
   """
   attr :name, :string, required: true
-  attr :class, :string, default: nil
+  attr :class, :any, default: nil
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
@@ -600,7 +622,7 @@ defmodule SetlistifyWeb.CoreComponents do
       to: selector,
       time: 300,
       transition:
-        {"transition-all transform ease-out duration-300", "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
+        {"transition-all ease-out duration-300", "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95",
          "opacity-100 translate-y-0 sm:scale-100"}
     )
   end
@@ -610,7 +632,7 @@ defmodule SetlistifyWeb.CoreComponents do
       to: selector,
       time: 200,
       transition:
-        {"transition-all transform ease-in duration-200", "opacity-100 translate-y-0 sm:scale-100",
+        {"transition-all ease-in duration-200", "opacity-100 translate-y-0 sm:scale-100",
          "opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95"}
     )
   end
@@ -621,7 +643,7 @@ defmodule SetlistifyWeb.CoreComponents do
     |> JS.show(
       to: "##{id}-bg",
       time: 300,
-      transition: {"transition-all transform ease-out duration-300", "opacity-0", "opacity-100"}
+      transition: {"transition-all ease-out duration-300", "opacity-0", "opacity-100"}
     )
     |> show("##{id}-container")
     |> JS.add_class("overflow-hidden", to: "body")
@@ -632,7 +654,7 @@ defmodule SetlistifyWeb.CoreComponents do
     js
     |> JS.hide(
       to: "##{id}-bg",
-      transition: {"transition-all transform ease-in duration-200", "opacity-100", "opacity-0"}
+      transition: {"transition-all ease-in duration-200", "opacity-100", "opacity-0"}
     )
     |> hide("##{id}-container")
     |> JS.hide(to: "##{id}", transition: {"block", "block", "hidden"})
