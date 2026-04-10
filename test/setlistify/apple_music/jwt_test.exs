@@ -35,7 +35,7 @@ defmodule Setlistify.AppleMusic.JWTTest do
       token = JWT.sign(%{"iat" => 1_000, "exp" => 2_000}, @test_private_pem, @kid, @iss)
 
       [header_b64 | _] = String.split(token, ".")
-      header = header_b64 |> Base.url_decode64!(padding: false) |> Jason.decode!()
+      header = header_b64 |> Base.url_decode64!(padding: false) |> JSON.decode!()
 
       assert header["alg"] == "ES256"
       assert header["kid"] == @kid
@@ -46,7 +46,7 @@ defmodule Setlistify.AppleMusic.JWTTest do
       token = JWT.sign(claims, @test_private_pem, @kid, @iss)
 
       [_, payload_b64 | _] = String.split(token, ".")
-      decoded = payload_b64 |> Base.url_decode64!(padding: false) |> Jason.decode!()
+      decoded = payload_b64 |> Base.url_decode64!(padding: false) |> JSON.decode!()
 
       assert decoded["iss"] == @iss
       assert decoded["iat"] == 1_000

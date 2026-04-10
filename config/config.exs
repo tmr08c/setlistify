@@ -28,8 +28,8 @@ config :opentelemetry, :resource,
     namespace: "setlistify"
   ]
 
-# Use Jason for JSON parsing in Phoenix
-config :phoenix, :json_library, Jason
+# Use Elixir's built-in JSON module for Phoenix
+config :phoenix, :json_library, JSON
 
 # Configures the endpoint
 config :setlistify, SetlistifyWeb.Endpoint,

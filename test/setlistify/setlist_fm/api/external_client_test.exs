@@ -17,7 +17,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
 
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
-        |> Plug.Conn.send_resp(200, Jason.encode!(Jason.decode!(@search_response)))
+        |> Plug.Conn.send_resp(200, JSON.encode!(JSON.decode!(@search_response)))
     end)
 
     assert {:ok, %{setlists: setlists, pagination: pagination}} =
@@ -76,7 +76,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
 
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
-        |> Plug.Conn.send_resp(200, Jason.encode!(response))
+        |> Plug.Conn.send_resp(200, JSON.encode!(response))
     end)
 
     assert {:ok, %{setlists: setlists, pagination: pagination}} =
@@ -137,7 +137,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
-        |> Plug.Conn.send_resp(200, Jason.encode!(response))
+        |> Plug.Conn.send_resp(200, JSON.encode!(response))
     end)
 
     assert {:ok, %{setlists: [uk_event, canada_event]}} = ExternalClient.search("beatles", 1)
@@ -177,7 +177,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
-        |> Plug.Conn.send_resp(200, Jason.encode!(response))
+        |> Plug.Conn.send_resp(200, JSON.encode!(response))
     end)
 
     assert {:ok, %{setlists: [event]}} = ExternalClient.search("test", 1)
@@ -310,7 +310,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
-        |> Plug.Conn.send_resp(200, Jason.encode!(response))
+        |> Plug.Conn.send_resp(200, JSON.encode!(response))
     end)
 
     assert {:ok, %{setlists: [no_songs, one_set, multiple_sets, set_with_encore]}} =
@@ -418,7 +418,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
       %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
         conn
         |> Plug.Conn.put_resp_header("content-type", "application/json")
-        |> Plug.Conn.send_resp(200, Jason.encode!(response))
+        |> Plug.Conn.send_resp(200, JSON.encode!(response))
     end)
 
     assert {:ok, %{setlists: [result]}} = ExternalClient.search("test artist", 1)
@@ -441,7 +441,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
 
       conn
       |> Plug.Conn.put_resp_header("content-type", "application/json")
-      |> Plug.Conn.send_resp(200, Jason.encode!(Jason.decode!(@get_response)))
+      |> Plug.Conn.send_resp(200, JSON.encode!(JSON.decode!(@get_response)))
     end)
 
     assert {:ok, result} = ExternalClient.get_setlist(id)
@@ -466,7 +466,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(500, Jason.encode!(%{error: "Internal Server Error"}))
+          |> Plug.Conn.send_resp(500, JSON.encode!(%{error: "Internal Server Error"}))
       end)
 
       assert {:error, {:api_error, _}} = ExternalClient.search("test artist", 1)
@@ -477,7 +477,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         %{request_path: "/rest/1.0/search/setlists", method: "GET"} = conn ->
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(429, Jason.encode!(%{error: "Rate Limited"}))
+          |> Plug.Conn.send_resp(429, JSON.encode!(%{error: "Rate Limited"}))
       end)
 
       assert {:error, {:api_error, "HTTP 429"}} = ExternalClient.search("test artist", 1)
@@ -500,7 +500,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         %{request_path: "/rest/1.0/setlist/" <> ^id, method: "GET"} = conn ->
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(404, Jason.encode!(%{error: "Not Found"}))
+          |> Plug.Conn.send_resp(404, JSON.encode!(%{error: "Not Found"}))
       end)
 
       assert {:error, :not_found} = ExternalClient.get_setlist(id)
@@ -513,7 +513,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
         %{request_path: "/rest/1.0/setlist/" <> ^id, method: "GET"} = conn ->
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(503, Jason.encode!(%{error: "Service Unavailable"}))
+          |> Plug.Conn.send_resp(503, JSON.encode!(%{error: "Service Unavailable"}))
       end)
 
       assert {:error, :network_error} = ExternalClient.get_setlist(id)

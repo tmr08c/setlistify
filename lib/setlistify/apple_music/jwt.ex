@@ -15,10 +15,10 @@ defmodule Setlistify.AppleMusic.JWT do
           String.t()
   def sign(claims, pem, kid, iss) do
     header_b64 =
-      %{"alg" => "ES256", "kid" => kid} |> Jason.encode!() |> Base.url_encode64(padding: false)
+      %{"alg" => "ES256", "kid" => kid} |> JSON.encode!() |> Base.url_encode64(padding: false)
 
     payload_b64 =
-      claims |> Map.put("iss", iss) |> Jason.encode!() |> Base.url_encode64(padding: false)
+      claims |> Map.put("iss", iss) |> JSON.encode!() |> Base.url_encode64(padding: false)
 
     signing_input = header_b64 <> "." <> payload_b64
 
