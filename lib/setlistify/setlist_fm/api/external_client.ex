@@ -190,7 +190,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
       Logger.error("Exception during Setlist.fm get_setlist: #{inspect(error)}")
       OpenTelemetry.Tracer.record_exception(error)
       OpenTelemetry.Tracer.set_status(:error, "Exception: #{Exception.message(error)}")
-      raise error
+      reraise error, __STACKTRACE__
   end
 
   defp request(endpoint) do
