@@ -1,8 +1,10 @@
 defmodule Setlistify.AppleMusic.SessionSupervisorTest do
   use ExUnit.Case, async: true
+
+  import Setlistify.Test.RegistryHelpers
+
   alias Setlistify.AppleMusic.SessionSupervisor
   alias Setlistify.AppleMusic.UserSession
-  import Setlistify.Test.RegistryHelpers
 
   setup do
     user_id = unique_user_id()

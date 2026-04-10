@@ -6,10 +6,13 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
   import Setlistify.Test.RegistryHelpers
   import SetlistifyWeb.AuthHelpers
 
-  alias Setlistify.{SetlistFm, Spotify, AppleMusic}
-  alias Setlistify.Spotify.{SessionManager, UserSession}
+  alias Setlistify.AppleMusic
   alias Setlistify.AppleMusic.SessionManager, as: AppleMusicSessionManager
   alias Setlistify.AppleMusic.UserSession, as: AppleMusicUserSession
+  alias Setlistify.SetlistFm.API.MockClient
+  alias Setlistify.Spotify
+  alias Setlistify.Spotify.SessionManager
+  alias Setlistify.Spotify.UserSession
 
   # Cache fetching happens in another process, managed by Cachex. The process we
   # start in our application tree is a supervisor, so explictly `allow`ing with
@@ -255,7 +258,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
 
     conn = log_in_apple_music_user(conn, user_id)
 
-    expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
+    expect(MockClient, :get_setlist, 1, fn ^setlist_id ->
       {:ok,
        %{
          artist: artist,
@@ -272,8 +275,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
        }}
     end)
 
-    AppleMusic.API.MockClient
-    |> expect(:search_for_track, 2, fn _user_session, _artist, title ->
+    expect(AppleMusic.API.MockClient, :search_for_track, 2, fn _user_session, _artist, title ->
       case title do
         "song1" ->
           %{track_id: "apple_music:track:456"}
@@ -311,7 +313,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
 
     conn = log_in_apple_music_user(conn, user_id)
 
-    expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
+    expect(MockClient, :get_setlist, 1, fn ^setlist_id ->
       {:ok,
        %{
          artist: artist,
@@ -328,8 +330,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
        }}
     end)
 
-    AppleMusic.API.MockClient
-    |> expect(:search_for_track, 2, fn _user_session, _artist, title ->
+    expect(AppleMusic.API.MockClient, :search_for_track, 2, fn _user_session, _artist, title ->
       case title do
         "song1" ->
           %{track_id: "apple_music:track:456"}
@@ -345,7 +346,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
 
     AppleMusic.API.MockClient
     |> expect(:create_playlist, fn ^user_session, name, description ->
-      formatted_date = Date.utc_today() |> Date.to_iso8601()
+      formatted_date = Date.to_iso8601(Date.utc_today())
       assert name =~ artist
       assert name =~ venue
       assert name =~ formatted_date
@@ -383,7 +384,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
 
     conn = log_in_apple_music_user(conn, user_id)
 
-    expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
+    expect(MockClient, :get_setlist, 1, fn ^setlist_id ->
       {:ok,
        %{
          artist: "The Beatles",
@@ -400,8 +401,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
        }}
     end)
 
-    AppleMusic.API.MockClient
-    |> expect(:search_for_track, 1, fn _user_session, _artist, _title ->
+    expect(AppleMusic.API.MockClient, :search_for_track, 1, fn _user_session, _artist, _title ->
       %{track_id: "apple_music:track:789"}
     end)
 

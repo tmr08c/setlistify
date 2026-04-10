@@ -88,6 +88,8 @@ defmodule Setlistify.Spotify.SessionManager do
 
   @behaviour Setlistify.UserSessionManager
 
+  use GenServer
+
   alias Setlistify.SessionRegistry
   alias Setlistify.Spotify.API
   alias Setlistify.Spotify.UserSession
