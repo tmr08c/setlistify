@@ -97,9 +97,8 @@ defmodule Setlistify.Spotify.SessionManager do
   require Logger
   require OpenTelemetry.Tracer
 
-  # TODO: this name may not be the most clear for the goal. Does `  @refresh_buffer` make it more clear?
   # Refresh token 5 minutes before expiration
-  @refresh_threshold 5 * 60
+  @refresh_buffer 5 * 60
 
   # Client API
 
@@ -276,7 +275,7 @@ defmodule Setlistify.Spotify.SessionManager do
 
   @impl true
   def handle_continue(:schedule_refresh, %{expires_at: expires_at} = state) do
-    schedule_refresh(expires_at - timestamp() - @refresh_threshold)
+    schedule_refresh(expires_at - timestamp() - @refresh_buffer)
 
     {:noreply, state}
   end
@@ -401,7 +400,7 @@ defmodule Setlistify.Spotify.SessionManager do
 
       case API.refresh_token(refresh_token) do
         {:ok, new_tokens} ->
-          schedule_refresh(new_tokens.expires_in - @refresh_threshold)
+          schedule_refresh(new_tokens.expires_in - @refresh_buffer)
 
           new_state =
             state
