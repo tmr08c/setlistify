@@ -1,119 +1,127 @@
 defmodule Setlistify.LokiLogger do
   @moduledoc """
-  A simple Logger backend for Grafana Loki.
-  Sends logs directly to Loki's HTTP API without external dependencies.
+  An Erlang `:logger` handler for Grafana Loki.
+
+  Sends logs to Loki's HTTP API. The handler's `log/2` callback sends
+  messages to a dedicated `GenServer` process that buffers entries and
+  flushes them on a timer or when the buffer is full.
+
+  ## Configuration
+
+  Configuration is passed via `:logger.add_handler/3` in the `:config` key:
+
+      :logger.add_handler(:loki, Setlistify.LokiLogger, %{
+        config: %{
+          url: "http://localhost:3100/loki/api/v1/push",
+          level: :info,
+          metadata: [:request_id, :trace_id, :span_id],
+          max_buffer: 100,
+          labels: %{"application" => "setlistify"},
+          username: "user_id",
+          password: "api_key"
+        }
+      })
   """
 
-  @behaviour :gen_event
-
-  defstruct [
-    :url,
-    :labels,
-    :level,
-    :metadata,
-    :max_buffer,
-    :auth_header,
-    buffer: [],
-    buffer_size: 0,
-    timer_ref: nil
-  ]
+  use GenServer
 
   @default_url "http://localhost:3100/loki/api/v1/push"
   @default_max_buffer 100
-  # 1 second
   @flush_interval 1000
 
-  # Init callbacks
-  def init(__MODULE__), do: init({__MODULE__, []})
+  # -- Erlang :logger handler callbacks --
 
-  def init({__MODULE__, opts}) do
-    config = configure([], opts)
-    schedule_flush()
-    {:ok, config}
-  end
+  @doc false
+  def adding_handler(%{config: config} = handler_config) do
+    auth_header = build_auth_header(config)
 
-  # Handle configuration updates
-  def handle_call({:configure, opts}, state) do
-    {:ok, :ok, configure(state, opts)}
-  end
+    state = %{
+      url: Map.get(config, :url, @default_url),
+      labels: Map.get(config, :labels, %{}),
+      level: Map.get(config, :level),
+      metadata: Map.get(config, :metadata, []),
+      max_buffer: Map.get(config, :max_buffer, @default_max_buffer),
+      auth_header: auth_header,
+      buffer: [],
+      buffer_size: 0,
+      timer_ref: nil
+    }
 
-  # Handle log events
-  def handle_event({level, _gl, {Logger, msg, ts, md}}, state) do
-    %{level: min_level} = state
+    case GenServer.start_link(__MODULE__, state, name: __MODULE__) do
+      {:ok, pid} ->
+        {:ok, Map.put(handler_config, :config, Map.put(config, :pid, pid))}
 
-    if is_nil(min_level) or Logger.compare_levels(level, min_level) != :lt do
-      {:ok, buffer_event(level, msg, ts, md, state)}
-    else
-      {:ok, state}
+      {:error, reason} ->
+        {:error, reason}
     end
   end
 
-  def handle_event(:flush, state) do
-    {:ok, flush(state)}
+  def adding_handler(handler_config) do
+    adding_handler(Map.put(handler_config, :config, %{}))
   end
 
-  def handle_event(_, state), do: {:ok, state}
+  @doc false
+  def removing_handler(%{config: %{pid: pid}}) when is_pid(pid) do
+    GenServer.stop(pid, :normal)
+  end
 
-  # Handle timer-based flushing
+  def removing_handler(_config), do: :ok
+
+  @doc false
+  def changing_config(:set, _old_config, new_config) do
+    {:ok, new_config}
+  end
+
+  def changing_config(:update, old_config, new_config) do
+    {:ok, Map.merge(old_config, new_config)}
+  end
+
+  @doc false
+  def log(%{level: level, msg: msg, meta: meta}, %{config: config}) do
+    min_level = Map.get(config, :level)
+
+    if is_nil(min_level) or Logger.compare_levels(level, min_level) != :lt do
+      pid = Map.get(config, :pid)
+
+      if pid && Process.alive?(pid) do
+        GenServer.cast(pid, {:log, level, msg, meta})
+      end
+    end
+
+    :ok
+  end
+
+  def log(_event, _config), do: :ok
+
+  # -- GenServer callbacks --
+
+  @impl GenServer
+  def init(state) do
+    timer_ref = schedule_flush()
+    {:ok, %{state | timer_ref: timer_ref}}
+  end
+
+  @impl GenServer
+  def handle_cast({:log, level, msg, meta}, state) do
+    {:noreply, buffer_event(level, msg, meta, state)}
+  end
+
+  @impl GenServer
   def handle_info(:flush, state) do
-    schedule_flush()
-    {:ok, flush(state)}
+    timer_ref = schedule_flush()
+    {:noreply, flush(%{state | timer_ref: timer_ref})}
   end
 
-  def handle_info(_, state), do: {:ok, state}
+  def handle_info(_msg, state), do: {:noreply, state}
 
-  def code_change(_old_vsn, state, _extra), do: {:ok, state}
-
+  @impl GenServer
   def terminate(_reason, state) do
     flush(state)
     :ok
   end
 
-  # Private functions
-  defp configure(state, opts) do
-    config =
-      Keyword.merge(
-        Application.get_env(:logger, __MODULE__, []),
-        opts
-      )
-
-    url = Keyword.get(config, :url, @default_url)
-    labels = Keyword.get(config, :labels, %{})
-    level = Keyword.get(config, :level)
-    metadata = Keyword.get(config, :metadata, [])
-    max_buffer = Keyword.get(config, :max_buffer, @default_max_buffer)
-
-    # For Grafana Cloud authentication
-    username = Keyword.get(config, :username)
-    password = Keyword.get(config, :password)
-
-    auth_header =
-      if username && password do
-        {"Authorization", "Basic " <> Base.encode64("#{username}:#{password}")}
-      end
-
-    # Handle both initial state (empty list) and existing state (struct)
-    {buffer, buffer_size} =
-      case state do
-        %__MODULE__{buffer: b, buffer_size: s} -> {b, s}
-        _ -> {[], 0}
-      end
-
-    struct!(
-      __MODULE__,
-      url: url,
-      labels: labels,
-      level: level,
-      metadata: metadata,
-      max_buffer: max_buffer,
-      auth_header: auth_header,
-      buffer: buffer,
-      buffer_size: buffer_size
-    )
-  end
-
-  defp buffer_event(level, msg, timestamp, metadata, state) do
-    entry = format_entry(level, msg, timestamp, metadata, state)
+  defp buffer_event(level, msg, meta, state) do
+    entry = format_entry(level, msg, meta, state)
     new_buffer = [entry | state.buffer]
     new_size = state.buffer_size + 1
 
@@ -124,38 +132,27 @@ defmodule Setlistify.LokiLogger do
     end
   end
 
-  defp format_entry(level, msg, _timestamp, metadata, state) do
-    # Take only requested metadata
-    filtered_metadata = take_metadata(metadata, state.metadata)
-
-    # Format timestamp as nanoseconds
-    # Logger timestamps are in local time, so we need to use System.system_time
-    # to get the current timestamp in nanoseconds
+  defp format_entry(level, msg, meta, state) do
+    filtered_metadata = take_metadata(meta, state.metadata)
     unix_nano = :nanosecond |> System.system_time() |> to_string()
+    message = format_message(msg)
 
-    # Format the log message
-    message = IO.iodata_to_binary(msg)
+    labels = Map.put(state.labels, "level", to_string(level))
 
-    # Build labels including metadata that should be indexed
     labels =
-      Map.put(state.labels, "level", to_string(level))
-
-    # Add trace context if available
-    labels =
-      case Keyword.get(filtered_metadata, :trace_id) do
+      case Map.get(filtered_metadata, :trace_id) do
         nil -> labels
         trace_id -> Map.put(labels, "trace_id", to_string(trace_id))
       end
 
     labels =
-      case Keyword.get(filtered_metadata, :span_id) do
+      case Map.get(filtered_metadata, :span_id) do
         nil -> labels
         span_id -> Map.put(labels, "span_id", to_string(span_id))
       end
 
-    # Build the log line with metadata
     log_line =
-      if filtered_metadata == [] do
+      if filtered_metadata == %{} do
         message
       else
         metadata_str =
@@ -167,16 +164,26 @@ defmodule Setlistify.LokiLogger do
     {labels, unix_nano, log_line}
   end
 
-  defp take_metadata(metadata, :all), do: metadata
+  defp format_message({:string, msg}), do: IO.iodata_to_binary(msg)
+  defp format_message({:report, report}), do: inspect(report)
 
-  defp take_metadata(metadata, keys) when is_list(keys) do
-    Enum.filter(metadata, fn {k, _} -> k in keys end)
+  defp format_message({format, args}) when is_list(args) do
+    format |> :io_lib.format(args) |> IO.iodata_to_binary()
   end
+
+  defp format_message(other), do: inspect(other)
+
+  defp take_metadata(meta, :all), do: meta
+
+  defp take_metadata(meta, keys) when is_list(keys) do
+    Map.take(meta, keys)
+  end
+
+  defp take_metadata(_meta, _), do: %{}
 
   defp flush(%{buffer: []} = state), do: state
 
   defp flush(%{buffer: buffer} = state) do
-    # Group by labels
     streams =
       buffer
       |> Enum.reverse()
@@ -190,7 +197,6 @@ defmodule Setlistify.LokiLogger do
 
     payload = %{"streams" => streams}
 
-    # Send async to not block logger
     Task.start(fn ->
       send_to_loki(state.url, payload, state.auth_header)
     end)
@@ -221,6 +227,12 @@ defmodule Setlistify.LokiLogger do
     error ->
       IO.puts(:stderr, "[LokiLogger] Error sending logs: #{inspect(error)}")
   end
+
+  defp build_auth_header(%{username: username, password: password}) when is_binary(username) and is_binary(password) do
+    {"Authorization", "Basic " <> Base.encode64("#{username}:#{password}")}
+  end
+
+  defp build_auth_header(_), do: nil
 
   defp schedule_flush do
     Process.send_after(self(), :flush, @flush_interval)
