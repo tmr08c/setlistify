@@ -84,6 +84,7 @@ defmodule Setlistify.MixProject do
 
       # Code quality
       {:styler, "~> 1.11", only: [:dev, :test], runtime: false},
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
 
       # Tidewave - AI assistant for development
       {:tidewave, "~> 0.5", only: :dev},
