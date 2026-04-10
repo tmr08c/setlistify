@@ -4,8 +4,8 @@
 
 cd "$(dirname "$0")/.."
 
-echo "==> Installing languages via asdf…"
-asdf install
+echo "==> Installing languages via mise…"
+mise install
 
 echo "==> Running mix setup…"
 mix setup
