@@ -202,7 +202,7 @@ defmodule Setlistify.LokiLogger do
     headers = [{"content-type", "application/json"}]
     headers = if auth_header, do: [auth_header | headers], else: headers
 
-    body = Jason.encode!(payload)
+    body = JSON.encode!(payload)
 
     case Req.post(url, body: body, headers: headers) do
       {:ok, %{status: status}} when status in 200..299 ->

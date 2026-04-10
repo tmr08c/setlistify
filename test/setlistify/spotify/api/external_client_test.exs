@@ -42,7 +42,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
         %{request_path: "/v1/search", method: "GET"} = conn ->
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(200, Jason.encode!(Jason.decode!(@search_response)))
+          |> Plug.Conn.send_resp(200, JSON.encode!(JSON.decode!(@search_response)))
       end)
 
       result = ExternalClient.search_for_track(user_session, "some artist", "some track")
@@ -57,7 +57,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(200, Jason.encode!(response))
+          |> Plug.Conn.send_resp(200, JSON.encode!(response))
       end)
 
       ExUnit.CaptureLog.capture_log(fn ->
@@ -76,7 +76,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           # Assert the request payload is correct
           {:ok, body, _} = Plug.Conn.read_body(conn)
 
-          assert Jason.decode!(body) == %{
+          assert JSON.decode!(body) == %{
                    "name" => "Test Playlist",
                    "description" => "Test Description",
                    "public" => false
@@ -84,7 +84,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(201, Jason.encode!(Jason.decode!(@create_playlist_response)))
+          |> Plug.Conn.send_resp(201, JSON.encode!(JSON.decode!(@create_playlist_response)))
       end)
 
       assert {:ok, playlist_response} =
@@ -106,13 +106,13 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           # Assert the request payload contains the track URIs
           {:ok, body, _} = Plug.Conn.read_body(conn)
 
-          assert Jason.decode!(body) == %{
+          assert JSON.decode!(body) == %{
                    "uris" => track_uris
                  }
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(201, Jason.encode!(Jason.decode!(@add_tracks_response)))
+          |> Plug.Conn.send_resp(201, JSON.encode!(JSON.decode!(@add_tracks_response)))
       end)
 
       assert {:ok, :tracks_added} =
@@ -191,7 +191,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(200, Jason.encode!(response))
+          |> Plug.Conn.send_resp(200, JSON.encode!(response))
         end
       )
 
@@ -223,7 +223,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(200, Jason.encode!(response))
+          |> Plug.Conn.send_resp(200, JSON.encode!(response))
         end
       )
 
@@ -274,7 +274,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(200, Jason.encode!(response))
+          |> Plug.Conn.send_resp(200, JSON.encode!(response))
         end
       )
 
@@ -291,7 +291,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(200, Jason.encode!(profile))
+          |> Plug.Conn.send_resp(200, JSON.encode!(profile))
         end
       )
 
@@ -331,7 +331,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(200, Jason.encode!(response))
+          |> Plug.Conn.send_resp(200, JSON.encode!(response))
         end
       )
 
@@ -378,7 +378,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(200, Jason.encode!(response))
+          |> Plug.Conn.send_resp(200, JSON.encode!(response))
         end
       )
 
@@ -397,7 +397,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(200, Jason.encode!(profile))
+          |> Plug.Conn.send_resp(200, JSON.encode!(profile))
         end
       )
 
@@ -433,7 +433,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(200, Jason.encode!(response))
+          |> Plug.Conn.send_resp(200, JSON.encode!(response))
         end
       )
 
@@ -467,7 +467,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(400, Jason.encode!(response))
+          |> Plug.Conn.send_resp(400, JSON.encode!(response))
         end
       )
 
@@ -491,7 +491,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(401, Jason.encode!(response))
+          |> Plug.Conn.send_resp(401, JSON.encode!(response))
         end
       )
 
@@ -567,7 +567,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           )
           |> Plug.Conn.send_resp(
             401,
-            Jason.encode!(%{
+            JSON.encode!(%{
               "error" => %{"message" => "The access token expired", "status" => 401}
             })
           )
@@ -583,7 +583,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(201, Jason.encode!(Jason.decode!(@create_playlist_response)))
+          |> Plug.Conn.send_resp(201, JSON.encode!(JSON.decode!(@create_playlist_response)))
         end
       )
 
@@ -643,7 +643,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           )
           |> Plug.Conn.send_resp(
             401,
-            Jason.encode!(%{
+            JSON.encode!(%{
               "error" => %{"message" => "The access token expired", "status" => 401}
             })
           )
@@ -712,7 +712,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           )
           |> Plug.Conn.send_resp(
             401,
-            Jason.encode!(%{
+            JSON.encode!(%{
               "error" => %{"message" => "The access token expired", "status" => 401}
             })
           )
@@ -728,7 +728,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
 
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(201, Jason.encode!(Jason.decode!(@add_tracks_response)))
+          |> Plug.Conn.send_resp(201, JSON.encode!(JSON.decode!(@add_tracks_response)))
         end
       )
 
@@ -787,7 +787,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           )
           |> Plug.Conn.send_resp(
             401,
-            Jason.encode!(%{
+            JSON.encode!(%{
               "error" => %{"message" => "The access token expired", "status" => 401}
             })
           )
@@ -853,7 +853,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           )
           |> Plug.Conn.send_resp(
             401,
-            Jason.encode!(%{
+            JSON.encode!(%{
               "error" => %{"message" => "The access token expired", "status" => 401}
             })
           )
@@ -867,7 +867,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
         fn %{request_path: "/v1/search", method: "GET"} = conn ->
           conn
           |> Plug.Conn.put_resp_header("content-type", "application/json")
-          |> Plug.Conn.send_resp(200, Jason.encode!(Jason.decode!(@search_response)))
+          |> Plug.Conn.send_resp(200, JSON.encode!(JSON.decode!(@search_response)))
         end
       )
 

@@ -114,7 +114,7 @@ defmodule Setlistify.AppleMusic.API.ExternalClientTest do
         %{request_path: "/v1/me/library/playlists", method: "POST"} = conn ->
           {:ok, body, _} = Plug.Conn.read_body(conn)
 
-          assert Jason.decode!(body) == %{
+          assert JSON.decode!(body) == %{
                    "attributes" => %{
                      "name" => "My Playlist",
                      "description" => "A description"
@@ -189,7 +189,7 @@ defmodule Setlistify.AppleMusic.API.ExternalClientTest do
       Req.Test.stub(MyAppleMusicStub, fn
         %{request_path: "/v1/me/library/playlists/p.abc123/tracks", method: "POST"} = conn ->
           {:ok, body, _} = Plug.Conn.read_body(conn)
-          data = Jason.decode!(body)["data"]
+          data = JSON.decode!(body)["data"]
           assert length(data) == 2
           assert Enum.all?(data, &(&1["type"] == "songs"))
           Plug.Conn.send_resp(conn, 204, "")

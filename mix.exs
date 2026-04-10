@@ -53,7 +53,6 @@ defmodule Setlistify.MixProject do
       {:gettext, "~> 0.20"},
       {:hammox, "~> 0.7", only: :test},
       {:heroicons, "~> 0.5"},
-      {:jason, "~> 1.2"},
       {:logger_backends, "~> 1.0"},
       {:phoenix, "~> 1.8", override: true},
       {:phoenix_ecto, "~> 4.4"},
