@@ -48,7 +48,6 @@ defmodule Setlistify.MixProject do
       {:esbuild, "~> 0.5", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},
       {:finch, "~> 0.13"},
-      {:floki, ">= 0.30.0", only: :test},
       {:lazy_html, "~> 0.1", only: :test},
       {:gettext, "~> 0.20"},
       {:hammox, "~> 0.7", only: :test},

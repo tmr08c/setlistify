@@ -38,7 +38,7 @@ defmodule SetlistifyWeb.ConnCase do
 
       def assert_has_element(html, selector, opts \\ []) do
         expected = Keyword.get(opts, :count, 1)
-        actual = html |> Floki.parse_document!() |> Floki.find(selector) |> length()
+        actual = html |> LazyHTML.from_document() |> LazyHTML.query(selector) |> Enum.count()
 
         assert expected == actual,
                "expected #{expected} elements matching #{selector}, found #{actual}"
