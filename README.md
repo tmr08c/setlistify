@@ -50,8 +50,7 @@ end
 
 ## Requirements
 
-- Elixir 1.14+
-- Node.js 16+
+- [mise](https://mise.jdx.dev) — manages Elixir and Erlang versions (see `.mise.toml`)
 - Docker and Docker Compose (for OpenTelemetry local development)
 
 ## Development
