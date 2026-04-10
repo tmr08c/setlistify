@@ -5,9 +5,10 @@ defmodule Setlistify.MixProject do
     [
       app: :setlistify,
       version: "0.1.0",
-      elixir: "~> 1.14",
+      elixir: "~> 1.19",
       elixirc_paths: elixirc_paths(Mix.env()),
       start_permanent: Mix.env() == :prod,
+      listeners: [Phoenix.CodeReloader],
       aliases: aliases(),
       deps: deps(),
       dialyzer: [
@@ -53,6 +54,7 @@ defmodule Setlistify.MixProject do
       {:hammox, "~> 0.7", only: :test},
       {:heroicons, "~> 0.5"},
       {:jason, "~> 1.2"},
+      {:logger_backends, "~> 1.0"},
       {:phoenix, "~> 1.8", override: true},
       {:phoenix_ecto, "~> 4.4"},
       {:phoenix_html, "~> 4.1"},
@@ -67,7 +69,7 @@ defmodule Setlistify.MixProject do
       {:prom_ex, "~> 1.9"},
 
       # OpenTelemetry
-      {:opentelemetry_exporter, "~> 1.8.0"},
+      {:opentelemetry_exporter, "~> 1.8"},
       {:opentelemetry, "~> 1.3"},
       {:opentelemetry_api, "~> 1.4"},
 
@@ -78,7 +80,7 @@ defmodule Setlistify.MixProject do
       {:opentelemetry_req, "~> 1.0.0"},
 
       # Telemetry
-      {:telemetry, "~> 1.2.1"},
+      {:telemetry, "~> 1.2"},
 
       # Logging - enabled in Phase 2
       {:opentelemetry_logger_metadata, "~> 0.2.0"},

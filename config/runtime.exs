@@ -242,8 +242,6 @@ if use_grafana_cloud do
         "fly_app" => System.get_env("FLY_APP_NAME", "setlistify"),
         "fly_region" => System.get_env("FLY_REGION", "unknown")
       }
-
-    config :logger, backends: [:console, Setlistify.LokiLogger]
   end
 
   # Local OTEL-LGTM configuration (default)

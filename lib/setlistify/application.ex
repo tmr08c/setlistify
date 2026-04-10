@@ -53,7 +53,7 @@ defmodule Setlistify.Application do
     # Start the supervisor
     case Supervisor.start_link(children, opts) do
       {:ok, _pid} = result ->
-        # Initialize OpenTelemetry after supervisor starts
+        maybe_add_loki_backend()
         result
 
       error ->
@@ -67,6 +67,12 @@ defmodule Setlistify.Application do
   def config_change(changed, _new, removed) do
     SetlistifyWeb.Endpoint.config_change(changed, removed)
     :ok
+  end
+
+  defp maybe_add_loki_backend do
+    if Application.get_env(:logger, Setlistify.LokiLogger) do
+      LoggerBackends.add(Setlistify.LokiLogger)
+    end
   end
 
   defp apple_music_children do
