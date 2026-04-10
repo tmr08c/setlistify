@@ -17,7 +17,8 @@ defmodule Setlistify.UserSessionManager do
     Provider key format: `{:provider, user_id}`
   """
 
-  alias Setlistify.{Spotify, AppleMusic}
+  alias Setlistify.AppleMusic
+  alias Setlistify.Spotify
 
   @type provider_key :: {:spotify, String.t()} | {:apple_music, String.t()}
   @type user_session :: Spotify.UserSession.t() | AppleMusic.UserSession.t()

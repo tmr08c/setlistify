@@ -42,8 +42,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
   """
   def regenerate_token, do: GenServer.call(__MODULE__, :regenerate_token)
 
-  def init(_),
-    do: {:ok, %{token: nil, expires_at: nil, timer_ref: nil}, {:continue, :generate_token}}
+  def init(_), do: {:ok, %{token: nil, expires_at: nil, timer_ref: nil}, {:continue, :generate_token}}
 
   def handle_continue(:generate_token, state) do
     case generate_and_sign() do

@@ -1,16 +1,15 @@
 defmodule SetlistifyWeb.Setlists.ShowLiveTest do
   use SetlistifyWeb.ConnCase, async: false
 
-  import Phoenix.LiveViewTest
   import Hammox
+  import Phoenix.LiveViewTest
+  import Setlistify.Test.RegistryHelpers
   import SetlistifyWeb.AuthHelpers
 
   alias Setlistify.{SetlistFm, Spotify, AppleMusic}
   alias Setlistify.Spotify.{SessionManager, UserSession}
   alias Setlistify.AppleMusic.SessionManager, as: AppleMusicSessionManager
   alias Setlistify.AppleMusic.UserSession, as: AppleMusicUserSession
-
-  import Setlistify.Test.RegistryHelpers
 
   # Cache fetching happens in another process, managed by Cachex. The process we
   # start in our application tree is a supervisor, so explictly `allow`ing with
@@ -30,7 +29,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
   test "viewing a setlist when logged out shows list of songs", %{conn: conn} do
     setlist_id = Ecto.UUID.generate()
 
-    expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
+    expect(MockClient, :get_setlist, 1, fn ^setlist_id ->
       {:ok,
        %{
          artist: "The Beatles",
@@ -67,7 +66,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
   test "displays venue location when viewing a setlist", %{conn: conn} do
     setlist_id = Ecto.UUID.generate()
 
-    expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
+    expect(MockClient, :get_setlist, 1, fn ^setlist_id ->
       {:ok,
        %{
          artist: "The Beatles",
@@ -110,10 +109,10 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     {:ok, _pid} = SessionManager.start_link({user_id, user_session})
 
     # Log in the user
-    conn = conn |> log_in_user(%{id: user_id})
+    conn = log_in_user(conn, %{id: user_id})
 
     # Mock setlist reponse
-    expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
+    expect(MockClient, :get_setlist, 1, fn ^setlist_id ->
       {:ok,
        %{
          artist: artist,
@@ -130,8 +129,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
        }}
     end)
 
-    Spotify.API.MockClient
-    |> expect(:search_for_track, 2, fn _user_session, _artist, title ->
+    expect(Spotify.API.MockClient, :search_for_track, 2, fn _user_session, _artist, title ->
       case title do
         "song1" ->
           # We have a match for song
@@ -175,10 +173,10 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     {:ok, _pid} = SessionManager.start_link({user_id, user_session})
 
     # Log in the user
-    conn = conn |> log_in_user(%{id: user_id})
+    conn = log_in_user(conn, %{id: user_id})
 
     # Mock setlist reponse
-    expect(SetlistFm.API.MockClient, :get_setlist, 1, fn ^setlist_id ->
+    expect(MockClient, :get_setlist, 1, fn ^setlist_id ->
       {:ok,
        %{
          artist: artist,
@@ -195,8 +193,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
        }}
     end)
 
-    Spotify.API.MockClient
-    |> expect(:search_for_track, 2, fn _user_session, _artist, title ->
+    expect(Spotify.API.MockClient, :search_for_track, 2, fn _user_session, _artist, title ->
       case title do
         "song1" ->
           # We have a match for song
@@ -216,7 +213,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
     # Mock playlist creation
     Spotify.API.MockClient
     |> expect(:create_playlist, fn ^user_session, name, description ->
-      formatted_date = Date.utc_today() |> Date.to_iso8601()
+      formatted_date = Date.to_iso8601(Date.utc_today())
       assert name =~ artist
       assert name =~ venue
       assert name =~ formatted_date

@@ -28,11 +28,11 @@ defmodule Setlistify.Test.RegistryHelpers do
       pid = assert_in_registry({:spotify, "user_123"}, fail_on_timeout: false)
   """
   def assert_in_registry({provider, user_id}, opts \\ []) do
+    import ExUnit.Assertions, only: [flunk: 1]
+
     max_attempts = Keyword.get(opts, :max_attempts, 3)
     sleep_ms = Keyword.get(opts, :sleep_ms, 1)
     fail_on_timeout = Keyword.get(opts, :fail_on_timeout, true)
-
-    import ExUnit.Assertions, only: [flunk: 1]
 
     Enum.reduce_while(1..max_attempts, nil, fn attempt, _ ->
       case Registry.lookup(Setlistify.UserSessionRegistry, {provider, user_id}) do
@@ -80,11 +80,11 @@ defmodule Setlistify.Test.RegistryHelpers do
       refute_in_registry({:apple_music, "user_123"}, max_attempts: 20, sleep_ms: 100)
   """
   def refute_in_registry({provider, user_id}, opts \\ []) do
+    import ExUnit.Assertions, only: [flunk: 1]
+
     max_attempts = Keyword.get(opts, :max_attempts, 3)
     sleep_ms = Keyword.get(opts, :sleep_ms, 1)
     fail_on_timeout = Keyword.get(opts, :fail_on_timeout, true)
-
-    import ExUnit.Assertions, only: [flunk: 1]
 
     Enum.reduce_while(1..max_attempts, nil, fn attempt, _ ->
       case Registry.lookup(Setlistify.UserSessionRegistry, {provider, user_id}) do

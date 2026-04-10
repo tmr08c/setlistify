@@ -4,6 +4,7 @@ defmodule Setlistify.AppleMusic.APITest do
   import Hammox
 
   alias Setlistify.AppleMusic.API
+  alias Setlistify.AppleMusic.API.MockClient
   alias Setlistify.AppleMusic.UserSession
 
   # Cache fetching happens in another process, managed by Cachex. The process we
@@ -92,9 +93,7 @@ defmodule Setlistify.AppleMusic.APITest do
     test "returns the full error tuple when impl returns an error", %{
       user_session: user_session
     } do
-      expect(Setlistify.AppleMusic.API.MockClient, :search_for_track, 1, fn _session,
-                                                                            _artist,
-                                                                            _track ->
+      expect(MockClient, :search_for_track, 1, fn _session, _artist, _track ->
         {:error, :token_refresh_failed}
       end)
 
@@ -103,9 +102,7 @@ defmodule Setlistify.AppleMusic.APITest do
     end
 
     test "caches successful results — impl is called only once", %{user_session: user_session} do
-      expect(Setlistify.AppleMusic.API.MockClient, :search_for_track, 1, fn _session,
-                                                                            _artist,
-                                                                            _track ->
+      expect(MockClient, :search_for_track, 1, fn _session, _artist, _track ->
         %{track_id: "am:track:abc123"}
       end)
 

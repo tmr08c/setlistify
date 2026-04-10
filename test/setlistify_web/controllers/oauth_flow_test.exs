@@ -1,7 +1,9 @@
 defmodule SetlistifyWeb.OAuthFlowTest do
   use SetlistifyWeb.ConnCase, async: false
+
   import Hammox
 
+  alias Setlistify.Spotify.API.MockClient
   alias Setlistify.Spotify.SessionManager
 
   setup do
@@ -25,7 +27,7 @@ defmodule SetlistifyWeb.OAuthFlowTest do
       signin_conn = get(conn, ~p"/signin/spotify?redirect_to=#{redirect_to}")
 
       # Should set the OAuth state and redirect_to in session
-      assert get_session(signin_conn, :oauth_state) != nil
+      assert get_session(signin_conn, :oauth_state)
       assert get_session(signin_conn, :redirect_to) == redirect_to
 
       # Should redirect to Spotify authorization URL
@@ -43,7 +45,7 @@ defmodule SetlistifyWeb.OAuthFlowTest do
         |> fetch_flash()
 
       # Set up mock for the token exchange
-      expect(Setlistify.Spotify.API.MockClient, :exchange_code, fn code, redirect_uri ->
+      expect(MockClient, :exchange_code, fn code, redirect_uri ->
         assert code == "test_code"
         assert redirect_uri =~ "/oauth/callbacks/spotify"
 
@@ -118,7 +120,7 @@ defmodule SetlistifyWeb.OAuthFlowTest do
         |> fetch_flash()
 
       # Mock the token exchange to fail
-      expect(Setlistify.Spotify.API.MockClient, :exchange_code, fn _code, _redirect_uri ->
+      expect(MockClient, :exchange_code, fn _code, _redirect_uri ->
         {:error, :invalid_code}
       end)
 

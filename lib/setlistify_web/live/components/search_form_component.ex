@@ -1,4 +1,5 @@
 defmodule SetlistifyWeb.Components.SearchFormComponent do
+  @moduledoc false
   use SetlistifyWeb, :live_component
   use Gettext, backend: SetlistifyWeb.Gettext
 
@@ -66,7 +67,7 @@ defmodule SetlistifyWeb.Components.SearchFormComponent do
         {"params", inspect(params)}
       ])
 
-      search_changeset = search_changeset(params) |> Map.put(:action, :validate)
+      search_changeset = params |> search_changeset() |> Map.put(:action, :validate)
       search_form = to_form(search_changeset, as: :search)
 
       OpenTelemetry.Tracer.set_attribute("search.valid", search_changeset.valid?)

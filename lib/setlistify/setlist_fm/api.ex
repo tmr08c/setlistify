@@ -1,4 +1,5 @@
 defmodule Setlistify.SetlistFm.API do
+  @moduledoc false
   require OpenTelemetry.Tracer
 
   @type search_result() :: %{

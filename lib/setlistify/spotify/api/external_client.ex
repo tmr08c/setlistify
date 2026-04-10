@@ -1,11 +1,12 @@
 defmodule Setlistify.Spotify.API.ExternalClient do
+  @moduledoc false
   @behaviour Setlistify.Spotify.API
+
+  alias Setlistify.Spotify.SessionManager
+  alias Setlistify.Spotify.UserSession
 
   require Logger
   require OpenTelemetry.Tracer
-
-  alias Setlistify.Spotify.UserSession
-  alias Setlistify.Spotify.SessionManager
 
   defp client(%UserSession{access_token: token}, endpoint \\ "https://api.spotify.com/v1/") do
     Logger.debug("Current Spotify API client token: #{token}")
@@ -39,9 +40,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
           end
 
         if authenticate_header && String.contains?(authenticate_value, "invalid_token") do
-          Logger.debug(
-            "Token expired during #{context}, attempting to refresh for user_id: #{user_session.user_id}"
-          )
+          Logger.debug("Token expired during #{context}, attempting to refresh for user_id: #{user_session.user_id}")
 
           OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.with_token_refresh" do
             case SessionManager.refresh_session(user_session.user_id) do
@@ -115,9 +114,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
           error
 
         {:ok, %{status: 401} = response} ->
-          Logger.error(
-            "Unauthorized search request with user_id #{user_session.user_id}: #{inspect(response)}"
-          )
+          Logger.error("Unauthorized search request with user_id #{user_session.user_id}: #{inspect(response)}")
 
           OpenTelemetry.Tracer.set_status(:error, "Unauthorized")
           nil
@@ -377,9 +374,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
           body |> Spotify.API.Types.TokenResponse.from_json!() |> build_user_session_from_tokens()
 
         {:ok, %{status: status, body: body}} when status in [400, 401] ->
-          Logger.error(
-            "Failed to exchange code: Invalid code. Status: #{status}, Error: #{inspect(body)}"
-          )
+          Logger.error("Failed to exchange code: Invalid code. Status: #{status}, Error: #{inspect(body)}")
 
           OpenTelemetry.Tracer.set_status(:error, "Invalid code: status #{status}")
 
@@ -445,9 +440,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
           {:ok, user_session}
 
         {:ok, %{status: status, body: body}} ->
-          Logger.error(
-            "Error fetching user profile. Received code #{status}. Response: #{inspect(body)}"
-          )
+          Logger.error("Error fetching user profile. Received code #{status}. Response: #{inspect(body)}")
 
           OpenTelemetry.Tracer.set_status(:error, "Profile fetch failed: status #{status}")
           {:error, :failed_to_fetch_profile}

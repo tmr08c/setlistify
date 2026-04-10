@@ -90,8 +90,6 @@ defmodule Setlistify.LokiLogger do
     auth_header =
       if username && password do
         {"Authorization", "Basic " <> Base.encode64("#{username}:#{password}")}
-      else
-        nil
       end
 
     # Handle both initial state (empty list) and existing state (struct)
@@ -133,16 +131,14 @@ defmodule Setlistify.LokiLogger do
     # Format timestamp as nanoseconds
     # Logger timestamps are in local time, so we need to use System.system_time
     # to get the current timestamp in nanoseconds
-    unix_nano = System.system_time(:nanosecond) |> to_string()
+    unix_nano = :nanosecond |> System.system_time() |> to_string()
 
     # Format the log message
     message = IO.iodata_to_binary(msg)
 
     # Build labels including metadata that should be indexed
     labels =
-      Map.merge(state.labels, %{
-        "level" => to_string(level)
-      })
+      Map.put(state.labels, "level", to_string(level))
 
     # Add trace context if available
     labels =
@@ -163,9 +159,7 @@ defmodule Setlistify.LokiLogger do
         message
       else
         metadata_str =
-          filtered_metadata
-          |> Enum.map(fn {k, v} -> "#{k}=#{inspect(v)}" end)
-          |> Enum.join(" ")
+          Enum.map_join(filtered_metadata, " ", fn {k, v} -> "#{k}=#{inspect(v)}" end)
 
         "#{message} #{metadata_str}"
       end

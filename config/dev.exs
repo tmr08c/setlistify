@@ -1,5 +1,24 @@
 import Config
 
+# Console logger configuration - include trace context
+config :logger, :console,
+  format: "$time [$level] $message $metadata\n",
+  metadata: [:request_id, :trace_id, :span_id, :user_id, :module, :function]
+
+# Logger configuration with Loki backend
+config :logger,
+  backends: [:console, Setlistify.LokiLogger],
+  level: :debug
+
+# Initialize plugs at runtime for faster development compilation
+config :phoenix, :plug_init_mode, :runtime
+
+# Set a higher stacktrace during development. Avoid configuring such
+# in production as building large stacktraces may be expensive.
+config :phoenix, :stacktrace_depth, 20
+
+config :phoenix_live_view, debug_heex_annotations: true
+
 # For development, we disable any cache and enable
 # debugging and code reloading.
 #
@@ -54,22 +73,3 @@ config :setlistify, SetlistifyWeb.Endpoint,
 
 # Enable dev routes for dashboard and mailbox
 config :setlistify, dev_routes: true
-
-# Logger configuration with Loki backend
-config :logger,
-  backends: [:console, Setlistify.LokiLogger],
-  level: :debug
-
-# Console logger configuration - include trace context
-config :logger, :console,
-  format: "$time [$level] $message $metadata\n",
-  metadata: [:request_id, :trace_id, :span_id, :user_id, :module, :function]
-
-# Set a higher stacktrace during development. Avoid configuring such
-# in production as building large stacktraces may be expensive.
-config :phoenix, :stacktrace_depth, 20
-
-# Initialize plugs at runtime for faster development compilation
-config :phoenix, :plug_init_mode, :runtime
-
-config :phoenix_live_view, debug_heex_annotations: true

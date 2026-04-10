@@ -1,11 +1,12 @@
 defmodule Setlistify.AppleMusic.API.ExternalClient do
+  @moduledoc false
   @behaviour Setlistify.AppleMusic.API
-
-  require Logger
-  require OpenTelemetry.Tracer
 
   alias Setlistify.AppleMusic.DeveloperTokenManager
   alias Setlistify.AppleMusic.UserSession
+
+  require Logger
+  require OpenTelemetry.Tracer
 
   defp client(%UserSession{user_token: user_token}) do
     developer_token = DeveloperTokenManager.get_token()

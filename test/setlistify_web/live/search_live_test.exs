@@ -1,8 +1,8 @@
 defmodule SetlistifyWeb.SearchLiveTest do
   use SetlistifyWeb.ConnCase, async: false
 
-  import Phoenix.LiveViewTest
   import Hammox
+  import Phoenix.LiveViewTest
 
   alias Setlistify.SetlistFm
 
@@ -11,6 +11,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
   # that PID does not work. This will enable "global" mode which means  any
   # process will respect our `expect` at the cost of not being able to run with
   # `async: true`
+  alias Setlistify.SetlistFm.API.MockClient
+
   setup :set_mox_from_context
   setup :verify_on_exit!
 
@@ -27,7 +29,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
   test "searching for setlists", %{conn: conn} do
     setlist_id = Ecto.UUID.generate()
 
-    expect(SetlistFm.API.MockClient, :search, 1, fn "beatles", 1 ->
+    expect(MockClient, :search, 1, fn "beatles", 1 ->
       {:ok,
        %{
          setlists: [
@@ -59,7 +61,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
   end
 
   test "displays 'No results found' when search returns empty list", %{conn: conn} do
-    expect(SetlistFm.API.MockClient, :search, 1, fn "nonexistent", 1 ->
+    expect(MockClient, :search, 1, fn "nonexistent", 1 ->
       {:error, :not_found}
     end)
 
@@ -69,7 +71,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
   end
 
   test "search form is pre-filled with query parameter", %{conn: conn} do
-    expect(SetlistFm.API.MockClient, :search, 1, fn "some band", 1 ->
+    expect(MockClient, :search, 1, fn "some band", 1 ->
       {:error, :not_found}
     end)
 
@@ -80,7 +82,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
   end
 
   test "displays song count in search results", %{conn: conn} do
-    expect(SetlistFm.API.MockClient, :search, 1, fn "test artist", 1 ->
+    expect(MockClient, :search, 1, fn "test artist", 1 ->
       {:ok,
        %{
          setlists: [
@@ -178,7 +180,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "properly handles URL-encoded queries with valid content", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "the beatles", 1 ->
+      expect(MockClient, :search, 1, fn "the beatles", 1 ->
         {:ok,
          %{
            setlists: [
@@ -202,7 +204,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "handles special characters in query parameters", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "AC/DC", 1 ->
+      expect(MockClient, :search, 1, fn "AC/DC", 1 ->
         {:ok,
          %{
            setlists: [
@@ -229,7 +231,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     test "handles very long query strings appropriately", %{conn: conn} do
       long_query = String.duplicate("a", 1000)
 
-      expect(SetlistFm.API.MockClient, :search, 1, fn ^long_query, 1 ->
+      expect(MockClient, :search, 1, fn ^long_query, 1 ->
         {:error, :not_found}
       end)
 
@@ -240,7 +242,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     test "handles unicode characters in queries", %{conn: conn} do
       unicode_query = "Björk"
 
-      expect(SetlistFm.API.MockClient, :search, 1, fn ^unicode_query, 1 ->
+      expect(MockClient, :search, 1, fn ^unicode_query, 1 ->
         {:ok,
          %{
            setlists: [
@@ -264,7 +266,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "trims whitespace from valid queries", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "radiohead", 1 ->
+      expect(MockClient, :search, 1, fn "radiohead", 1 ->
         {:ok,
          %{
            setlists: [
@@ -291,7 +293,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
 
   describe "pagination with page parameter" do
     test "defaults to page 1 when page parameter is not provided", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "test band", 1 ->
+      expect(MockClient, :search, 1, fn "test band", 1 ->
         {:ok,
          %{
            setlists: [
@@ -315,7 +317,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "uses correct page when page parameter is provided", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "test band", 3 ->
+      expect(MockClient, :search, 1, fn "test band", 3 ->
         {:ok,
          %{
            setlists: [
@@ -340,7 +342,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "defaults to page 1 when page parameter is empty string", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
+      expect(MockClient, :search, 1, fn "artist", 1 ->
         {:error, :not_found}
       end)
 
@@ -350,7 +352,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     test "defaults to page 1 when page parameter has spaces", %{conn: conn} do
       # With cache clearing in setup, the first call will hit the API and subsequent
       # calls will hit the cache since they all use the same {query, page} key
-      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
+      expect(MockClient, :search, 1, fn "artist", 1 ->
         {:error, :not_found}
       end)
 
@@ -362,7 +364,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "defaults to page 1 when page parameter is not a number", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
+      expect(MockClient, :search, 1, fn "artist", 1 ->
         {:error, :not_found}
       end)
 
@@ -374,7 +376,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "defaults to page 1 when page parameter is zero", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
+      expect(MockClient, :search, 1, fn "artist", 1 ->
         {:error, :not_found}
       end)
 
@@ -382,7 +384,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "defaults to page 1 when page parameter is negative", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
+      expect(MockClient, :search, 1, fn "artist", 1 ->
         {:error, :not_found}
       end)
 
@@ -392,7 +394,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "handles very large page numbers", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 999_999 ->
+      expect(MockClient, :search, 1, fn "artist", 999_999 ->
         {:error, :not_found}
       end)
 
@@ -401,7 +403,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "handles decimal page numbers by truncating to integer", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 2 ->
+      expect(MockClient, :search, 1, fn "artist", 2 ->
         {:ok,
          %{
            setlists: [
@@ -425,7 +427,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "handles page parameter with special characters", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
+      expect(MockClient, :search, 1, fn "artist", 1 ->
         {:error, :not_found}
       end)
 
@@ -436,7 +438,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     end
 
     test "handles page parameter as array or map", %{conn: conn} do
-      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 1 ->
+      expect(MockClient, :search, 1, fn "artist", 1 ->
         {:error, :not_found}
       end)
 
@@ -447,7 +449,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
 
     test "handles multiple page parameters by using the last one", %{conn: conn} do
       # Phoenix uses the last parameter value when duplicates exist
-      expect(SetlistFm.API.MockClient, :search, 1, fn "artist", 3 ->
+      expect(MockClient, :search, 1, fn "artist", 3 ->
         {:ok,
          %{
            setlists: [
@@ -474,7 +476,7 @@ defmodule SetlistifyWeb.SearchLiveTest do
     test "preserves query parameter when navigating with page parameter", %{conn: conn} do
       unicode_query = "Sigur Rós"
 
-      expect(SetlistFm.API.MockClient, :search, 1, fn ^unicode_query, 2 ->
+      expect(MockClient, :search, 1, fn ^unicode_query, 2 ->
         {:ok,
          %{
            setlists: [

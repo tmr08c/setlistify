@@ -7,18 +7,20 @@ defmodule SetlistifyWeb.Plugs.RestoreSpotifyToken do
   """
   import Plug.Conn
 
-  alias Setlistify.Spotify.{SessionSupervisor, SessionManager, API}
   alias Setlistify.Auth.TokenSalts
+  alias Setlistify.Spotify.API
+  alias Setlistify.Spotify.SessionManager
+  alias Setlistify.Spotify.SessionSupervisor
 
   def init(opts), do: opts
 
   def call(conn, _opts) do
     auth_provider = get_session(conn, :auth_provider)
 
-    if auth_provider != "spotify" do
-      conn
-    else
+    if auth_provider == "spotify" do
       do_call(conn)
+    else
+      conn
     end
   end
 

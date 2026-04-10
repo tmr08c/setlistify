@@ -1,8 +1,10 @@
 defmodule SetlistifyWeb.Layouts.AppTest do
   use SetlistifyWeb.ConnCase, async: true
+
   import Phoenix.LiveViewTest
 
-  alias Setlistify.Spotify.{SessionManager, UserSession}
+  alias Setlistify.Spotify.SessionManager
+  alias Setlistify.Spotify.UserSession
 
   describe "authentication UI elements" do
     test "displays sign in links when user is not authenticated", %{conn: conn} do

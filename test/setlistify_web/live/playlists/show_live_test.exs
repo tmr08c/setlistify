@@ -1,13 +1,14 @@
 defmodule SetlistifyWeb.Playlists.ShowLiveTest do
   use SetlistifyWeb.ConnCase, async: true
 
-  import Phoenix.LiveViewTest
   import Hammox
+  import Phoenix.LiveViewTest
 
-  alias Setlistify.Spotify.API.MockClient, as: SpotifyMock
-  alias Setlistify.Spotify.{SessionManager, UserSession}
   alias Setlistify.AppleMusic.SessionManager, as: AppleMusicSessionManager
   alias Setlistify.AppleMusic.UserSession, as: AppleMusicUserSession
+  alias Setlistify.Spotify.API.MockClient, as: SpotifyMock
+  alias Setlistify.Spotify.SessionManager
+  alias Setlistify.Spotify.UserSession
 
   setup :verify_on_exit!
 

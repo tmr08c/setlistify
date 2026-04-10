@@ -6,12 +6,12 @@ defmodule Setlistify.CacheTest do
   #    would race to register the same name and crash
   use Setlistify.DataCase, async: false
 
+  alias Setlistify.Cache
+
   require OpenTelemetry.Tracer
   require Record
 
-  alias Setlistify.Cache
-
-  doctest Setlistify.Cache
+  doctest Cache
 
   # Record.defrecord extracts the :span record field names from the Erlang include
   # at compile time, giving us named access (span(s, :attributes)) rather than

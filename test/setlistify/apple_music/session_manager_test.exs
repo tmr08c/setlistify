@@ -3,7 +3,8 @@ defmodule Setlistify.AppleMusic.SessionManagerTest do
 
   import Setlistify.Test.RegistryHelpers
 
-  alias Setlistify.AppleMusic.{SessionManager, UserSession}
+  alias Setlistify.AppleMusic.SessionManager
+  alias Setlistify.AppleMusic.UserSession
 
   setup do
     user_id = unique_user_id()

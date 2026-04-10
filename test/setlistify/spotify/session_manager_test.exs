@@ -4,6 +4,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
   import Hammox
   import Setlistify.Test.RegistryHelpers
 
+  alias Setlistify.Spotify.API.MockClient
   alias Setlistify.Spotify.SessionManager
   alias Setlistify.Spotify.UserSession
 
@@ -188,7 +189,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
 
       {:ok, pid} = SessionManager.start_link({user_id, user_session})
 
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
+      expect(MockClient, :refresh_token, fn refresh_token ->
         assert refresh_token == initial_token.refresh_token
 
         {:ok,
@@ -199,7 +200,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
          }}
       end)
 
-      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+      allow(MockClient, self(), pid)
 
       assert {:ok, session} = SessionManager.refresh_session(user_id)
       assert %UserSession{} = session
@@ -224,12 +225,12 @@ defmodule Setlistify.Spotify.SessionManagerTest do
 
       {:ok, pid} = SessionManager.start_link({user_id, user_session})
 
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
+      expect(MockClient, :refresh_token, fn refresh_token ->
         assert refresh_token == initial_token.refresh_token
         {:error, :invalid_token}
       end)
 
-      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+      allow(MockClient, self(), pid)
 
       assert {:error, :invalid_token} = SessionManager.refresh_session(user_id)
       refute Process.alive?(pid)
@@ -248,7 +249,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       user_id: user_id,
       initial_token: initial_token
     } do
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
+      expect(MockClient, :refresh_token, fn refresh_token ->
         assert initial_token.access_token != "refreshed_token"
         assert refresh_token == initial_token.refresh_token
 
@@ -262,7 +263,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
 
       # Allow refresh_token message using global mode
       # Allow the mock to be called from the session process
-      allow(Setlistify.Spotify.API.MockClient, self(), fn ->
+      allow(MockClient, self(), fn ->
         # Wait for the process to be registered and return it
         # This avoids flakiness issues where the Registry lookup might happen
         # before the process is registered
@@ -304,7 +305,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       Phoenix.PubSub.subscribe(Setlistify.PubSub, "user:#{user_id}")
 
       # Mock the refresh_token API call
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn _refresh_token ->
+      expect(MockClient, :refresh_token, fn _refresh_token ->
         {:ok,
          %{
            access_token: "new_access_token",
@@ -325,7 +326,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       {:ok, pid} = SessionManager.start_link({user_id, user_session})
 
       # Ensure we're allowing the right process
-      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+      allow(MockClient, self(), pid)
 
       # Trigger a refresh
       assert {:ok, session} = SessionManager.refresh_session(user_id)
@@ -348,7 +349,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       Phoenix.PubSub.subscribe(Setlistify.PubSub, "user:#{user2_id}")
 
       # Mock the refresh_token API call for user1
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn refresh_token ->
+      expect(MockClient, :refresh_token, fn refresh_token ->
         assert refresh_token == @refresh_token
 
         {:ok,
@@ -371,7 +372,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       {:ok, pid} = SessionManager.start_link({user1_id, user1_session})
 
       # Allow the mock to be called from the session process
-      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+      allow(MockClient, self(), pid)
 
       # Trigger a refresh for user1
       assert {:ok, session} = SessionManager.refresh_session(user1_id)
@@ -390,7 +391,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       Phoenix.PubSub.subscribe(Setlistify.PubSub, "user:#{user2_id}")
 
       # Mock refresh for user1
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, 1, fn "user1_refresh" ->
+      expect(MockClient, :refresh_token, 1, fn "user1_refresh" ->
         {:ok,
          %{
            access_token: "user1_new_token",
@@ -400,7 +401,7 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       end)
 
       # Mock refresh for user2
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, 1, fn "user2_refresh" ->
+      expect(MockClient, :refresh_token, 1, fn "user2_refresh" ->
         {:ok,
          %{
            access_token: "user2_new_token",
@@ -433,8 +434,8 @@ defmodule Setlistify.Spotify.SessionManagerTest do
       {:ok, pid2} = SessionManager.start_link({user2_id, user2_session})
 
       # Allow the mocks to be called from the session processes
-      allow(Setlistify.Spotify.API.MockClient, self(), pid1)
-      allow(Setlistify.Spotify.API.MockClient, self(), pid2)
+      allow(MockClient, self(), pid1)
+      allow(MockClient, self(), pid2)
 
       # Trigger refreshes
       assert {:ok, session1} = SessionManager.refresh_session(user1_id)

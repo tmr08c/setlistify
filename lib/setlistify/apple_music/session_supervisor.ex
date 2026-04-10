@@ -3,9 +3,11 @@ defmodule Setlistify.AppleMusic.SessionSupervisor do
   Supervisor for managing Apple Music user token processes.
   """
 
+  alias Setlistify.AppleMusic.SessionManager
+  alias Setlistify.AppleMusic.UserSession
+
   require Logger
   require OpenTelemetry.Tracer
-  alias Setlistify.AppleMusic.{SessionManager, UserSession}
 
   def start_user_token(user_id, %UserSession{} = session) do
     OpenTelemetry.Tracer.with_span "Setlistify.AppleMusic.SessionSupervisor.start_user_token" do

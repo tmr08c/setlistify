@@ -4,6 +4,7 @@ defmodule Setlistify.SetlistFm.APITest do
   import Hammox
 
   alias Setlistify.SetlistFm.API
+  alias Setlistify.SetlistFm.API.MockClient
 
   setup :set_mox_from_context
   setup :verify_on_exit!
@@ -17,7 +18,7 @@ defmodule Setlistify.SetlistFm.APITest do
 
   describe "search/2 caching" do
     test "caches successful results — impl called only once for the same query" do
-      expect(Setlistify.SetlistFm.API.MockClient, :search, 1, fn _query, _page ->
+      expect(MockClient, :search, 1, fn _query, _page ->
         {:ok, %{setlists: [], pagination: %{page: 1, total: 0, items_per_page: 20}}}
       end)
 
@@ -26,7 +27,7 @@ defmodule Setlistify.SetlistFm.APITest do
     end
 
     test "caches :not_found — impl called only once for the same query" do
-      expect(Setlistify.SetlistFm.API.MockClient, :search, 1, fn _query, _page ->
+      expect(MockClient, :search, 1, fn _query, _page ->
         {:error, :not_found}
       end)
 
@@ -35,13 +36,13 @@ defmodule Setlistify.SetlistFm.APITest do
     end
 
     test "does not cache transient errors — impl called again on retry" do
-      expect(Setlistify.SetlistFm.API.MockClient, :search, 1, fn _query, _page ->
+      expect(MockClient, :search, 1, fn _query, _page ->
         {:error, {:api_error, 500}}
       end)
 
       assert {:error, {:api_error, 500}} = API.search("artist")
 
-      expect(Setlistify.SetlistFm.API.MockClient, :search, 1, fn _query, _page ->
+      expect(MockClient, :search, 1, fn _query, _page ->
         {:ok, %{setlists: [], pagination: %{page: 1, total: 0, items_per_page: 20}}}
       end)
 
@@ -58,7 +59,7 @@ defmodule Setlistify.SetlistFm.APITest do
         sets: []
       }
 
-      expect(Setlistify.SetlistFm.API.MockClient, :get_setlist, 1, fn _id ->
+      expect(MockClient, :get_setlist, 1, fn _id ->
         {:ok, setlist}
       end)
 
@@ -67,7 +68,7 @@ defmodule Setlistify.SetlistFm.APITest do
     end
 
     test "does not cache errors — impl called again on retry" do
-      expect(Setlistify.SetlistFm.API.MockClient, :get_setlist, 1, fn _id ->
+      expect(MockClient, :get_setlist, 1, fn _id ->
         {:error, :not_found}
       end)
 
@@ -80,7 +81,7 @@ defmodule Setlistify.SetlistFm.APITest do
         sets: []
       }
 
-      expect(Setlistify.SetlistFm.API.MockClient, :get_setlist, 1, fn _id ->
+      expect(MockClient, :get_setlist, 1, fn _id ->
         {:ok, setlist}
       end)
 

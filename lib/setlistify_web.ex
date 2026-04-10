@@ -23,10 +23,11 @@ defmodule SetlistifyWeb do
     quote do
       use Phoenix.Router, helpers: false
 
-      # Import common connection and controller functions to use in pipelines
-      import Plug.Conn
       import Phoenix.Controller
       import Phoenix.LiveView.Router
+
+      # Import common connection and controller functions to use in pipelines
+      import Plug.Conn
     end
   end
 
@@ -105,8 +106,8 @@ defmodule SetlistifyWeb do
       if Mix.env() == :prod do
         def tid(_), do: []
       else
-        def tid(list) when is_list(list), do: [{:data, ["test-#{Enum.join(list, "-")}": true]}]
-        def tid(id), do: [{:data, ["test-#{id}": true]}]
+        def tid(list) when is_list(list), do: [{:data, [{:"test-#{Enum.join(list, "-")}", true}]}]
+        def tid(id), do: [{:data, [{:"test-#{id}", true}]}]
       end
     end
   end

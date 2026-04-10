@@ -5,12 +5,12 @@ defmodule SetlistifyWeb.UserAuth do
   For LiveView authentication hooks, see SetlistifyWeb.Auth.LiveHooks.
   """
 
+  @behaviour Plug
+
   use SetlistifyWeb, :verified_routes
 
-  import Plug.Conn
   import Phoenix.Controller
-
-  @behaviour Plug
+  import Plug.Conn
 
   @impl true
   def init(opts), do: opts
@@ -24,7 +24,7 @@ defmodule SetlistifyWeb.UserAuth do
   Used for HTTP routes that require the user to be authenticated.
   """
   def require_authenticated_user(conn, _opts) do
-    if conn |> get_session(:user_id) do
+    if get_session(conn, :user_id) do
       conn
     else
       conn

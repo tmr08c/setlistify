@@ -1,4 +1,5 @@
 defmodule SetlistifyWeb.HomeLive do
+  @moduledoc false
   use SetlistifyWeb, :live_view
   use Gettext, backend: SetlistifyWeb.Gettext
 

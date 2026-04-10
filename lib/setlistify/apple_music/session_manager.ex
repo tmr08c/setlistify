@@ -9,14 +9,15 @@ defmodule Setlistify.AppleMusic.SessionManager do
   broadcast on token change.
   """
 
-  use GenServer
-  require Logger
-  require OpenTelemetry.Tracer
-
   @behaviour Setlistify.UserSessionManager
+
+  use GenServer
 
   alias Setlistify.AppleMusic.UserSession
   alias Setlistify.SessionRegistry
+
+  require Logger
+  require OpenTelemetry.Tracer
 
   @impl Setlistify.UserSessionManager
   def start_link({user_id, %UserSession{} = session}) do

@@ -29,27 +29,19 @@ defmodule Setlistify.Application do
         {DynamicSupervisor, name: Setlistify.UserSessionSupervisor},
         # Start Caches
         Supervisor.child_spec(
-          {Cachex,
-           name: :setlist_fm_search_cache,
-           expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
+          {Cachex, name: :setlist_fm_search_cache, expiration: Cachex.Spec.expiration(default: to_timeout(minute: 5))},
           id: :setlist_fm_search_cache
         ),
         Supervisor.child_spec(
-          {Cachex,
-           name: :setlist_fm_setlist_cache,
-           expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
+          {Cachex, name: :setlist_fm_setlist_cache, expiration: Cachex.Spec.expiration(default: to_timeout(minute: 5))},
           id: :setlist_fm_setlist_cache
         ),
         Supervisor.child_spec(
-          {Cachex,
-           name: :spotify_track_cache,
-           expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
+          {Cachex, name: :spotify_track_cache, expiration: Cachex.Spec.expiration(default: to_timeout(minute: 5))},
           id: :spotify_track_cache
         ),
         Supervisor.child_spec(
-          {Cachex,
-           name: :apple_music_track_cache,
-           expiration: Cachex.Spec.expiration(default: :timer.minutes(5))},
+          {Cachex, name: :apple_music_track_cache, expiration: Cachex.Spec.expiration(default: to_timeout(minute: 5))},
           id: :apple_music_track_cache
         )
       ] ++ apple_music_children()

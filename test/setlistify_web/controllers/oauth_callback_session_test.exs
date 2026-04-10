@@ -1,10 +1,12 @@
 defmodule SetlistifyWeb.OAuthCallbackSessionTest do
   use SetlistifyWeb.ConnCase
-  import Hammox
 
-  alias Setlistify.Spotify.UserSession
-  alias Setlistify.Auth.TokenSalts
+  import Hammox
   import Setlistify.Test.RegistryHelpers
+
+  alias Setlistify.Auth.TokenSalts
+  alias Setlistify.Spotify.API.MockClient
+  alias Setlistify.Spotify.UserSession
 
   describe "OAuth callback session handling" do
     test "properly sets user_id in session after successful OAuth flow", %{conn: conn} do
@@ -24,7 +26,7 @@ defmodule SetlistifyWeb.OAuthCallbackSessionTest do
       }
 
       # Mock the API exchange_code call
-      expect(Setlistify.Spotify.API.MockClient, :exchange_code, fn ^mock_code, ^redirect_uri ->
+      expect(MockClient, :exchange_code, fn ^mock_code, ^redirect_uri ->
         {:ok, user_session}
       end)
 
@@ -44,7 +46,7 @@ defmodule SetlistifyWeb.OAuthCallbackSessionTest do
 
       # Verify the session was set correctly
       assert get_session(conn, "user_id") == user_id
-      assert get_session(conn, "refresh_token") != nil
+      assert get_session(conn, "refresh_token")
 
       # Verify old session structure is NOT present
       refute get_session(conn, "access_token")
@@ -55,7 +57,7 @@ defmodule SetlistifyWeb.OAuthCallbackSessionTest do
 
       # Verify redirect happened
       assert conn.status == 302
-      location = Plug.Conn.get_resp_header(conn, "location") |> List.first()
+      location = conn |> Plug.Conn.get_resp_header("location") |> List.first()
       assert location == "http://localhost:4002/" || location == "/"
     end
 
@@ -74,7 +76,7 @@ defmodule SetlistifyWeb.OAuthCallbackSessionTest do
         username: "test_username"
       }
 
-      expect(Setlistify.Spotify.API.MockClient, :exchange_code, fn ^mock_code, ^redirect_uri ->
+      expect(MockClient, :exchange_code, fn ^mock_code, ^redirect_uri ->
         {:ok, user_session}
       end)
 
@@ -108,8 +110,7 @@ defmodule SetlistifyWeb.OAuthCallbackSessionTest do
 
       # Setup initial session
       conn =
-        conn
-        |> init_test_session(%{
+        init_test_session(conn, %{
           "user_id" => user_id,
           "refresh_token" => encrypted_refresh_token,
           "redirect_to" => "/some/path"

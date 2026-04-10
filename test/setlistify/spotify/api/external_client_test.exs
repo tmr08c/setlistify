@@ -1,8 +1,11 @@
 defmodule Setlistify.Spotify.Api.ExternalClientTest do
   use Setlistify.DataCase, async: true
+
   import Hammox
 
   alias Setlistify.Spotify.API.ExternalClient
+  alias Setlistify.Spotify.API.MockClient
+  alias Setlistify.Spotify.SessionSupervisor
   alias Setlistify.Spotify.UserSession
 
   @user_profile_user_id "myusername"
@@ -177,8 +180,8 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           params = URI.decode_query(body)
           assert params["grant_type"] == "refresh_token"
           assert params["refresh_token"] == "old_refresh_token"
-          assert params["client_id"] != nil
-          assert params["client_secret"] != nil
+          assert params["client_id"]
+          assert params["client_secret"]
 
           response = %{
             "access_token" => "new_access_token",
@@ -208,8 +211,8 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           params = URI.decode_query(body)
           assert params["grant_type"] == "refresh_token"
           assert params["refresh_token"] == "old_refresh_token"
-          assert params["client_id"] != nil
-          assert params["client_secret"] != nil
+          assert params["client_id"]
+          assert params["client_secret"]
 
           # This does **not** include the refresh token, so we expect to keep
           # using our old refresh token
@@ -364,8 +367,8 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           assert params["grant_type"] == "authorization_code"
           assert params["code"] == "valid_code"
           assert params["redirect_uri"] == "http://localhost:4000/oauth/callbacks/spotify"
-          assert params["client_id"] != nil
-          assert params["client_secret"] != nil
+          assert params["client_id"]
+          assert params["client_secret"]
 
           response = %{
             "access_token" => "new_access_token",
@@ -404,7 +407,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
                  "http://localhost:4000/oauth/callbacks/spotify"
                )
 
-      assert %Setlistify.Spotify.UserSession{} = user_session
+      assert %UserSession{} = user_session
       assert user_session.access_token == "new_access_token"
       assert user_session.refresh_token == "new_refresh_token"
       assert user_session.expires_at > System.system_time(:second)
@@ -519,35 +522,35 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       user_session: user_session
     } do
       # Stop any existing manager first
-      Setlistify.Spotify.SessionSupervisor.stop_user_token(@user_profile_user_id)
+      SessionSupervisor.stop_user_token(@user_profile_user_id)
 
       # Create a UserSession instance for the test
       test_session = %UserSession{
         access_token: "expired_access_token",
         refresh_token: "refresh_token",
-        expires_at: System.system_time(:second) + 10000,
+        expires_at: System.system_time(:second) + 10_000,
         user_id: @user_profile_user_id,
         username: "Test User"
       }
 
       {:ok, pid} =
-        Setlistify.Spotify.SessionSupervisor.start_user_token(
+        SessionSupervisor.start_user_token(
           @user_profile_user_id,
           test_session
         )
 
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn _refresh_token ->
+      expect(MockClient, :refresh_token, fn _refresh_token ->
         {:ok,
          %{
            access_token: "new_access_token",
            refresh_token: "refresh_token",
-           expires_in: 10000
+           expires_in: 10_000
          }}
       end)
 
       # Refreshing happens in the SessionManager process, so we need to explicity
       # tell it to use the mock we have above
-      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+      allow(MockClient, self(), pid)
 
       # First request returns 401 for expired token
       Req.Test.expect(
@@ -560,7 +563,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           |> Plug.Conn.put_resp_header("content-type", "application/json")
           |> Plug.Conn.put_resp_header(
             "www-authenticate",
-            "Bearer realm=\"spotify\", error=\"invalid_token\", error_description=\"The access token expired\""
+            ~s(Bearer realm="spotify", error="invalid_token", error_description="The access token expired")
           )
           |> Plug.Conn.send_resp(
             401,
@@ -599,31 +602,31 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
     @tag :capture_log
     test "returns error when token refresh fails", %{user_session: user_session} do
       # Stop any existing manager first
-      Setlistify.Spotify.SessionSupervisor.stop_user_token(@user_profile_user_id)
+      SessionSupervisor.stop_user_token(@user_profile_user_id)
 
       # Create a UserSession instance for the test
       test_session = %UserSession{
         access_token: "expired_access_token",
         refresh_token: "bad_refresh_token",
-        expires_at: System.system_time(:second) + 10000,
+        expires_at: System.system_time(:second) + 10_000,
         user_id: @user_profile_user_id,
         username: "Test User"
       }
 
       {:ok, pid} =
-        Setlistify.Spotify.SessionSupervisor.start_user_token(
+        SessionSupervisor.start_user_token(
           @user_profile_user_id,
           test_session
         )
 
       # Mock failed token refresh
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn _refresh_token ->
+      expect(MockClient, :refresh_token, fn _refresh_token ->
         {:error, :invalid_token}
       end)
 
       # Refreshing happens in the SessionManager process, so we need to explicity
       # tell it to use the mock we have above
-      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+      allow(MockClient, self(), pid)
 
       # First request returns 401 for expired token
       Req.Test.expect(
@@ -636,7 +639,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           |> Plug.Conn.put_resp_header("content-type", "application/json")
           |> Plug.Conn.put_resp_header(
             "www-authenticate",
-            "Bearer realm=\"spotify\", error=\"invalid_token\", error_description=\"The access token expired\""
+            ~s(Bearer realm="spotify", error="invalid_token", error_description="The access token expired")
           )
           |> Plug.Conn.send_resp(
             401,
@@ -662,35 +665,35 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       user_session: user_session
     } do
       # Stop any existing manager first
-      Setlistify.Spotify.SessionSupervisor.stop_user_token(@user_profile_user_id)
+      SessionSupervisor.stop_user_token(@user_profile_user_id)
 
       # Create a UserSession instance for the test
       test_session = %UserSession{
         access_token: "expired_access_token",
         refresh_token: "refresh_token",
-        expires_at: System.system_time(:second) + 10000,
+        expires_at: System.system_time(:second) + 10_000,
         user_id: @user_profile_user_id,
         username: "Test User"
       }
 
       {:ok, pid} =
-        Setlistify.Spotify.SessionSupervisor.start_user_token(
+        SessionSupervisor.start_user_token(
           @user_profile_user_id,
           test_session
         )
 
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn _refresh_token ->
+      expect(MockClient, :refresh_token, fn _refresh_token ->
         {:ok,
          %{
            access_token: "new_access_token",
            refresh_token: "refresh_token",
-           expires_in: 10000
+           expires_in: 10_000
          }}
       end)
 
       # Refreshing happens in the SessionManager process, so we need to explicity
       # tell it to use the mock we have above
-      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+      allow(MockClient, self(), pid)
 
       track_uris = ["spotify:track:123", "spotify:track:456"]
 
@@ -705,7 +708,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           |> Plug.Conn.put_resp_header("content-type", "application/json")
           |> Plug.Conn.put_resp_header(
             "www-authenticate",
-            "Bearer realm=\"spotify\", error=\"invalid_token\", error_description=\"The access token expired\""
+            ~s(Bearer realm="spotify", error="invalid_token", error_description="The access token expired")
           )
           |> Plug.Conn.send_resp(
             401,
@@ -741,31 +744,31 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
     @tag :capture_log
     test "returns error when token refresh fails", %{user_session: user_session} do
       # Stop any existing manager first
-      Setlistify.Spotify.SessionSupervisor.stop_user_token(@user_profile_user_id)
+      SessionSupervisor.stop_user_token(@user_profile_user_id)
 
       # Create a UserSession instance for the test
       test_session = %UserSession{
         access_token: "expired_access_token",
         refresh_token: "bad_refresh_token",
-        expires_at: System.system_time(:second) + 10000,
+        expires_at: System.system_time(:second) + 10_000,
         user_id: @user_profile_user_id,
         username: "Test User"
       }
 
       {:ok, pid} =
-        Setlistify.Spotify.SessionSupervisor.start_user_token(
+        SessionSupervisor.start_user_token(
           @user_profile_user_id,
           test_session
         )
 
       # Mock failed token refresh
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn _refresh_token ->
+      expect(MockClient, :refresh_token, fn _refresh_token ->
         {:error, :invalid_token}
       end)
 
       # Refreshing happens in the SessionManager process, so we need to explicity
       # tell it to use the mock we have above
-      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+      allow(MockClient, self(), pid)
 
       track_uris = ["spotify:track:123", "spotify:track:456"]
 
@@ -780,7 +783,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           |> Plug.Conn.put_resp_header("content-type", "application/json")
           |> Plug.Conn.put_resp_header(
             "www-authenticate",
-            "Bearer realm=\"spotify\", error=\"invalid_token\", error_description=\"The access token expired\""
+            ~s(Bearer realm="spotify", error="invalid_token", error_description="The access token expired")
           )
           |> Plug.Conn.send_resp(
             401,
@@ -806,35 +809,35 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       user_session: user_session
     } do
       # Stop any existing manager first
-      Setlistify.Spotify.SessionSupervisor.stop_user_token(@user_profile_user_id)
+      SessionSupervisor.stop_user_token(@user_profile_user_id)
 
       # Create a UserSession instance for the test
       test_session = %UserSession{
         access_token: "expired_access_token",
         refresh_token: "refresh_token",
-        expires_at: System.system_time(:second) + 10000,
+        expires_at: System.system_time(:second) + 10_000,
         user_id: @user_profile_user_id,
         username: "Test User"
       }
 
       {:ok, pid} =
-        Setlistify.Spotify.SessionSupervisor.start_user_token(
+        SessionSupervisor.start_user_token(
           @user_profile_user_id,
           test_session
         )
 
-      expect(Setlistify.Spotify.API.MockClient, :refresh_token, fn _refresh_token ->
+      expect(MockClient, :refresh_token, fn _refresh_token ->
         {:ok,
          %{
            access_token: "new_access_token",
            refresh_token: "refresh_token",
-           expires_in: 10000
+           expires_in: 10_000
          }}
       end)
 
       # Refreshing happens in the SessionManager process, so we need to explicity
       # tell it to use the mock we have above
-      allow(Setlistify.Spotify.API.MockClient, self(), pid)
+      allow(MockClient, self(), pid)
 
       # First request returns 401 for expired token
       Req.Test.expect(
@@ -846,7 +849,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           |> Plug.Conn.put_resp_header("content-type", "application/json")
           |> Plug.Conn.put_resp_header(
             "www-authenticate",
-            "Bearer realm=\"spotify\", error=\"invalid_token\", error_description=\"The access token expired\""
+            ~s(Bearer realm="spotify", error="invalid_token", error_description="The access token expired")
           )
           |> Plug.Conn.send_resp(
             401,
