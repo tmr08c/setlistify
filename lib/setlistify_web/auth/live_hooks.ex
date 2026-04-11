@@ -3,6 +3,7 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
   LiveView authentication hooks for mounting protected views.
   """
 
+  alias Setlistify.Scope
   alias Setlistify.UserSessionManager
 
   def on_mount(:default, _params, session, socket) do
@@ -47,6 +48,7 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
 
     socket =
       socket
+      |> Phoenix.Component.assign_new(:current_scope, fn -> Scope.for_user_session(user_session) end)
       |> Phoenix.Component.assign_new(:user_id, fn -> user_id end)
       |> Phoenix.Component.assign_new(:user_session, fn -> user_session end)
       |> Phoenix.Component.assign(:redirect_to, nil)
@@ -81,6 +83,7 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
 
     socket =
       if_result
+      |> Phoenix.Component.assign(:current_scope, Scope.for_user_session(nil))
       |> Phoenix.Component.assign(:user_id, nil)
       |> Phoenix.Component.assign(:user_session, nil)
       |> Phoenix.Component.assign(:apple_music_trigger, false)
