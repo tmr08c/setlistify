@@ -86,7 +86,7 @@
 <main class="pt-16 sm:pt-24 min-h-screen">
   <.flash_group flash={@flash} />
   <div class="pb-20">
-    {@inner_content}
+    {render_slot(@inner_block)}
   </div>
 </main>
 <footer class="border-t border-gray-800 py-6 px-4 text-center">

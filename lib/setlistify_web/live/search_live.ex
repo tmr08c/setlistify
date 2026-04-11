@@ -4,6 +4,7 @@ defmodule SetlistifyWeb.SearchLive do
   use Gettext, backend: SetlistifyWeb.Gettext
 
   alias SetlistifyWeb.Components.SearchFormComponent
+  alias SetlistifyWeb.Layouts
 
   require Logger
   require OpenTelemetry.Tracer
@@ -71,51 +72,60 @@ defmodule SetlistifyWeb.SearchLive do
 
   def render(assigns) do
     ~H"""
-    <.section_container class="py-10">
-      <div class="max-w-lg mx-auto mb-10">
-        <.live_component
-          module={SearchFormComponent}
-          id="results-search-form"
-          input_id="search-query-results"
-          query_params={@query_params}
-        />
-      </div>
-
-      <h2 class="text-3xl font-bold text-center mb-12">Search Results</h2>
-
-      <%= if @setlists == [] do %>
-        <p class="text-center text-gray-400 text-lg">No results found</p>
-      <% else %>
-        <ol class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          <%= for setlist <- @setlists do %>
-            <.link navigate={~p"/setlist/#{setlist.id}"} {tid(["setlist", setlist.id])}>
-              <li class="bg-black/50 border border-gray-800 rounded-xl p-6 hover:border-emerald-500 transition-colors">
-                <time datetime={setlist.date} class="inline-block mb-3">
-                  <span class="text-sm text-gray-400">
-                    {Calendar.strftime(setlist.date, "%B %d, %Y")}
-                  </span>
-                </time>
-
-                <h3 class="text-lg font-semibold mb-1">{setlist.artist}</h3>
-                <p class="text-gray-400">{setlist.venue.name}</p>
-                <p class="text-gray-400 text-sm">{format_location(setlist.venue.location)}</p>
-                <p class="text-emerald-400 text-sm mt-2">
-                  {format_song_count(setlist.song_count)}
-                </p>
-              </li>
-            </.link>
-          <% end %>
-        </ol>
-
-        <%= if should_show_pagination?(@pagination) do %>
-          <.pagination
-            page={@pagination.page}
-            total_pages={total_pages(@pagination)}
-            query={@query_params["query"]}
+    <Layouts.app
+      flash={@flash}
+      user_session={@user_session}
+      redirect_to={@redirect_to}
+      apple_music_trigger={@apple_music_trigger}
+      apple_music_user_token={@apple_music_user_token}
+      apple_music_storefront={@apple_music_storefront}
+    >
+      <.section_container class="py-10">
+        <div class="max-w-lg mx-auto mb-10">
+          <.live_component
+            module={SearchFormComponent}
+            id="results-search-form"
+            input_id="search-query-results"
+            query_params={@query_params}
           />
+        </div>
+
+        <h2 class="text-3xl font-bold text-center mb-12">Search Results</h2>
+
+        <%= if @setlists == [] do %>
+          <p class="text-center text-gray-400 text-lg">No results found</p>
+        <% else %>
+          <ol class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+            <%= for setlist <- @setlists do %>
+              <.link navigate={~p"/setlist/#{setlist.id}"} {tid(["setlist", setlist.id])}>
+                <li class="bg-black/50 border border-gray-800 rounded-xl p-6 hover:border-emerald-500 transition-colors">
+                  <time datetime={setlist.date} class="inline-block mb-3">
+                    <span class="text-sm text-gray-400">
+                      {Calendar.strftime(setlist.date, "%B %d, %Y")}
+                    </span>
+                  </time>
+
+                  <h3 class="text-lg font-semibold mb-1">{setlist.artist}</h3>
+                  <p class="text-gray-400">{setlist.venue.name}</p>
+                  <p class="text-gray-400 text-sm">{format_location(setlist.venue.location)}</p>
+                  <p class="text-emerald-400 text-sm mt-2">
+                    {format_song_count(setlist.song_count)}
+                  </p>
+                </li>
+              </.link>
+            <% end %>
+          </ol>
+
+          <%= if should_show_pagination?(@pagination) do %>
+            <.pagination
+              page={@pagination.page}
+              total_pages={total_pages(@pagination)}
+              query={@query_params["query"]}
+            />
+          <% end %>
         <% end %>
-      <% end %>
-    </.section_container>
+      </.section_container>
+    </Layouts.app>
     """
   end
 
