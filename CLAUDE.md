@@ -105,6 +105,22 @@ When the server is running, Tidewave MCP tools are available. Prefer them over s
 
 If Tidewave tools are unavailable (server not running), fall back to static tools normally.
 
+## Commit Messages
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/). Use the appropriate type prefix:
+
+| Type | When to use |
+|------|-------------|
+| `feat` | A new end-user-facing feature |
+| `fix` | A bug fix visible to users |
+| `chore` | Internal changes: refactors, dependency updates, tooling, code organization |
+| `docs` | Documentation only |
+| `test` | Adding or updating tests |
+| `ci` | CI/CD configuration changes |
+| `perf` | Performance improvements |
+
+**Key distinction:** `feat` is for things users notice; `chore` is for everything else internal. For example, adopting a new code pattern, migrating a framework API, or adding a struct for internal use are all `chore`, not `feat`.
+
 ## Development Reminders
 
 - Run `mix format` after making changes (includes Styler auto-rewrites)
