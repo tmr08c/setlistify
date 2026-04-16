@@ -84,7 +84,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                     async_result = Map.get(assigns, async_key) %>
                     <li>
                       <span class="inline-flex items-center gap-2">
-                        <%= if @user_session && async_result do %>
+                        <%= if @current_scope.user_session && async_result do %>
                           <.async_result :let={result} assign={async_result}>
                             <:loading>
                               <Heroicons.arrow_path
@@ -119,7 +119,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                           </.async_result>
                         <% end %>
                         <span class={[
-                          @user_session && async_result && async_result.ok? &&
+                          @current_scope.user_session && async_result && async_result.ok? &&
                             !async_result.result[:track_info] && "text-gray-500",
                           "inline"
                         ]}>
@@ -136,7 +136,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
         <div class="bg-gray-900 rounded-xl p-4 sm:p-6 border border-gray-800">
           <div class="text-center">
-            <%= if @user_session do %>
+            <%= if @current_scope.user_session do %>
               <div class="space-y-4">
                 <p class="text-gray-400 mb-4">
                   Ready to create your playlist? We'll add all available tracks to your music library.

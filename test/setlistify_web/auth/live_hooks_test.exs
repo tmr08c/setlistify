@@ -40,8 +40,8 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
 
       {:cont, updated_socket} = LiveHooks.on_mount(:default, %{}, session, socket)
 
-      assert updated_socket.assigns.user_id == user_id
-      assert updated_socket.assigns.user_session == user_session
+      assert updated_socket.assigns.current_scope.user_id == user_id
+      assert updated_socket.assigns.current_scope.user_session == user_session
     end
 
     test "assigns nil when not authenticated" do
@@ -57,8 +57,8 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
 
       {:cont, updated_socket} = LiveHooks.on_mount(:default, %{}, session, socket)
 
-      assert updated_socket.assigns.user_id == nil
-      assert updated_socket.assigns.user_session == nil
+      assert updated_socket.assigns.current_scope.user_id == nil
+      assert updated_socket.assigns.current_scope.user_session == nil
     end
 
     test "assigns nil when auth_provider is unknown" do
@@ -74,8 +74,8 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
 
       {:cont, updated_socket} = LiveHooks.on_mount(:default, %{}, session, socket)
 
-      assert updated_socket.assigns.user_id == nil
-      assert updated_socket.assigns.user_session == nil
+      assert updated_socket.assigns.current_scope.user_id == nil
+      assert updated_socket.assigns.current_scope.user_session == nil
     end
   end
 
@@ -150,8 +150,8 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
 
       {:cont, updated_socket} = LiveHooks.on_mount(:ensure_authenticated, %{}, session, socket)
 
-      assert updated_socket.assigns.user_id == user_id
-      assert updated_socket.assigns.user_session == user_session
+      assert updated_socket.assigns.current_scope.user_id == user_id
+      assert updated_socket.assigns.current_scope.user_session == user_session
     end
   end
 end

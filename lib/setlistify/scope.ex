@@ -2,13 +2,9 @@ defmodule Setlistify.Scope do
   @moduledoc """
   Centralises request-scoped context for authenticated users.
 
-  Following the Phoenix 1.8 Scopes pattern, this struct is populated from the
-  session during `on_mount` and threaded through context functions to carry
-  the current user's identity and music-service session.
-
-  The `user_session` field holds the provider-specific session struct
-  (`Setlistify.Spotify.UserSession` or `Setlistify.AppleMusic.UserSession`).
-  The `user_id` field is extracted from the session for convenience.
+  Populated from the session during `on_mount` and threaded through context
+  functions to carry the current user's identity and provider-specific session
+  struct. The `user_id` field is extracted from the session for convenience.
   """
 
   alias Setlistify.AppleMusic
