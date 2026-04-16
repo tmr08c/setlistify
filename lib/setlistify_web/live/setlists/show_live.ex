@@ -13,7 +13,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   def mount(%{"id" => id}, _session, socket) do
     case SetlistFm.API.get_setlist(id) do
       {:ok, setlist} ->
-        user_session = socket.assigns[:user_session]
+        scope = socket.assigns[:current_scope]
 
         socket =
           assign(socket,
@@ -25,7 +25,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
             redirect_to: "/setlist/#{id}"
           )
 
-        socket = maybe_start_song_searches(socket, setlist, user_session)
+        socket = maybe_start_song_searches(socket, setlist, scope)
 
         {:ok, socket}
 
@@ -44,10 +44,10 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   end
 
   def handle_event("create_playlist", _params, socket) do
-    user_session = socket.assigns.user_session
+    scope = socket.assigns.current_scope
 
-    if user_session do
-      create_and_populate_playlist(socket, user_session)
+    if Setlistify.Scope.authenticated?(scope) do
+      create_and_populate_playlist(socket, scope.user_session)
     else
       {:noreply, put_flash(socket, :error, "Unable to access your music session. Please log in again.")}
     end
@@ -84,7 +84,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                     async_result = Map.get(assigns, async_key) %>
                     <li>
                       <span class="inline-flex items-center gap-2">
-                        <%= if @user_session && async_result do %>
+                        <%= if @current_scope.user_session && async_result do %>
                           <.async_result :let={result} assign={async_result}>
                             <:loading>
                               <Heroicons.arrow_path
@@ -119,7 +119,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                           </.async_result>
                         <% end %>
                         <span class={[
-                          @user_session && async_result && async_result.ok? &&
+                          @current_scope.user_session && async_result && async_result.ok? &&
                             !async_result.result[:track_info] && "text-gray-500",
                           "inline"
                         ]}>
@@ -136,7 +136,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
         <div class="bg-gray-900 rounded-xl p-4 sm:p-6 border border-gray-800">
           <div class="text-center">
-            <%= if @user_session do %>
+            <%= if @current_scope.user_session do %>
               <div class="space-y-4">
                 <p class="text-gray-400 mb-4">
                   Ready to create your playlist? We'll add all available tracks to your music library.
@@ -157,9 +157,10 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     """
   end
 
+  defp maybe_start_song_searches(socket, _setlist, %Setlistify.Scope{user_session: nil}), do: socket
   defp maybe_start_song_searches(socket, _setlist, nil), do: socket
 
-  defp maybe_start_song_searches(socket, setlist, user_session) do
+  defp maybe_start_song_searches(socket, setlist, %Setlistify.Scope{user_session: user_session}) do
     setlist.sets
     |> Enum.with_index()
     |> Enum.flat_map(fn {set, set_index} ->
