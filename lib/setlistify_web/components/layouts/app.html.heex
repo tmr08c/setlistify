@@ -1,4 +1,4 @@
-<%= if needs_music_kit?(@user_session) do %>
+<%= if needs_music_kit?(@current_scope.user_session) do %>
   <script async src="https://js-cdn.music.apple.com/musickit/v3/musickit.js">
   </script>
 <% end %>
@@ -10,22 +10,24 @@
         <span class="text-lg sm:text-xl font-bold ml-2">Setlistify</span>
       </a>
     </div>
-    <div :if={@user_session} class="flex items-center space-x-2 sm:space-x-4">
+    <div :if={@current_scope.user_session} class="flex items-center space-x-2 sm:space-x-4">
       <span class="text-gray-400 hidden sm:inline">
-        {user_signed_in_label(@user_session)}
+        {user_signed_in_label(@current_scope.user_session)}
       </span>
-      <span class="text-gray-400 sm:hidden text-sm">{user_display_name(@user_session)}</span>
+      <span class="text-gray-400 sm:hidden text-sm">
+        {user_display_name(@current_scope.user_session)}
+      </span>
       <.link
         href={~p"/signout"}
         id="sign-out-link"
-        phx-hook={sign_out_hook(@user_session)}
-        data-developer-token={sign_out_developer_token(@user_session)}
+        phx-hook={sign_out_hook(@current_scope.user_session)}
+        data-developer-token={sign_out_developer_token(@current_scope.user_session)}
         class="text-white hover:text-emerald-400 text-sm sm:text-base"
       >
         Sign Out
       </.link>
     </div>
-    <div :if={!@user_session} class="flex items-center space-x-3 sm:space-x-4">
+    <div :if={!@current_scope.user_session} class="flex items-center space-x-3 sm:space-x-4">
       <.link
         navigate={
           if @redirect_to,
@@ -72,7 +74,7 @@
   </div>
 </header>
 <form
-  :if={!@user_session}
+  :if={!@current_scope.user_session}
   id="apple-music-auth-form"
   method="post"
   action="/oauth/callbacks/apple_music"
