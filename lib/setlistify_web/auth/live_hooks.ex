@@ -50,6 +50,9 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
       |> Phoenix.Component.assign_new(:user_id, fn -> user_id end)
       |> Phoenix.Component.assign_new(:user_session, fn -> user_session end)
       |> Phoenix.Component.assign(:redirect_to, nil)
+      |> Phoenix.Component.assign(:apple_music_trigger, false)
+      |> Phoenix.Component.assign(:apple_music_user_token, nil)
+      |> Phoenix.Component.assign(:apple_music_storefront, nil)
 
     {:cont, socket}
   end

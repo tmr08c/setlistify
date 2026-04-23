@@ -53,7 +53,7 @@ defmodule SetlistifyWeb do
   def live_view do
     quote do
       use Phoenix.LiveView,
-        layout: {SetlistifyWeb.Layouts, :app}
+        layout: false
 
       unquote(html_helpers())
 

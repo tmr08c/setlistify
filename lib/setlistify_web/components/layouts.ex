@@ -4,15 +4,25 @@ defmodule SetlistifyWeb.Layouts do
 
   See the `layouts` directory for all templates available.
   The "root" layout is a skeleton rendered as part of the
-  application router. The "app" layout is set as the default
-  layout on both `use SetlistifyWeb, :controller` and
-  `use SetlistifyWeb, :live_view`.
+  application router. The "app" layout is an explicit function
+  component called directly from LiveView templates.
   """
   use SetlistifyWeb, :html
 
   alias Setlistify.Spotify.UserSession
 
   embed_templates "layouts/*"
+
+  attr :flash, :map, required: true
+  attr :user_session, :any, default: nil
+  attr :redirect_to, :string, default: nil
+  attr :apple_music_trigger, :boolean, default: false
+  attr :apple_music_user_token, :string, default: nil
+  attr :apple_music_storefront, :string, default: nil
+
+  slot :inner_block, required: true
+
+  def app(assigns)
 
   defp user_display_name(%UserSession{username: username}), do: username
   defp user_display_name(%Setlistify.AppleMusic.UserSession{}), do: "Apple Music"
