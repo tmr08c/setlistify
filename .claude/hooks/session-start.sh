@@ -16,11 +16,13 @@ fi
 
 cd "$CLAUDE_PROJECT_DIR"
 
-if ! dpkg -s libssl3 libncurses6 unzip ca-certificates gh >/dev/null 2>&1; then
-  echo "==> Installing system packages (libssl3, libncurses6, unzip, gh)..."
+SYSTEM_PACKAGES=(libssl3 libncurses6 unzip ca-certificates gh)
+
+if ! dpkg -s "${SYSTEM_PACKAGES[@]}" >/dev/null 2>&1; then
+  echo "==> Installing system packages (${SYSTEM_PACKAGES[*]})..."
   apt-get update -qq
   DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-    libssl3 libncurses6 unzip ca-certificates gh >/dev/null
+    "${SYSTEM_PACKAGES[@]}" >/dev/null
 fi
 
 export MISE_DATA_DIR="${MISE_DATA_DIR:-$HOME/.local/share/mise}"
