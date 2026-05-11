@@ -31,10 +31,20 @@ if ! command -v mise >/dev/null 2>&1; then
 fi
 export PATH="$HOME/.local/bin:$MISE_DATA_DIR/shims:$PATH"
 
+# Trust the project's mise config so `mise install` doesn't refuse to run.
+mise trust "$CLAUDE_PROJECT_DIR/.mise.toml" >/dev/null
+
 echo "==> Installing Erlang/Elixir via mise (precompiled)..."
 mise install
 
-echo "export PATH=\"$HOME/.local/bin:$MISE_DATA_DIR/shims:\$PATH\"" >> "$CLAUDE_ENV_FILE"
+# Point Hex/Erlang at the system CA bundle. Without this, `mix deps.get` fails
+# with "TLS client: Unknown CA" against repo.hex.pm on this base image.
+export HEX_CACERTS_PATH="/etc/ssl/certs/ca-certificates.crt"
+
+{
+  echo "export PATH=\"$HOME/.local/bin:$MISE_DATA_DIR/shims:\$PATH\""
+  echo "export HEX_CACERTS_PATH=\"/etc/ssl/certs/ca-certificates.crt\""
+} >> "$CLAUDE_ENV_FILE"
 
 # runtime.exs loads `.env` for :dev (and `.env.example` for :test). Seed `.env`
 # with the same placeholders so dev compile/boot doesn't blow up on
