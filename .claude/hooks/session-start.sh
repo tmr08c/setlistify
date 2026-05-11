@@ -49,10 +49,4 @@ mix local.rebar --force --if-missing >/dev/null
 echo "==> Fetching mix dependencies..."
 mix deps.get
 
-echo "==> Compiling (dev)..."
-mix compile
-
-echo "==> Compiling (test)..."
-MIX_ENV=test mix compile
-
 echo "==> Setup complete."
