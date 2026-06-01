@@ -69,8 +69,17 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
          %{user_session: user_session} do
       Req.Test.stub(MySpotifyStub, fn
         %{request_path: "/v1/search", method: "GET"} = conn ->
-          response = track_response("Labrinth", "Still Don't Know My Name", "spotify:track:xyz")
-          Req.Test.json(conn, response)
+          Req.Test.json(conn, %{
+            "tracks" => %{
+              "items" => [
+                %{
+                  "uri" => "spotify:track:xyz",
+                  "name" => "Still Don't Know My Name",
+                  "artists" => [%{"name" => "Labrinth"}]
+                }
+              ]
+            }
+          })
       end)
 
       ExUnit.CaptureLog.capture_log(fn ->
@@ -88,10 +97,17 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       Req.Test.expect(MySpotifyStub, fn %{request_path: "/v1/search", query_string: qs} = conn ->
         assert qs =~ "artist%3ACursive"
 
-        Req.Test.json(
-          conn,
-          track_response("Cursive", "Driftwood: A Fairy Tale", "spotify:track:cursive1")
-        )
+        Req.Test.json(conn, %{
+          "tracks" => %{
+            "items" => [
+              %{
+                "uri" => "spotify:track:cursive1",
+                "name" => "Driftwood: A Fairy Tale",
+                "artists" => [%{"name" => "Cursive"}]
+              }
+            ]
+          }
+        })
       end)
 
       assert %{track_id: "spotify:track:cursive1"} =
@@ -108,10 +124,17 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       Req.Test.expect(MySpotifyStub, fn %{request_path: "/v1/search", query_string: qs} = conn ->
         assert qs =~ "artist%3ACursive"
 
-        Req.Test.json(
-          conn,
-          track_response("Cursive", "The Recluse", "spotify:track:recluse")
-        )
+        Req.Test.json(conn, %{
+          "tracks" => %{
+            "items" => [
+              %{
+                "uri" => "spotify:track:recluse",
+                "name" => "The Recluse",
+                "artists" => [%{"name" => "Cursive"}]
+              }
+            ]
+          }
+        })
       end)
 
       assert %{track_id: "spotify:track:recluse"} =
@@ -122,20 +145,6 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
                  "Some Other Band"
                )
     end
-  end
-
-  defp track_response(artist, name, uri) do
-    %{
-      "tracks" => %{
-        "items" => [
-          %{
-            "uri" => uri,
-            "name" => name,
-            "artists" => [%{"name" => artist}]
-          }
-        ]
-      }
-    }
   end
 
   describe "create_playlist/3" do

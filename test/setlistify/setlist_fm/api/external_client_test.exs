@@ -466,24 +466,24 @@ defmodule Setlistify.SetlistFm.API.ExternalClientTest do
   test "get_setlist/1 surfaces cover_artist on songs originally performed by another band" do
     id = "4375bf0b"
 
-    Req.Test.expect(MySetlistFmStub, fn %{
-                                          request_path: "/rest/1.0/setlist/" <> rest,
-                                          method: "GET"
-                                        } = conn ->
-      assert rest == id
+    Req.Test.expect(
+      MySetlistFmStub,
+      fn %{request_path: "/rest/1.0/setlist/" <> rest, method: "GET"} = conn ->
+        assert rest == id
 
-      conn
-      |> Plug.Conn.put_resp_header("content-type", "application/json")
-      |> Plug.Conn.send_resp(200, @get_with_cover_response)
-    end)
+        conn
+        |> Plug.Conn.put_resp_header("content-type", "application/json")
+        |> Plug.Conn.send_resp(200, @get_with_cover_response)
+      end
+    )
 
     assert {:ok, result} = ExternalClient.get_setlist(id)
     assert result.artist == "Tim Kasher"
 
     songs = result.sets |> Enum.flat_map(& &1.songs) |> Map.new(&{&1.title, &1})
 
-    assert songs["Anonymity"] == %{title: "Anonymity", cover_artist: nil}
-    assert songs["Strays"] == %{title: "Strays", cover_artist: nil}
+    assert songs["Anonymity"] == %{title: "Anonymity"}
+    assert songs["Strays"] == %{title: "Strays"}
     assert songs["Needy"] == %{title: "Needy", cover_artist: "The Good Life"}
 
     assert songs["Driftwood: A Fairy Tale"] == %{

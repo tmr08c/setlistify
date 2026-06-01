@@ -149,16 +149,7 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
 
           sets =
             Enum.map(sets, fn set ->
-              songs =
-                set
-                |> Map.get("song", [])
-                |> Enum.map(fn song ->
-                  %{
-                    title: Map.get(song, "name"),
-                    cover_artist: song |> Map.get("cover", %{}) |> Map.get("name")
-                  }
-                end)
-
+              songs = set |> Map.get("song", []) |> Enum.map(&parse_song/1)
               %{name: set["name"], encore: set["encore"], songs: songs}
             end)
 
@@ -200,6 +191,15 @@ defmodule Setlistify.SetlistFm.API.ExternalClient do
       OpenTelemetry.Tracer.record_exception(error)
       OpenTelemetry.Tracer.set_status(:error, "Exception: #{Exception.message(error)}")
       reraise error, __STACKTRACE__
+  end
+
+  defp parse_song(song) do
+    base = %{title: Map.get(song, "name")}
+
+    case get_in(song, ["cover", "name"]) do
+      nil -> base
+      cover_artist -> Map.put(base, :cover_artist, cover_artist)
+    end
   end
 
   defp request(endpoint) do

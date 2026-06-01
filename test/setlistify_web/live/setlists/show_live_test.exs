@@ -46,15 +46,15 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
          },
          date: Date.new!(2023, 01, 01),
          sets: [
-           %{name: "Warm up", songs: [%{title: "a warm up song", cover_artist: nil}]},
+           %{name: "Warm up", songs: [%{title: "a warm up song"}]},
            %{
              name: nil,
-             songs: [%{title: "main set song1", cover_artist: nil}, %{title: "main set song2", cover_artist: nil}]
+             songs: [%{title: "main set song1"}, %{title: "main set song2"}]
            },
            %{
              name: nil,
              encore: 1,
-             songs: [%{title: "encore song1", cover_artist: nil}, %{title: "encore song2", cover_artist: nil}]
+             songs: [%{title: "encore song1"}, %{title: "encore song2"}]
            }
          ]
        }}
@@ -90,7 +90,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
          },
          date: Date.new!(2023, 01, 01),
          sets: [
-           %{name: "Main", songs: [%{title: "Hey Jude", cover_artist: nil}]}
+           %{name: "Main", songs: [%{title: "Hey Jude"}]}
          ]
        }}
     end)
@@ -135,7 +135,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
            }
          },
          date: Date.utc_today(),
-         sets: [%{name: nil, songs: [%{title: "song1", cover_artist: nil}, %{title: "song2", cover_artist: nil}]}]
+         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
        }}
     end)
 
@@ -199,7 +199,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
            }
          },
          date: Date.utc_today(),
-         sets: [%{name: nil, songs: [%{title: "song1", cover_artist: nil}, %{title: "song2", cover_artist: nil}]}]
+         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
        }}
     end)
 
@@ -278,7 +278,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
            }
          },
          date: Date.utc_today(),
-         sets: [%{name: nil, songs: [%{title: "song1", cover_artist: nil}, %{title: "song2", cover_artist: nil}]}]
+         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
        }}
     end)
 
@@ -333,7 +333,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
            }
          },
          date: Date.utc_today(),
-         sets: [%{name: nil, songs: [%{title: "song1", cover_artist: nil}, %{title: "song2", cover_artist: nil}]}]
+         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
        }}
     end)
 
@@ -404,7 +404,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
            }
          },
          date: Date.utc_today(),
-         sets: [%{name: nil, songs: [%{title: "Hey Jude", cover_artist: nil}]}]
+         sets: [%{name: nil, songs: [%{title: "Hey Jude"}]}]
        }}
     end)
 
