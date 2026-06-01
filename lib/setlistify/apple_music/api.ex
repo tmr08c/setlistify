@@ -14,12 +14,14 @@ defmodule Setlistify.AppleMusic.API do
     {:ok, %UserSession{user_token: user_token, storefront: storefront, user_id: user_id}}
   end
 
-  @callback search_for_track(UserSession.t(), String.t(), String.t()) ::
+  @callback search_for_track(UserSession.t(), String.t(), String.t(), String.t() | nil) ::
               nil | %{track_id: String.t()} | {:error, atom()}
-  def search_for_track(user_session, artist, track) do
-    Setlistify.Cache.fetch(:apple_music_track_cache, {artist, track}, fn {artist, track} ->
-      impl().search_for_track(user_session, artist, track)
-    end)
+  def search_for_track(user_session, artist, track, cover_artist \\ nil) do
+    Setlistify.Cache.fetch(
+      :apple_music_track_cache,
+      {artist, track, cover_artist},
+      fn _ -> impl().search_for_track(user_session, artist, track, cover_artist) end
+    )
   end
 
   @callback create_playlist(UserSession.t(), String.t(), String.t()) ::

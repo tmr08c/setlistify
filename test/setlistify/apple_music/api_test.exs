@@ -85,7 +85,7 @@ defmodule Setlistify.AppleMusic.APITest do
     test "returns the full error tuple when impl returns an error", %{
       user_session: user_session
     } do
-      expect(MockClient, :search_for_track, 1, fn _session, _artist, _track ->
+      expect(MockClient, :search_for_track, 1, fn _session, _artist, _track, _cover ->
         {:error, :token_refresh_failed}
       end)
 
@@ -94,7 +94,7 @@ defmodule Setlistify.AppleMusic.APITest do
     end
 
     test "caches successful results — impl is called only once", %{user_session: user_session} do
-      expect(MockClient, :search_for_track, 1, fn _session, _artist, _track ->
+      expect(MockClient, :search_for_track, 1, fn _session, _artist, _track, _cover ->
         %{track_id: "am:track:abc123"}
       end)
 
