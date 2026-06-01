@@ -106,6 +106,63 @@ defmodule Setlistify.AppleMusic.API.ExternalClientTest do
                  ExternalClient.search_for_track(@user_session, "Artist", "Track")
       end)
     end
+
+    test "rejects results whose artist does not match the queried artist" do
+      # Mimics Apple Music returning an unrelated top-1 result when the
+      # queried artist never matches anywhere in the catalog (e.g. searching
+      # "Tim Kasher From the Hips" and getting back a Labrinth song).
+      Req.Test.stub(MyAppleMusicStub, fn
+        %{request_path: "/v1/catalog/us/search"} = conn ->
+          response = mismatched_song_response("Labrinth", "Still Don't Know My Name")
+          Req.Test.json(conn, response)
+      end)
+
+      ExUnit.CaptureLog.capture_log(fn ->
+        assert ExternalClient.search_for_track(@user_session, "Tim Kasher", "From the Hips") ==
+                 nil
+      end)
+    end
+
+    test "falls back to cover artist when performing artist returns no usable match" do
+      # Performing artist call returns no usable result, cover artist call hits.
+      Req.Test.expect(MyAppleMusicStub, fn %{query_string: qs} = conn ->
+        assert qs =~ "term=Tim+Kasher+Driftwood"
+        response = %{"results" => %{"songs" => %{"data" => []}}}
+        Req.Test.json(conn, response)
+      end)
+
+      Req.Test.expect(MyAppleMusicStub, fn %{query_string: qs} = conn ->
+        assert qs =~ "term=Cursive+Driftwood"
+        response = matching_song_response("Cursive", "Driftwood: A Fairy Tale", "1187475400")
+        Req.Test.json(conn, response)
+      end)
+
+      assert %{track_id: "1187475400"} =
+               ExternalClient.search_for_track(
+                 @user_session,
+                 "Tim Kasher",
+                 "Driftwood: A Fairy Tale",
+                 "Cursive"
+               )
+    end
+
+    test "uses performing artist first when it matches, without calling cover artist" do
+      # Only the performing-artist call is expected; if a fallback fires the
+      # test fails because Req.Test.verify_on_exit! sees an unconsumed expect.
+      Req.Test.expect(MyAppleMusicStub, fn %{query_string: qs} = conn ->
+        assert qs =~ "term=Cursive+The+Recluse"
+        response = matching_song_response("Cursive", "The Recluse", "9999")
+        Req.Test.json(conn, response)
+      end)
+
+      assert %{track_id: "9999"} =
+               ExternalClient.search_for_track(
+                 @user_session,
+                 "Cursive",
+                 "The Recluse",
+                 "Some Other Band"
+               )
+    end
   end
 
   describe "create_playlist/3" do
@@ -254,5 +311,25 @@ defmodule Setlistify.AppleMusic.API.ExternalClientTest do
                  ["1441164430"]
                )
     end
+  end
+
+  defp matching_song_response(artist, track, id) do
+    %{
+      "results" => %{
+        "songs" => %{
+          "data" => [
+            %{
+              "id" => id,
+              "type" => "songs",
+              "attributes" => %{"artistName" => artist, "name" => track}
+            }
+          ]
+        }
+      }
+    }
+  end
+
+  defp mismatched_song_response(artist, track) do
+    matching_song_response(artist, track, "0000")
   end
 end

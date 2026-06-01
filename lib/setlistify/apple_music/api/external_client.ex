@@ -62,45 +62,26 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
     {:ok, %UserSession{user_token: user_token, storefront: storefront, user_id: user_id}}
   end
 
-  def search_for_track(user_session, artist, track) do
+  def search_for_track(user_session, artist, track, cover_artist \\ nil) do
     OpenTelemetry.Tracer.with_span "Setlistify.AppleMusic.API.ExternalClient.search_for_track" do
-      request_fn = fn req ->
-        Req.get(req,
-          url: "/v1/catalog/#{user_session.storefront}/search",
-          params: %{term: "#{artist} #{track}", types: "songs", limit: 1}
-        )
-      end
+      case do_search_for_track(user_session, artist, track) do
+        {:ok, %{track_id: _} = result} ->
+          result
 
-      case with_developer_token_refresh(user_session, request_fn, "track search") do
-        {:ok, %{status: 200} = resp} ->
-          songs =
-            resp.body |> Map.get("results", %{}) |> Map.get("songs", %{}) |> Map.get("data", [])
+        {:ok, :no_match} when is_binary(cover_artist) ->
+          OpenTelemetry.Tracer.set_attributes([{"search.fallback", "cover_artist"}])
 
-          case List.first(songs) do
-            nil ->
-              Logger.warning("No search results", %{artist: artist, track: track})
-              OpenTelemetry.Tracer.set_attributes([{"results.count", 0}])
-              OpenTelemetry.Tracer.set_status(:ok, "")
-              nil
-
-            song ->
-              OpenTelemetry.Tracer.set_attributes([
-                {"results.count", length(songs)},
-                {"track.id", song["id"]}
-              ])
-
-              OpenTelemetry.Tracer.set_status(:ok, "")
-              %{track_id: song["id"]}
+          case do_search_for_track(user_session, cover_artist, track) do
+            {:ok, %{track_id: _} = result} -> result
+            {:ok, :no_match} -> nil
+            {:error, _} = error -> error
           end
 
-        {:error, reason} = error ->
-          OpenTelemetry.Tracer.set_status(:error, inspect(reason))
-          error
-
-        {:ok, response} ->
-          Logger.error("Unexpected response from Apple Music search: #{inspect(response)}")
-          OpenTelemetry.Tracer.set_status(:error, "Unexpected response")
+        {:ok, :no_match} ->
           nil
+
+        {:error, _} = error ->
+          error
       end
     end
   rescue
@@ -109,6 +90,70 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
       OpenTelemetry.Tracer.record_exception(error)
       OpenTelemetry.Tracer.set_status(:error, "Exception: #{Exception.message(error)}")
       nil
+  end
+
+  defp do_search_for_track(user_session, artist, track) do
+    request_fn = fn req ->
+      Req.get(req,
+        url: "/v1/catalog/#{user_session.storefront}/search",
+        params: %{term: "#{artist} #{track}", types: "songs", limit: 1}
+      )
+    end
+
+    case with_developer_token_refresh(user_session, request_fn, "track search") do
+      {:ok, %{status: 200} = resp} ->
+        songs =
+          resp.body |> Map.get("results", %{}) |> Map.get("songs", %{}) |> Map.get("data", [])
+
+        case List.first(songs) do
+          nil ->
+            Logger.warning("No search results", %{artist: artist, track: track})
+            {:ok, :no_match}
+
+          song ->
+            result_artist = get_in(song, ["attributes", "artistName"])
+
+            if artist_match?(artist, result_artist) do
+              OpenTelemetry.Tracer.set_attributes([
+                {"results.count", length(songs)},
+                {"track.id", song["id"]}
+              ])
+
+              {:ok, %{track_id: song["id"]}}
+            else
+              Logger.warning("Rejected search result: artist mismatch", %{
+                queried_artist: artist,
+                returned_artist: result_artist,
+                track: track
+              })
+
+              {:ok, :no_match}
+            end
+        end
+
+      {:error, _} = error ->
+        error
+
+      {:ok, response} ->
+        Logger.error("Unexpected response from Apple Music search: #{inspect(response)}")
+        {:error, :unexpected_response}
+    end
+  end
+
+  defp artist_match?(_queried, nil), do: false
+
+  defp artist_match?(queried, returned) do
+    q = normalize_artist(queried)
+    r = normalize_artist(returned)
+    q != "" and r != "" and (String.contains?(r, q) or String.contains?(q, r))
+  end
+
+  defp normalize_artist(name) do
+    name
+    |> String.downcase()
+    |> String.replace(~r/[^\p{L}\p{N}\s]/u, " ")
+    |> String.replace(~r/\s+/u, " ")
+    |> String.trim()
   end
 
   def create_playlist(user_session, name, description) do
