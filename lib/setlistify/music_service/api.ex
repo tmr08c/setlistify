@@ -14,7 +14,7 @@ defmodule Setlistify.MusicService.API do
   @type user_session :: Spotify.UserSession.t() | AppleMusic.UserSession.t()
 
   @callback search_for_track(user_session(), String.t(), String.t(), String.t() | nil) ::
-              nil | %{track_id: String.t()}
+              nil | %{track_id: String.t()} | {:error, atom()}
 
   @callback create_playlist(user_session(), String.t(), String.t()) ::
               {:ok, %{id: String.t(), external_url: String.t()}} | {:error, atom()}
