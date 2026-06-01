@@ -2,8 +2,11 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   @moduledoc false
   use SetlistifyWeb, :live_view
 
+  import Setlistify.Scope, only: [authenticated?: 1]
+
   alias Setlistify.AppleMusic
   alias Setlistify.MusicService
+  alias Setlistify.Scope
   alias Setlistify.SetlistFm
   alias Setlistify.Spotify
 
@@ -46,7 +49,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   def handle_event("create_playlist", _params, socket) do
     scope = socket.assigns.current_scope
 
-    if Setlistify.Scope.authenticated?(scope) do
+    if authenticated?(scope) do
       create_and_populate_playlist(socket, scope.user_session)
     else
       {:noreply, put_flash(socket, :error, "Unable to access your music session. Please log in again.")}
@@ -84,7 +87,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                     async_result = Map.get(assigns, async_key) %>
                     <li>
                       <span class="inline-flex items-center gap-2">
-                        <%= if @current_scope.user_session && async_result do %>
+                        <%= if authenticated?(@current_scope) && async_result do %>
                           <.async_result :let={result} assign={async_result}>
                             <:loading>
                               <Heroicons.arrow_path
@@ -119,7 +122,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                           </.async_result>
                         <% end %>
                         <span class={[
-                          @current_scope.user_session && async_result && async_result.ok? &&
+                          authenticated?(@current_scope) && async_result && async_result.ok? &&
                             !async_result.result[:track_info] && "text-gray-500",
                           "inline"
                         ]}>
@@ -136,7 +139,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
         <div class="bg-gray-900 rounded-xl p-4 sm:p-6 border border-gray-800">
           <div class="text-center">
-            <%= if @current_scope.user_session do %>
+            <%= if authenticated?(@current_scope) do %>
               <div class="space-y-4">
                 <p class="text-gray-400 mb-4">
                   Ready to create your playlist? We'll add all available tracks to your music library.
@@ -157,10 +160,9 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     """
   end
 
-  defp maybe_start_song_searches(socket, _setlist, %Setlistify.Scope{user_session: nil}), do: socket
-  defp maybe_start_song_searches(socket, _setlist, nil), do: socket
+  defp maybe_start_song_searches(socket, _setlist, scope) when not authenticated?(scope), do: socket
 
-  defp maybe_start_song_searches(socket, setlist, %Setlistify.Scope{user_session: user_session}) do
+  defp maybe_start_song_searches(socket, setlist, %Scope{user_session: user_session}) do
     setlist.sets
     |> Enum.with_index()
     |> Enum.flat_map(fn {set, set_index} ->

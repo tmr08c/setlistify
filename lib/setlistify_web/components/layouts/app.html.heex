@@ -10,7 +10,7 @@
         <span class="text-lg sm:text-xl font-bold ml-2">Setlistify</span>
       </a>
     </div>
-    <div :if={@current_scope.user_session} class="flex items-center space-x-2 sm:space-x-4">
+    <div :if={authenticated?(@current_scope)} class="flex items-center space-x-2 sm:space-x-4">
       <span class="text-gray-400 hidden sm:inline">
         {user_signed_in_label(@current_scope.user_session)}
       </span>
@@ -27,7 +27,7 @@
         Sign Out
       </.link>
     </div>
-    <div :if={!@current_scope.user_session} class="flex items-center space-x-3 sm:space-x-4">
+    <div :if={!authenticated?(@current_scope)} class="flex items-center space-x-3 sm:space-x-4">
       <.link
         navigate={
           if @redirect_to,
@@ -74,7 +74,7 @@
   </div>
 </header>
 <form
-  :if={!@current_scope.user_session}
+  :if={!authenticated?(@current_scope)}
   id="apple-music-auth-form"
   method="post"
   action="/oauth/callbacks/apple_music"
