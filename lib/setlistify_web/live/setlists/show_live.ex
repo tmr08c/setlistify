@@ -182,12 +182,18 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
               {"music.service", provider(user_session)},
               {"music.track", song.title},
               {"music.artist", setlist.artist},
+              {"music.cover_artist", song.cover_artist || ""},
               {"song.set_index", set_index},
               {"song.song_index", song_index}
             ])
 
             track_info =
-              MusicService.API.search_for_track(user_session, setlist.artist, song.title)
+              MusicService.API.search_for_track(
+                user_session,
+                setlist.artist,
+                song.title,
+                song.cover_artist
+              )
 
             {:ok,
              %{

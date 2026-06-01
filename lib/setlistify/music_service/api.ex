@@ -13,7 +13,7 @@ defmodule Setlistify.MusicService.API do
 
   @type user_session :: Spotify.UserSession.t() | AppleMusic.UserSession.t()
 
-  @callback search_for_track(user_session(), String.t(), String.t()) ::
+  @callback search_for_track(user_session(), String.t(), String.t(), String.t() | nil) ::
               nil | %{track_id: String.t()}
 
   @callback create_playlist(user_session(), String.t(), String.t()) ::
@@ -32,16 +32,17 @@ defmodule Setlistify.MusicService.API do
     AppleMusic.API
   end
 
-  def search_for_track(user_session, artist, track) do
+  def search_for_track(user_session, artist, track, cover_artist \\ nil) do
     OpenTelemetry.Tracer.with_span "Setlistify.MusicService.API.search_for_track" do
       OpenTelemetry.Tracer.set_attributes([
         {"user.id", user_session.user_id},
         {"enduser.id", user_session.user_id},
         {"music.artist", artist},
-        {"music.track", track}
+        {"music.track", track},
+        {"music.cover_artist", cover_artist || ""}
       ])
 
-      impl(user_session).search_for_track(user_session, artist, track)
+      impl(user_session).search_for_track(user_session, artist, track, cover_artist)
     end
   end
 
