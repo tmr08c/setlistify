@@ -1,0 +1,57 @@
+{
+  "id": "4375bf0b",
+  "versionId": "g7b1d7228",
+  "eventDate": "23-05-2026",
+  "lastUpdated": "2026-05-24T21:21:35.780+0000",
+  "artist": {
+    "mbid": "22dbe176-9b9b-4c2c-b84b-a2f3aa0cf355",
+    "name": "Tim Kasher",
+    "sortName": "Kasher, Tim",
+    "disambiguation": "",
+    "url": "https://www.setlist.fm/setlists/tim-kasher-6bd6ca56.html"
+  },
+  "venue": {
+    "id": "1bd6c528",
+    "name": "The Bottleneck",
+    "city": {
+      "id": "4274277",
+      "name": "Lawrence",
+      "state": "Kansas",
+      "stateCode": "KS",
+      "coords": {"lat": 38.9716689, "long": -95.2352501},
+      "country": {"code": "US", "name": "United States"}
+    },
+    "url": "https://www.setlist.fm/venue/the-bottleneck-lawrence-ks-usa-1bd6c528.html"
+  },
+  "sets": {
+    "set": [
+      {
+        "song": [
+          {"name": "Anonymity", "info": "First time ever played live"},
+          {
+            "name": "Needy",
+            "cover": {
+              "mbid": "0ad7bbcd-6e77-4dc0-bb61-e331c46f70ec",
+              "name": "The Good Life",
+              "sortName": "Good Life, The",
+              "disambiguation": "US indie rock band",
+              "url": "https://www.setlist.fm/setlists/the-good-life-4bd69ba6.html"
+            }
+          },
+          {
+            "name": "Driftwood: A Fairy Tale",
+            "cover": {
+              "mbid": "c4153c51-b4ac-4183-beb3-c5dbfce39176",
+              "name": "Cursive",
+              "sortName": "Cursive",
+              "disambiguation": "Omaha indie rock",
+              "url": "https://www.setlist.fm/setlists/cursive-23d6d8df.html"
+            }
+          },
+          {"name": "Strays"}
+        ]
+      }
+    ]
+  },
+  "url": "https://www.setlist.fm/setlist/tim-kasher/2026/the-bottleneck-lawrence-ks-4375bf0b.html"
+}
