@@ -46,9 +46,16 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
          },
          date: Date.new!(2023, 01, 01),
          sets: [
-           %{name: "Warm up", songs: [%{title: "a warm up song"}]},
-           %{name: nil, songs: [%{title: "main set song1"}, %{title: "main set song2"}]},
-           %{name: nil, encore: 1, songs: [%{title: "encore song1"}, %{title: "encore song2"}]}
+           %{name: "Warm up", songs: [%{title: "a warm up song", cover_artist: nil}]},
+           %{
+             name: nil,
+             songs: [%{title: "main set song1", cover_artist: nil}, %{title: "main set song2", cover_artist: nil}]
+           },
+           %{
+             name: nil,
+             encore: 1,
+             songs: [%{title: "encore song1", cover_artist: nil}, %{title: "encore song2", cover_artist: nil}]
+           }
          ]
        }}
     end)
@@ -83,7 +90,7 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
          },
          date: Date.new!(2023, 01, 01),
          sets: [
-           %{name: "Main", songs: [%{title: "Hey Jude"}]}
+           %{name: "Main", songs: [%{title: "Hey Jude", cover_artist: nil}]}
          ]
        }}
     end)
@@ -128,11 +135,11 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
            }
          },
          date: Date.utc_today(),
-         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
+         sets: [%{name: nil, songs: [%{title: "song1", cover_artist: nil}, %{title: "song2", cover_artist: nil}]}]
        }}
     end)
 
-    expect(Spotify.API.MockClient, :search_for_track, 2, fn _user_session, _artist, title ->
+    expect(Spotify.API.MockClient, :search_for_track, 2, fn _user_session, _artist, title, _cover ->
       case title do
         "song1" ->
           # We have a match for song
@@ -192,11 +199,11 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
            }
          },
          date: Date.utc_today(),
-         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
+         sets: [%{name: nil, songs: [%{title: "song1", cover_artist: nil}, %{title: "song2", cover_artist: nil}]}]
        }}
     end)
 
-    expect(Spotify.API.MockClient, :search_for_track, 2, fn _user_session, _artist, title ->
+    expect(Spotify.API.MockClient, :search_for_track, 2, fn _user_session, _artist, title, _cover ->
       case title do
         "song1" ->
           # We have a match for song
@@ -271,11 +278,11 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
            }
          },
          date: Date.utc_today(),
-         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
+         sets: [%{name: nil, songs: [%{title: "song1", cover_artist: nil}, %{title: "song2", cover_artist: nil}]}]
        }}
     end)
 
-    expect(AppleMusic.API.MockClient, :search_for_track, 2, fn _user_session, _artist, title ->
+    expect(AppleMusic.API.MockClient, :search_for_track, 2, fn _user_session, _artist, title, _cover ->
       case title do
         "song1" ->
           %{track_id: "apple_music:track:456"}
@@ -326,11 +333,11 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
            }
          },
          date: Date.utc_today(),
-         sets: [%{name: nil, songs: [%{title: "song1"}, %{title: "song2"}]}]
+         sets: [%{name: nil, songs: [%{title: "song1", cover_artist: nil}, %{title: "song2", cover_artist: nil}]}]
        }}
     end)
 
-    expect(AppleMusic.API.MockClient, :search_for_track, 2, fn _user_session, _artist, title ->
+    expect(AppleMusic.API.MockClient, :search_for_track, 2, fn _user_session, _artist, title, _cover ->
       case title do
         "song1" ->
           %{track_id: "apple_music:track:456"}
@@ -397,11 +404,11 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
            }
          },
          date: Date.utc_today(),
-         sets: [%{name: nil, songs: [%{title: "Hey Jude"}]}]
+         sets: [%{name: nil, songs: [%{title: "Hey Jude", cover_artist: nil}]}]
        }}
     end)
 
-    expect(AppleMusic.API.MockClient, :search_for_track, 1, fn _user_session, _artist, _title ->
+    expect(AppleMusic.API.MockClient, :search_for_track, 1, fn _user_session, _artist, _title, _cover ->
       %{track_id: "apple_music:track:789"}
     end)
 
