@@ -42,9 +42,20 @@ defmodule Setlistify.MusicService.API do
         {"music.cover_artist", cover_artist || ""}
       ])
 
-      impl(user_session).search_for_track(user_session, artist, track, cover_artist)
+      result = impl(user_session).search_for_track(user_session, artist, track, cover_artist)
+
+      OpenTelemetry.Tracer.set_attributes([
+        {"music.search.outcome", search_outcome(result)}
+      ])
+
+      result
     end
   end
+
+  defp search_outcome(%{track_id: _}), do: "match"
+  defp search_outcome(nil), do: "no_match"
+  defp search_outcome({:error, _}), do: "error"
+  defp search_outcome(_), do: "unknown"
 
   def create_playlist(user_session, name, description) do
     OpenTelemetry.Tracer.with_span "Setlistify.MusicService.API.create_playlist" do
