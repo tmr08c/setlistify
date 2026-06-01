@@ -45,7 +45,7 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
           |> Plug.Conn.send_resp(200, JSON.encode!(JSON.decode!(@search_response)))
       end)
 
-      result = ExternalClient.search_for_track(user_session, "some artist", "some track")
+      result = ExternalClient.search_for_track(user_session, "Modest Mouse", "Lace Your Shoes")
 
       assert result.track_id =~ ~r"spotify:track:\w+"
     end
@@ -64,6 +64,78 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
         assert ExternalClient.search_for_track(user_session, "some artist", "some track") == nil
       end)
     end
+
+    test "rejects results whose artist does not match the queried artist",
+         %{user_session: user_session} do
+      Req.Test.stub(MySpotifyStub, fn
+        %{request_path: "/v1/search", method: "GET"} = conn ->
+          response = track_response("Labrinth", "Still Don't Know My Name", "spotify:track:xyz")
+          Req.Test.json(conn, response)
+      end)
+
+      ExUnit.CaptureLog.capture_log(fn ->
+        assert ExternalClient.search_for_track(user_session, "Tim Kasher", "From the Hips") == nil
+      end)
+    end
+
+    test "falls back to cover artist when performing artist returns no usable match",
+         %{user_session: user_session} do
+      Req.Test.expect(MySpotifyStub, fn %{request_path: "/v1/search", query_string: qs} = conn ->
+        assert qs =~ "artist%3ATim+Kasher"
+        Req.Test.json(conn, %{"tracks" => %{"items" => []}})
+      end)
+
+      Req.Test.expect(MySpotifyStub, fn %{request_path: "/v1/search", query_string: qs} = conn ->
+        assert qs =~ "artist%3ACursive"
+
+        Req.Test.json(
+          conn,
+          track_response("Cursive", "Driftwood: A Fairy Tale", "spotify:track:cursive1")
+        )
+      end)
+
+      assert %{track_id: "spotify:track:cursive1"} =
+               ExternalClient.search_for_track(
+                 user_session,
+                 "Tim Kasher",
+                 "Driftwood: A Fairy Tale",
+                 "Cursive"
+               )
+    end
+
+    test "uses performing artist first when it matches, without calling cover artist",
+         %{user_session: user_session} do
+      Req.Test.expect(MySpotifyStub, fn %{request_path: "/v1/search", query_string: qs} = conn ->
+        assert qs =~ "artist%3ACursive"
+
+        Req.Test.json(
+          conn,
+          track_response("Cursive", "The Recluse", "spotify:track:recluse")
+        )
+      end)
+
+      assert %{track_id: "spotify:track:recluse"} =
+               ExternalClient.search_for_track(
+                 user_session,
+                 "Cursive",
+                 "The Recluse",
+                 "Some Other Band"
+               )
+    end
+  end
+
+  defp track_response(artist, name, uri) do
+    %{
+      "tracks" => %{
+        "items" => [
+          %{
+            "uri" => uri,
+            "name" => name,
+            "artists" => [%{"name" => artist}]
+          }
+        ]
+      }
+    }
   end
 
   describe "create_playlist/3" do
@@ -875,8 +947,8 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
       result =
         ExternalClient.search_for_track(
           user_session,
-          "some artist",
-          "some track"
+          "Modest Mouse",
+          "Lace Your Shoes"
         )
 
       # The implementation should:

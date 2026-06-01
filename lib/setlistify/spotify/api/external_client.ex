@@ -78,54 +78,26 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     end
   end
 
-  def search_for_track(user_session, artist, track) do
+  def search_for_track(user_session, artist, track, cover_artist \\ nil) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.search_for_track" do
-      request_fn = fn req ->
-        Req.get(req,
-          url: "/search",
-          params: %{q: "artist:#{artist} track:#{track}", type: "track"}
-        )
-      end
-
-      case with_token_refresh(user_session, request_fn, "track search") do
-        {:ok, %{status: 200} = resp} ->
-          items = resp.body |> Map.get("tracks", %{}) |> Map.get("items", [])
-
-          result =
-            case List.first(items) do
-              nil ->
-                Logger.warning("No search results", %{artist: artist, track: track})
-                OpenTelemetry.Tracer.set_attribute("results.count", 0)
-                nil
-
-              track_info ->
-                Logger.info("Found match", %{artist: artist, track: track})
-
-                OpenTelemetry.Tracer.set_attributes([
-                  {"results.count", length(items)},
-                  {"track.id", track_info["uri"]}
-                ])
-
-                %{track_id: track_info["uri"]}
-            end
-
-          OpenTelemetry.Tracer.set_status(:ok, "")
+      case do_search_for_track(user_session, artist, track) do
+        {:ok, %{track_id: _} = result} ->
           result
 
-        {:error, reason} = error ->
-          OpenTelemetry.Tracer.set_status(:error, inspect(reason))
+        {:ok, :no_match} when is_binary(cover_artist) ->
+          OpenTelemetry.Tracer.set_attributes([{"search.fallback", "cover_artist"}])
+
+          case do_search_for_track(user_session, cover_artist, track) do
+            {:ok, %{track_id: _} = result} -> result
+            {:ok, :no_match} -> nil
+            {:error, _} = error -> error
+          end
+
+        {:ok, :no_match} ->
+          nil
+
+        {:error, _} = error ->
           error
-
-        {:ok, %{status: 401} = response} ->
-          Logger.error("Unauthorized search request with user_id #{user_session.user_id}: #{inspect(response)}")
-
-          OpenTelemetry.Tracer.set_status(:error, "Unauthorized")
-          nil
-
-        {:ok, response} ->
-          Logger.error("Unexpected response from Spotify search: #{inspect(response)}")
-          OpenTelemetry.Tracer.set_status(:error, "Unexpected response")
-          nil
       end
     end
   rescue
@@ -134,6 +106,70 @@ defmodule Setlistify.Spotify.API.ExternalClient do
       OpenTelemetry.Tracer.record_exception(error)
       OpenTelemetry.Tracer.set_status(:error, "Exception: #{Exception.message(error)}")
       nil
+  end
+
+  defp do_search_for_track(user_session, artist, track) do
+    request_fn = fn req ->
+      Req.get(req,
+        url: "/search",
+        params: %{q: "artist:#{artist} track:#{track}", type: "track"}
+      )
+    end
+
+    case with_token_refresh(user_session, request_fn, "track search") do
+      {:ok, %{status: 200} = resp} ->
+        items = resp.body |> Map.get("tracks", %{}) |> Map.get("items", [])
+
+        case List.first(items) do
+          nil ->
+            Logger.warning("No search results", %{artist: artist, track: track})
+            {:ok, :no_match}
+
+          track_info ->
+            result_artists = track_info |> Map.get("artists", []) |> Enum.map(& &1["name"])
+
+            if Enum.any?(result_artists, &artist_match?(artist, &1)) do
+              Logger.info("Found match", %{artist: artist, track: track})
+              {:ok, %{track_id: track_info["uri"]}}
+            else
+              Logger.warning("Rejected search result: artist mismatch", %{
+                queried_artist: artist,
+                returned_artists: result_artists,
+                track: track
+              })
+
+              {:ok, :no_match}
+            end
+        end
+
+      {:error, _} = error ->
+        error
+
+      {:ok, %{status: 401} = response} ->
+        Logger.error("Unauthorized search request with user_id #{user_session.user_id}: #{inspect(response)}")
+
+        {:error, :unauthorized}
+
+      {:ok, response} ->
+        Logger.error("Unexpected response from Spotify search: #{inspect(response)}")
+        {:error, :unexpected_response}
+    end
+  end
+
+  defp artist_match?(_queried, nil), do: false
+
+  defp artist_match?(queried, returned) do
+    q = normalize_artist(queried)
+    r = normalize_artist(returned)
+    q != "" and r != "" and (String.contains?(r, q) or String.contains?(q, r))
+  end
+
+  defp normalize_artist(name) do
+    name
+    |> String.downcase()
+    |> String.replace(~r/[^\p{L}\p{N}\s]/u, " ")
+    |> String.replace(~r/\s+/u, " ")
+    |> String.trim()
   end
 
   def create_playlist(user_session, name, description) do
