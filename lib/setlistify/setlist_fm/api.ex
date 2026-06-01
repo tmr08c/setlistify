@@ -49,7 +49,7 @@ defmodule Setlistify.SetlistFm.API do
   @type set :: %{
           optional(:encore) => integer(),
           name: nil | String.t(),
-          songs: [%{title: String.t(), cover_artist: String.t() | nil}]
+          songs: [%{:title => String.t(), optional(:cover_artist) => String.t()}]
         }
 
   @callback search(String.t(), pos_integer()) :: search_response()

@@ -178,11 +178,13 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
         atom_key,
         fn ->
           OpenTelemetry.Tracer.with_span "SetlistifyWeb.Setlists.ShowLive.search_song_async" do
+            cover_artist = Map.get(song, :cover_artist)
+
             OpenTelemetry.Tracer.set_attributes([
               {"music.service", provider(user_session)},
               {"music.track", song.title},
               {"music.artist", setlist.artist},
-              {"music.cover_artist", song.cover_artist || ""},
+              {"music.cover_artist", cover_artist || ""},
               {"song.set_index", set_index},
               {"song.song_index", song_index}
             ])
@@ -192,7 +194,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                 user_session,
                 setlist.artist,
                 song.title,
-                song.cover_artist
+                cover_artist
               )
 
             {:ok,

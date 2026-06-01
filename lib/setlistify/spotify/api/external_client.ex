@@ -119,28 +119,7 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     case with_token_refresh(user_session, request_fn, "track search") do
       {:ok, %{status: 200} = resp} ->
         items = resp.body |> Map.get("tracks", %{}) |> Map.get("items", [])
-
-        case List.first(items) do
-          nil ->
-            Logger.warning("No search results", %{artist: artist, track: track})
-            {:ok, :no_match}
-
-          track_info ->
-            result_artists = track_info |> Map.get("artists", []) |> Enum.map(& &1["name"])
-
-            if Enum.any?(result_artists, &artist_match?(artist, &1)) do
-              Logger.info("Found match", %{artist: artist, track: track})
-              {:ok, %{track_id: track_info["uri"]}}
-            else
-              Logger.warning("Rejected search result: artist mismatch", %{
-                queried_artist: artist,
-                returned_artists: result_artists,
-                track: track
-              })
-
-              {:ok, :no_match}
-            end
-        end
+        evaluate_search_result(List.first(items), artist, track)
 
       {:error, _} = error ->
         error
@@ -156,21 +135,35 @@ defmodule Setlistify.Spotify.API.ExternalClient do
     end
   end
 
+  defp evaluate_search_result(nil, artist, track) do
+    Logger.warning("No search results", %{artist: artist, track: track})
+    {:ok, :no_match}
+  end
+
+  defp evaluate_search_result(track_info, artist, track) do
+    result_artists = track_info |> Map.get("artists", []) |> Enum.map(& &1["name"])
+
+    if Enum.any?(result_artists, &artist_match?(artist, &1)) do
+      Logger.info("Found match", %{artist: artist, track: track})
+      {:ok, %{track_id: track_info["uri"]}}
+    else
+      Logger.warning("Rejected search result: artist mismatch", %{
+        queried_artist: artist,
+        returned_artists: result_artists,
+        track: track
+      })
+
+      {:ok, :no_match}
+    end
+  end
+
   defp artist_match?(_queried, nil), do: false
 
   defp artist_match?(queried, returned) do
-    q = normalize_artist(queried)
-    r = normalize_artist(returned)
-    q != "" and r != "" and (String.contains?(r, q) or String.contains?(q, r))
+    String.equivalent?(normalize_artist(queried), normalize_artist(returned))
   end
 
-  defp normalize_artist(name) do
-    name
-    |> String.downcase()
-    |> String.replace(~r/[^\p{L}\p{N}\s]/u, " ")
-    |> String.replace(~r/\s+/u, " ")
-    |> String.trim()
-  end
+  defp normalize_artist(name), do: name |> String.downcase() |> String.trim()
 
   def create_playlist(user_session, name, description) do
     OpenTelemetry.Tracer.with_span "Setlistify.Spotify.API.ExternalClient.create_playlist" do

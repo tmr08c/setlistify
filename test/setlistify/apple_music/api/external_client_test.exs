@@ -113,8 +113,22 @@ defmodule Setlistify.AppleMusic.API.ExternalClientTest do
       # "Tim Kasher From the Hips" and getting back a Labrinth song).
       Req.Test.stub(MyAppleMusicStub, fn
         %{request_path: "/v1/catalog/us/search"} = conn ->
-          response = mismatched_song_response("Labrinth", "Still Don't Know My Name")
-          Req.Test.json(conn, response)
+          Req.Test.json(conn, %{
+            "results" => %{
+              "songs" => %{
+                "data" => [
+                  %{
+                    "id" => "12345",
+                    "type" => "songs",
+                    "attributes" => %{
+                      "artistName" => "Labrinth",
+                      "name" => "Still Don't Know My Name"
+                    }
+                  }
+                ]
+              }
+            }
+          })
       end)
 
       ExUnit.CaptureLog.capture_log(fn ->
@@ -127,14 +141,28 @@ defmodule Setlistify.AppleMusic.API.ExternalClientTest do
       # Performing artist call returns no usable result, cover artist call hits.
       Req.Test.expect(MyAppleMusicStub, fn %{query_string: qs} = conn ->
         assert qs =~ "term=Tim+Kasher+Driftwood"
-        response = %{"results" => %{"songs" => %{"data" => []}}}
-        Req.Test.json(conn, response)
+        Req.Test.json(conn, %{"results" => %{"songs" => %{"data" => []}}})
       end)
 
       Req.Test.expect(MyAppleMusicStub, fn %{query_string: qs} = conn ->
         assert qs =~ "term=Cursive+Driftwood"
-        response = matching_song_response("Cursive", "Driftwood: A Fairy Tale", "1187475400")
-        Req.Test.json(conn, response)
+
+        Req.Test.json(conn, %{
+          "results" => %{
+            "songs" => %{
+              "data" => [
+                %{
+                  "id" => "1187475400",
+                  "type" => "songs",
+                  "attributes" => %{
+                    "artistName" => "Cursive",
+                    "name" => "Driftwood: A Fairy Tale"
+                  }
+                }
+              ]
+            }
+          }
+        })
       end)
 
       assert %{track_id: "1187475400"} =
@@ -151,8 +179,20 @@ defmodule Setlistify.AppleMusic.API.ExternalClientTest do
       # test fails because Req.Test.verify_on_exit! sees an unconsumed expect.
       Req.Test.expect(MyAppleMusicStub, fn %{query_string: qs} = conn ->
         assert qs =~ "term=Cursive+The+Recluse"
-        response = matching_song_response("Cursive", "The Recluse", "9999")
-        Req.Test.json(conn, response)
+
+        Req.Test.json(conn, %{
+          "results" => %{
+            "songs" => %{
+              "data" => [
+                %{
+                  "id" => "9999",
+                  "type" => "songs",
+                  "attributes" => %{"artistName" => "Cursive", "name" => "The Recluse"}
+                }
+              ]
+            }
+          }
+        })
       end)
 
       assert %{track_id: "9999"} =
@@ -311,25 +351,5 @@ defmodule Setlistify.AppleMusic.API.ExternalClientTest do
                  ["1441164430"]
                )
     end
-  end
-
-  defp matching_song_response(artist, track, id) do
-    %{
-      "results" => %{
-        "songs" => %{
-          "data" => [
-            %{
-              "id" => id,
-              "type" => "songs",
-              "attributes" => %{"artistName" => artist, "name" => track}
-            }
-          ]
-        }
-      }
-    }
-  end
-
-  defp mismatched_song_response(artist, track) do
-    matching_song_response(artist, track, "0000")
   end
 end
