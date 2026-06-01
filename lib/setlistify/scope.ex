@@ -1,12 +1,9 @@
 defmodule Setlistify.Scope do
   @moduledoc """
-  Centralises request-scoped context for authenticated users.
+  Wraps the current user's music-service session for use in LiveView assigns.
 
-  Populated from the session during `on_mount` and threaded through context
-  functions to carry the current user's provider-specific session struct.
-
-  Following the Phoenix 1.8 scopes convention so future cross-cutting context
-  (permissions, feature flags, multi-provider metadata) has a natural home.
+  Populated by `SetlistifyWeb.Auth.LiveHooks` as `:current_scope` and used to
+  check authentication and reach the provider-specific `user_session` struct.
   """
 
   alias Setlistify.AppleMusic
@@ -33,8 +30,8 @@ defmodule Setlistify.Scope do
   @doc """
   Returns true if the scope belongs to an authenticated user.
 
-  Defined as a guard so it can be used in function heads, `case`/`cond`
-  expressions, and HEEx templates alike.
+  Defined as a guard so callers can use it in function heads as well as
+  ordinary expressions.
   """
   defguard authenticated?(scope)
            when is_struct(scope, __MODULE__) and not is_nil(scope.user_session)
