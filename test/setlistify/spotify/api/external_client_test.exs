@@ -119,6 +119,62 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
                )
     end
 
+    test "returns nil when the cover artist fallback also returns a mismatched artist",
+         %{user_session: user_session} do
+      # Performing-artist search misses, cover-artist fallback fires but the
+      # top-1 result is again from an unrelated artist — verify we don't slip
+      # through and return the bad fallback result.
+      Req.Test.expect(MySpotifyStub, fn %{request_path: "/v1/search", query_string: qs} = conn ->
+        assert qs =~ "artist%3ATim+Kasher"
+        Req.Test.json(conn, %{"tracks" => %{"items" => []}})
+      end)
+
+      Req.Test.expect(MySpotifyStub, fn %{request_path: "/v1/search", query_string: qs} = conn ->
+        assert qs =~ "artist%3ACursive"
+
+        Req.Test.json(conn, %{
+          "tracks" => %{
+            "items" => [
+              %{
+                "uri" => "spotify:track:bogus",
+                "name" => "Driftwood",
+                "artists" => [%{"name" => "Some Other Artist"}]
+              }
+            ]
+          }
+        })
+      end)
+
+      ExUnit.CaptureLog.capture_log(fn ->
+        assert ExternalClient.search_for_track(
+                 user_session,
+                 "Tim Kasher",
+                 "Driftwood: A Fairy Tale",
+                 "Cursive"
+               ) == nil
+      end)
+    end
+
+    test "propagates primary search error without attempting cover artist fallback",
+         %{user_session: user_session} do
+      # An unexpected non-2xx from the primary search should bubble up. The
+      # cover_artist fallback should NOT fire — only the first call is
+      # expected (verify_on_exit! catches an unconsumed second expect).
+      Req.Test.expect(MySpotifyStub, fn %{request_path: "/v1/search"} = conn ->
+        Plug.Conn.send_resp(conn, 500, "Internal Server Error")
+      end)
+
+      ExUnit.CaptureLog.capture_log(fn ->
+        assert {:error, :unexpected_response} =
+                 ExternalClient.search_for_track(
+                   user_session,
+                   "Tim Kasher",
+                   "Driftwood: A Fairy Tale",
+                   "Cursive"
+                 )
+      end)
+    end
+
     test "uses performing artist first when it matches, without calling cover artist",
          %{user_session: user_session} do
       Req.Test.expect(MySpotifyStub, fn %{request_path: "/v1/search", query_string: qs} = conn ->

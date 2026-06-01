@@ -174,6 +174,69 @@ defmodule Setlistify.AppleMusic.API.ExternalClientTest do
                )
     end
 
+    test "returns nil when the cover artist fallback also returns a mismatched artist" do
+      # Performing-artist search misses, cover-artist fallback fires but the
+      # top-1 result is again from an unrelated artist — verify we don't slip
+      # through and return the bad fallback result.
+      Req.Test.expect(MyAppleMusicStub, fn %{query_string: qs} = conn ->
+        assert qs =~ "term=Tim+Kasher+Driftwood"
+        Req.Test.json(conn, %{"results" => %{"songs" => %{"data" => []}}})
+      end)
+
+      Req.Test.expect(MyAppleMusicStub, fn %{query_string: qs} = conn ->
+        assert qs =~ "term=Cursive+Driftwood"
+
+        Req.Test.json(conn, %{
+          "results" => %{
+            "songs" => %{
+              "data" => [
+                %{
+                  "id" => "99999",
+                  "type" => "songs",
+                  "attributes" => %{
+                    "artistName" => "Some Other Artist",
+                    "name" => "Driftwood"
+                  }
+                }
+              ]
+            }
+          }
+        })
+      end)
+
+      ExUnit.CaptureLog.capture_log(fn ->
+        assert ExternalClient.search_for_track(
+                 @user_session,
+                 "Tim Kasher",
+                 "Driftwood: A Fairy Tale",
+                 "Cursive"
+               ) == nil
+      end)
+    end
+
+    test "propagates primary search error without attempting cover artist fallback" do
+      # After with_developer_token_refresh exhausts its retry, an unauthorized
+      # error should bubble up — we should NOT try the cover_artist with a
+      # presumably-still-broken auth context.
+      Req.Test.expect(MyAppleMusicStub, fn conn ->
+        Plug.Conn.send_resp(conn, 401, "Unauthorized")
+      end)
+
+      Req.Test.expect(MyAppleMusicStub, fn conn ->
+        Plug.Conn.send_resp(conn, 401, "Unauthorized")
+      end)
+
+      ExUnit.CaptureLog.capture_log(fn ->
+        assert {:error, :unauthorized} =
+                 ExternalClient.search_for_track(
+                   @user_session,
+                   "Tim Kasher",
+                   "Driftwood: A Fairy Tale",
+                   "Cursive"
+                 )
+      end)
+    end
+
     test "uses performing artist first when it matches, without calling cover artist" do
       # Only the performing-artist call is expected; if a fallback fires the
       # test fails because Req.Test.verify_on_exit! sees an unconsumed expect.
