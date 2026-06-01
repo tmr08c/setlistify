@@ -137,6 +137,8 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
   defp evaluate_search_result(nil, artist, track) do
     Logger.warning("No search results", %{artist: artist, track: track})
+
+    OpenTelemetry.Tracer.set_attributes([{"search.outcome", "no_results"}])
     {:ok, :no_match}
   end
 
@@ -145,6 +147,12 @@ defmodule Setlistify.Spotify.API.ExternalClient do
 
     if Enum.any?(result_artists, &artist_match?(artist, &1)) do
       Logger.info("Found match", %{artist: artist, track: track})
+
+      OpenTelemetry.Tracer.set_attributes([
+        {"track.id", track_info["uri"]},
+        {"search.outcome", "match"}
+      ])
+
       {:ok, %{track_id: track_info["uri"]}}
     else
       Logger.warning("Rejected search result: artist mismatch", %{
@@ -152,6 +160,15 @@ defmodule Setlistify.Spotify.API.ExternalClient do
         returned_artists: result_artists,
         track: track
       })
+
+      OpenTelemetry.Tracer.set_attributes([{"search.outcome", "rejected_artist_mismatch"}])
+
+      OpenTelemetry.Tracer.add_event("search.result_rejected", [
+        {"reason", "artist_mismatch"},
+        {"queried_artist", artist},
+        {"returned_artists", Enum.join(result_artists, ", ")},
+        {"track", track}
+      ])
 
       {:ok, :no_match}
     end

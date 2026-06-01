@@ -118,6 +118,8 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
 
   defp evaluate_search_result(nil, artist, track) do
     Logger.warning("No search results", %{artist: artist, track: track})
+
+    OpenTelemetry.Tracer.set_attributes([{"search.outcome", "no_results"}])
     {:ok, :no_match}
   end
 
@@ -125,7 +127,11 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
     result_artist = get_in(song, ["attributes", "artistName"])
 
     if artist_match?(artist, result_artist) do
-      OpenTelemetry.Tracer.set_attributes([{"track.id", song["id"]}])
+      OpenTelemetry.Tracer.set_attributes([
+        {"track.id", song["id"]},
+        {"search.outcome", "match"}
+      ])
+
       {:ok, %{track_id: song["id"]}}
     else
       Logger.warning("Rejected search result: artist mismatch", %{
@@ -133,6 +139,15 @@ defmodule Setlistify.AppleMusic.API.ExternalClient do
         returned_artist: result_artist,
         track: track
       })
+
+      OpenTelemetry.Tracer.set_attributes([{"search.outcome", "rejected_artist_mismatch"}])
+
+      OpenTelemetry.Tracer.add_event("search.result_rejected", [
+        {"reason", "artist_mismatch"},
+        {"queried_artist", artist},
+        {"returned_artist", result_artist || ""},
+        {"track", track}
+      ])
 
       {:ok, :no_match}
     end
