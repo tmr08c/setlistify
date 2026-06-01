@@ -3,8 +3,10 @@ defmodule Setlistify.Scope do
   Centralises request-scoped context for authenticated users.
 
   Populated from the session during `on_mount` and threaded through context
-  functions to carry the current user's identity and provider-specific session
-  struct. The `user_id` field is extracted from the session for convenience.
+  functions to carry the current user's provider-specific session struct.
+
+  Following the Phoenix 1.8 scopes convention so future cross-cutting context
+  (permissions, feature flags, multi-provider metadata) has a natural home.
   """
 
   alias Setlistify.AppleMusic
@@ -13,11 +15,10 @@ defmodule Setlistify.Scope do
   @type user_session :: Spotify.UserSession.t() | AppleMusic.UserSession.t()
 
   @type t :: %__MODULE__{
-          user_id: String.t() | nil,
           user_session: user_session() | nil
         }
 
-  defstruct user_id: nil, user_session: nil
+  defstruct user_session: nil
 
   @doc """
   Builds a scope for an authenticated user session.
@@ -27,18 +28,14 @@ defmodule Setlistify.Scope do
   """
   @spec for_user_session(user_session() | nil) :: t()
   def for_user_session(nil), do: %__MODULE__{}
-
-  def for_user_session(%_{user_id: user_id} = user_session) do
-    %__MODULE__{
-      user_id: user_id,
-      user_session: user_session
-    }
-  end
+  def for_user_session(%_{} = user_session), do: %__MODULE__{user_session: user_session}
 
   @doc """
   Returns true if the scope belongs to an authenticated user.
+
+  Defined as a guard so it can be used in function heads, `case`/`cond`
+  expressions, and HEEx templates alike.
   """
-  @spec authenticated?(t()) :: boolean()
-  def authenticated?(%__MODULE__{user_session: nil}), do: false
-  def authenticated?(%__MODULE__{user_session: _}), do: true
+  defguard authenticated?(scope)
+           when is_struct(scope, __MODULE__) and not is_nil(scope.user_session)
 end

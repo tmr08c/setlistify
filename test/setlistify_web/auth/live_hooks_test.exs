@@ -40,7 +40,6 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
 
       {:cont, updated_socket} = LiveHooks.on_mount(:default, %{}, session, socket)
 
-      assert updated_socket.assigns.current_scope.user_id == user_id
       assert updated_socket.assigns.current_scope.user_session == user_session
     end
 
@@ -57,7 +56,6 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
 
       {:cont, updated_socket} = LiveHooks.on_mount(:default, %{}, session, socket)
 
-      assert updated_socket.assigns.current_scope.user_id == nil
       assert updated_socket.assigns.current_scope.user_session == nil
     end
 
@@ -74,7 +72,6 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
 
       {:cont, updated_socket} = LiveHooks.on_mount(:default, %{}, session, socket)
 
-      assert updated_socket.assigns.current_scope.user_id == nil
       assert updated_socket.assigns.current_scope.user_session == nil
     end
   end
@@ -150,7 +147,6 @@ defmodule SetlistifyWeb.Auth.LiveHooksTest do
 
       {:cont, updated_socket} = LiveHooks.on_mount(:ensure_authenticated, %{}, session, socket)
 
-      assert updated_socket.assigns.current_scope.user_id == user_id
       assert updated_socket.assigns.current_scope.user_session == user_session
     end
   end

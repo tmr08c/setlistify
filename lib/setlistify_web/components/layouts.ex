@@ -10,6 +10,8 @@ defmodule SetlistifyWeb.Layouts do
   """
   use SetlistifyWeb, :html
 
+  import Setlistify.Scope, only: [authenticated?: 1]
+
   alias Setlistify.Spotify.UserSession
 
   embed_templates "layouts/*"
