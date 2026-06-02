@@ -13,8 +13,6 @@ defmodule SetlistifyWeb.Layouts do
   alias Setlistify.Scope
   alias Setlistify.Spotify.UserSession
 
-  require Scope
-
   embed_templates "layouts/*"
 
   defp user_display_name(%UserSession{username: username}), do: username

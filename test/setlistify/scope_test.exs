@@ -5,8 +5,6 @@ defmodule Setlistify.ScopeTest do
   alias Setlistify.Scope
   alias Setlistify.Spotify
 
-  require Scope
-
   describe "for_user_session/1" do
     test "returns a blank scope for nil" do
       scope = Scope.for_user_session(nil)
@@ -61,31 +59,6 @@ defmodule Setlistify.ScopeTest do
       }
 
       assert Scope.authenticated?(Scope.for_user_session(user_session))
-    end
-
-    test "works as a guard in function heads" do
-      defmodule GuardSample do
-        @moduledoc false
-        import Scope, only: [authenticated?: 1]
-
-        require Scope
-
-        def check(scope) when authenticated?(scope), do: :yes
-        def check(_), do: :no
-      end
-
-      authed =
-        Scope.for_user_session(%Spotify.UserSession{
-          user_id: "u1",
-          username: "User",
-          access_token: "tok",
-          refresh_token: "ref",
-          expires_at: System.system_time(:second) + 3600
-        })
-
-      assert GuardSample.check(authed) == :yes
-      assert GuardSample.check(Scope.for_user_session(nil)) == :no
-      assert GuardSample.check(nil) == :no
     end
   end
 end
