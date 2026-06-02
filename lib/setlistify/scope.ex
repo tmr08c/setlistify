@@ -29,10 +29,8 @@ defmodule Setlistify.Scope do
 
   @doc """
   Returns true if the scope belongs to an authenticated user.
-
-  Defined as a guard so callers can use it in function heads as well as
-  ordinary expressions.
   """
-  defguard authenticated?(scope)
-           when is_struct(scope, __MODULE__) and not is_nil(scope.user_session)
+  @spec authenticated?(t() | any()) :: boolean()
+  def authenticated?(%__MODULE__{user_session: user_session}), do: not is_nil(user_session)
+  def authenticated?(_), do: false
 end

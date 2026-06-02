@@ -10,7 +10,6 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
   require OpenTelemetry.Tracer
   require OpentelemetryPhoenixLiveViewProcessPropagator.LiveView
-  require Scope
 
   def mount(%{"id" => id}, _session, socket) do
     case SetlistFm.API.get_setlist(id) do
@@ -159,9 +158,15 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     """
   end
 
-  defp maybe_start_song_searches(socket, _setlist, scope) when not Scope.authenticated?(scope), do: socket
+  defp maybe_start_song_searches(socket, setlist, scope) do
+    if Scope.authenticated?(scope) do
+      start_song_searches(socket, setlist, scope.user_session)
+    else
+      socket
+    end
+  end
 
-  defp maybe_start_song_searches(socket, setlist, %Scope{user_session: user_session}) do
+  defp start_song_searches(socket, setlist, user_session) do
     setlist.sets
     |> Enum.with_index()
     |> Enum.flat_map(fn {set, set_index} ->
