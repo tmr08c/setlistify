@@ -158,9 +158,13 @@ defmodule Setlistify.Spotify.Api.ExternalClientTest do
     test "propagates primary search error without attempting cover artist fallback",
          %{user_session: user_session} do
       # An unexpected non-2xx from the primary search should bubble up. The
-      # cover_artist fallback should NOT fire — only the first call is
-      # expected (verify_on_exit! catches an unconsumed second expect).
-      Req.Test.expect(MySpotifyStub, fn %{request_path: "/v1/search"} = conn ->
+      # cover_artist fallback should NOT fire — only one request is expected
+      # (Spotify's with_token_refresh only retries on 401 with invalid_token,
+      # so a 500 doesn't trigger a retry either) and it should query the
+      # primary artist, not the cover artist.
+      Req.Test.expect(MySpotifyStub, fn %{request_path: "/v1/search", query_string: qs} = conn ->
+        assert qs =~ "artist%3ATim+Kasher"
+        refute qs =~ "Cursive"
         Plug.Conn.send_resp(conn, 500, "Internal Server Error")
       end)
 

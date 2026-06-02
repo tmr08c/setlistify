@@ -218,11 +218,19 @@ defmodule Setlistify.AppleMusic.API.ExternalClientTest do
       # After with_developer_token_refresh exhausts its retry, an unauthorized
       # error should bubble up — we should NOT try the cover_artist with a
       # presumably-still-broken auth context.
-      Req.Test.expect(MyAppleMusicStub, fn conn ->
+      #
+      # Both expected requests query the primary artist ("Tim Kasher"): the
+      # first is the initial call, the second is the token-refresh retry
+      # inside with_developer_token_refresh. Neither should query "Cursive" —
+      # if the fallback wrongly fired we'd see a third request, and the
+      # assertions below would also catch a Cursive query in slot 2.
+      Req.Test.expect(MyAppleMusicStub, fn %{query_string: qs} = conn ->
+        assert qs =~ "term=Tim+Kasher+Driftwood"
         Plug.Conn.send_resp(conn, 401, "Unauthorized")
       end)
 
-      Req.Test.expect(MyAppleMusicStub, fn conn ->
+      Req.Test.expect(MyAppleMusicStub, fn %{query_string: qs} = conn ->
+        assert qs =~ "term=Tim+Kasher+Driftwood"
         Plug.Conn.send_resp(conn, 401, "Unauthorized")
       end)
 
