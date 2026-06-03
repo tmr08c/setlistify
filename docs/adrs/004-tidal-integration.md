@@ -136,9 +136,22 @@ Tidal v2 has no batch search-by-query endpoint (one `searchResults/{query}` per 
 
 `MusicService.API.get_embed("tidal", url)` wires through to the Tidal oEmbed endpoint or returns a deterministic `https://embed.tidal.com/tracks/{id}` iframe. `Playlists.ShowLive.handle_params/3` gets a `"tidal"` clause that mirrors the Spotify path, not the Apple Music link-to-library path.
 
-### 5. `:tidal_refresh_token` as a dedicated session key
+### 5. Share the `:refresh_token` session key with Spotify; disambiguate by salt + `:auth_provider`
 
-Do not reuse Spotify's `:refresh_token` session key — disambiguate so both providers can coexist in `UserAuth.auth_user/2`. Add `Setlistify.Auth.TokenSalts.tidal_refresh_token/0` returning `"tidal refresh token"`. Leave Spotify's existing salt + key unchanged to avoid invalidating existing cookies.
+Tidal's refresh token has the same semantic shape as Spotify's (an OAuth refresh token). The existing codebase's pattern for per-provider session storage is:
+
+| Layer | Pattern |
+|---|---|
+| Session cookie keys (e.g. `:refresh_token`, `:user_token`) | **Unprefixed** — each provider owns its own keys; only one provider is active at a time |
+| Provider discriminator | `:auth_provider` (`"spotify"` / `"apple_music"`) |
+| Phoenix token salts | **Prefixed** — `spotify_refresh_token`, `apple_music_user_token` |
+| LiveHook assigns / events | **Prefixed** — e.g. `:apple_music_trigger`, `:apple_music_user_token` |
+
+Tidal follows that pattern: reuse the `:refresh_token` session key, add `Setlistify.Auth.TokenSalts.tidal_refresh_token/0` returning `"tidal refresh token"` as a distinct salt, and rely on `:auth_provider` to discriminate at read sites. The encryption salt is the real safety boundary — a Tidal-encrypted token will fail to decrypt under the Spotify salt and vice versa, so even a degenerate state where `:auth_provider == "tidal"` coexists with a Spotify-encrypted `:refresh_token` resolves correctly: decryption fails, `RestoreTidalToken` clears the session, the user re-authenticates.
+
+The (briefly considered) alternative was `:tidal_refresh_token` as a distinct session key — bulletproof against stale-cookie races but introduces a third storage pattern that's inconsistent with how Apple Music sits next to Spotify today. The shared-key + distinct-salt approach matches precedent.
+
+`UserAuth.auth_user/2` already reads + re-puts `:refresh_token` across `renew_session/1`; no change is needed there. `OAuthCallbackController.sign_out/2` adds a `"tidal"` clause to its existing `{auth_provider, id}` match. `RestoreTidalToken` selects the `tidal_refresh_token` salt because the plug is provider-specific (`auth_provider == "tidal"` guard).
 
 ### 6. #130 evaluation is a Phase 2 deliverable
 
@@ -173,6 +186,10 @@ new/2       assert state == get_session(:oauth_state)            # existing CSRF
 
 The token-endpoint host (`login.tidal.com` vs `auth.tidal.com`) and exact `scope` values are confirmed in the Phase 0 spike before this is written.
 
+#### Why not `oidcc`?
+
+[`oidcc`](https://oidcc.hexdocs.pm/readme.html) is an OpenID Connect library that bundles PKCE alongside provider discovery (`.well-known/openid-configuration`), ID-token JWT/JWK validation, userinfo, and nonce handling. Tidal is plain OAuth 2.1 + PKCE — no ID token, no discovery endpoint, no `openid` scope. Adopting `oidcc` would mean dragging in OIDC abstractions and discovery configuration for an OAuth-only provider, in exchange for skipping ~5 LOC of `:crypto`. Not worth it. If we add a second OAuth-PKCE provider later and the crypto duplicates, extract a `Setlistify.Auth.PKCE` helper at that point.
+
 ### Rate Limit Strategy (deferred)
 
 In v1, no coordination layer. `ExternalClient` returns `{:error, :rate_limited, retry_after}` on 429 and records:
@@ -194,6 +211,19 @@ Tidal v2 speaks JSON:API:
 - Add tracks: `POST /v2/playlists/{id}/relationships/items` in 20-track chunks; whether `meta.positionBefore` is required is confirmed in the spike.
 
 The artist-match + cover-fallback policy is re-derived **verbatim** from the Spotify/Apple Music implementations inside `Tidal.API.ExternalClient.search_for_track/4` — this duplication is the deliberate third data point for #130.
+
+#### JSON:API tooling
+
+We do not adopt a JSON:API client library. The Elixir `jsonapi` hex package is a Phoenix-side *serializer* (for emitting responses), not a client. Req's existing `decode_body` step already handles the `application/vnd.api+json` content type as JSON via the `*+json` match, so the response body arrives as a parsed map without configuration. The only JSON:API mechanics we touch are setting the `content-type` / `accept` headers in `client/1` and walking the `included` array to resolve `relationships` references. The latter is encapsulated in a small private helper:
+
+```elixir
+# Resolves a {type, id} relationships reference against the top-level included list.
+defp extract_included(%{"included" => included}, type, id) do
+  Enum.find(included, fn entry -> entry["type"] == type && entry["id"] == id end)
+end
+```
+
+Code-generation from an OpenAPI/JSON:API schema is net-negative for ~5 endpoints — the wrappers would be larger than the call sites.
 
 ### Track ID Abstraction
 
@@ -375,6 +405,7 @@ Each PR is independently mergeable. Issues numbered in dependency order.
 
 ## References
 
+- [TIDAL API SDK Quick Start](https://developer.tidal.com/documentation/api-sdk/api-sdk-quick-start) — start here in the Phase 0 spike
 - [TIDAL API Reference](https://tidal-music.github.io/tidal-api-reference/)
 - [TIDAL Developer Portal](https://developer.tidal.com/)
 - [OAuth 2.1 / PKCE (RFC 7636)](https://datatracker.ietf.org/doc/html/rfc7636)
