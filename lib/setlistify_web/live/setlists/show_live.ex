@@ -14,7 +14,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   def mount(%{"id" => id}, _session, socket) do
     case SetlistFm.API.get_setlist(id) do
       {:ok, setlist} ->
-        scope = socket.assigns[:current_scope]
+        current_scope = socket.assigns[:current_scope]
 
         socket =
           assign(socket,
@@ -26,7 +26,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
             redirect_to: "/setlist/#{id}"
           )
 
-        socket = maybe_start_song_searches(socket, setlist, scope)
+        socket = maybe_start_song_searches(socket, setlist, current_scope)
 
         {:ok, socket}
 
@@ -45,10 +45,10 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   end
 
   def handle_event("create_playlist", _params, socket) do
-    scope = socket.assigns.current_scope
+    current_scope = socket.assigns.current_scope
 
-    if Scope.authenticated?(scope) do
-      create_and_populate_playlist(socket, scope.user_session)
+    if Scope.authenticated?(current_scope) do
+      create_and_populate_playlist(socket, current_scope.user_session)
     else
       {:noreply, put_flash(socket, :error, "Unable to access your music session. Please log in again.")}
     end
@@ -158,9 +158,9 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     """
   end
 
-  defp maybe_start_song_searches(socket, setlist, scope) do
-    if Scope.authenticated?(scope) do
-      start_song_searches(socket, setlist, scope.user_session)
+  defp maybe_start_song_searches(socket, setlist, current_scope) do
+    if Scope.authenticated?(current_scope) do
+      start_song_searches(socket, setlist, current_scope.user_session)
     else
       socket
     end
