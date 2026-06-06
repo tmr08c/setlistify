@@ -16,12 +16,12 @@ The bulk of the supporting architecture is already in place from ADR-003: `Setli
 
 The novelty in Tidal is in the protocol details:
 
-- OAuth 2.1 with **mandatory PKCE**
+- OAuth 2.1 with **mandatory PKCE for all clients** ([per Tidal's docs](https://developer.tidal.com/documentation/api-sdk/api-sdk-authorization): *"TIDAL (and OAuth 2.1) enforces Proof Key for Code Exchange (PKCE) for all clients"*) — no carve-out for confidential clients
 - **JSON:API content type** (`application/vnd.api+json`)
 - A **path-segment search** endpoint (`/v2/searchResults/{url-encoded-query}`)
 - A required `countryCode` on every catalog call
-- **24-hour access tokens** with standard refresh-token rotation
-- A documented **~1 req/5 sec rate limit per token**
+- **24-hour access tokens** with refresh via `grant_type=refresh_token`. Tidal's documented refresh-response example shows no `refresh_token` field, implying no rotation — but this is not asserted in prose, so the spike verifies it
+- **Undocumented rate limits.** Tidal does not publish numeric thresholds. The only documented behavior is that 429 responses include a `Retry-After` header (confirmed by a Tidal maintainer). The spike measures real limits.
 - No app-level signed token (no `DeveloperTokenManager` equivalent)
 
 ### Constraints
@@ -48,7 +48,7 @@ Three phases — no separate "preparatory Spotify refactors" wave (none needed):
 
 - **Phase 0 — Auth spike.** Validate the uncertainty hot-spots end-to-end (PKCE flow, path-segment search with JSON:API parsing, `meta.positionBefore` semantics for add-tracks, real-world rate-limit behavior, ISRC availability). Gates Phase 1. Spike code may be throwaway.
 - **Phase 1 — Implementation.** Seven issues, each a single PR-sized unit. Follows `docs/adding-a-music-provider.md` end-to-end.
-- **Phase 2 — Wrap-up.** Three issues: #130 evaluation with a third data point; rate-limit telemetry review after real traffic; doc updates.
+- **Phase 2 — Wrap-up.** Three issues: #130 evaluation with a third data point; rate-limit telemetry review after real traffic; doc updates. Plus one conditional ISRC fast-path issue, gated on the spike + telemetry findings.
 
 ## Considered Options
 
@@ -63,7 +63,7 @@ Only Tidal-specific decisions warrant options analysis. The dispatch architectur
 
 **Option B — Session cookie, mirroring the existing `:oauth_state` pattern. (Chosen.)** The `code_verifier` is generated before the authorize redirect and stored in the session cookie next to the existing `:oauth_state` nonce, then replayed (and deleted) in the token exchange.
 
-- Pros: ~12 LOC beyond Spotify's existing flow; no new module/process/table; reuses a pattern the team already understands.
+- Pros: small, contained change beyond Spotify's existing flow; no new module/process/table; reuses a pattern the team already understands.
 - Cons: concurrent multi-tab sign-in attempts can overwrite each other's verifier — an edge case Spotify already accepts for `:oauth_state`.
 
 **Decision: Option B.** Matching the existing pattern beats introducing a new one. The cookie is signed/encrypted, same-site, and already survives the OAuth round-trip for `:oauth_state`.
@@ -75,7 +75,7 @@ Only Tidal-specific decisions warrant options analysis. The dispatch architectur
 - Pros: smooth UX under burst.
 - Cons: over-engineering before we have real usage data; the search fan-out pattern's real-world 429 incidence is unknown.
 
-**Option B — Telemetry only in v1, evaluate in Phase 2. (Chosen.)** Surface 429s as `{:error, :rate_limited, retry_after}`, instrument with OTel, and decide on coordination after observing real traffic.
+**Option B — Telemetry only in v1, evaluate in Phase 2. (Chosen.)** Surface 429s as `{:error, {:rate_limited, retry_after}}` (2-tuple, fits the existing callback's `{:error, atom() | {atom(), term()}}` union), instrument with OTel, and decide on coordination after observing real traffic.
 
 **Decision: Option B.** Ship a possibly-rough UX for Tidal-heavy users in exchange for not over-engineering before we have data. The per-user limiter is a well-understood follow-up if Phase 2 telemetry shows it's needed.
 
@@ -100,11 +100,11 @@ defmodule Setlistify.Tidal.UserSession do
 end
 ```
 
-Tidal requires `countryCode` on essentially every catalog request, mirroring Apple Music's `storefront`. It is fetched once from `/v2/users/me` during the auth-code exchange and stored in the struct + session cookie so restoration is a pure constructor (no `/me` round-trip). On missing/invalid `country` at sign-in: **fail loud with a flash**, do not default to `"US"`.
+Tidal requires `countryCode` on essentially every catalog request, mirroring Apple Music's `storefront`. It is fetched once from `/v2/users/me` during the auth-code exchange and stored in the struct + session cookie under the unprefixed key `:country_code` (consistent with Apple Music's unprefixed `:storefront`). Restoration reads it from the cookie without a `/me` round-trip. On missing/invalid `country` at sign-in: **fail loud with a flash**, do not default to `"US"`.
 
 ### 2. PKCE state lives in the session cookie
 
-Tidal requires OAuth 2.1 with mandatory PKCE. The flow needs a `code_verifier` (43–128 char random unreserved string) generated before the authorize redirect and replayed in the token exchange — identical in lifecycle to the existing `:oauth_state` nonce that Spotify's `sign_in/2` already puts in the session.
+Tidal mandates PKCE for *all* clients, including confidential ones with a `client_secret` ([per their authorization docs](https://developer.tidal.com/documentation/api-sdk/api-sdk-authorization)). The flow needs a `code_verifier` (43–128 char random unreserved string) generated before the authorize redirect and replayed in the token exchange — identical in lifecycle to the existing `:oauth_state` nonce that Spotify's `sign_in/2` already puts in the session.
 
 - `sign_in/2`: `put_session(:pkce_code_verifier, verifier)` next to the existing `put_session(:oauth_state, state)`.
 - `new/2`: `get_session(:pkce_code_verifier)`, `delete_session(:pkce_code_verifier)` (single-use), pass to `Tidal.API.exchange_code(code, redirect_uri, verifier)`.
@@ -116,21 +116,28 @@ verifier  = :crypto.strong_rand_bytes(32) |> Base.url_encode64(padding: false)
 challenge = :crypto.hash(:sha256, verifier) |> Base.url_encode64(padding: false)
 ```
 
-This adds ~12 LOC beyond Spotify's existing flow. No new module, supervision child, or ETS table.
+The helpers are inlined as private functions in `OAuthCallbackController` — no separate `Setlistify.Auth.PKCE` module. If a second OAuth-PKCE provider arrives and the crypto duplicates, extract then. No new supervision child or ETS table.
 
 ### 3. Rate limiting — telemetry only in v1
 
 The `ExternalClient` will:
 
-- Surface 429s as `{:error, :rate_limited, retry_after_seconds}` rather than retrying silently.
+- Surface 429s as `{:error, {:rate_limited, retry_after_seconds}}` — a **2-tuple** preserving the existing `MusicService.API` callback shape (`{:error, atom() | {atom(), term()}}`). The callback type widens slightly; Spotify and Apple Music remain free to emit only the bare `{:error, atom()}` variants they already do, so no behavioral change there. The LiveView pattern-matches the inner `{:rate_limited, retry_after}` tuple to surface a retry hint if desired.
 - Use **provider-agnostic OTel attributes** (per ADR-003's generalization away from `<provider>.*` namespaces): the standard `http.status_code` semconv attribute on every span; on 429, a `http.rate_limited` span event with `http.response.header.retry_after` as its attribute. Provider identity is carried by `peer.service`, set by `MusicService.API.impl/1`.
 - Add a telemetry metric for 429 counts, labeled by `music.service`, so per-provider filtering works in Grafana without a provider-prefixed namespace.
 
 The LiveView already runs track searches concurrently via `assign_async` — that fan-out will probably 429 under burst. The Phase 2 telemetry review reads the real data and decides whether to add coordination then.
 
-### 3a. Possible batch-lookup optimization via ISRC
+### 3a. ISRC batch-lookup as a Phase 2 follow-up optimization
 
-Tidal v2 has no batch search-by-query endpoint (one `searchResults/{query}` per call — search remains rate-limit-bound). But `GET /v2/tracks?filter[isrc]=A,B,C&countryCode=US` supports batch lookup by ISRC, up to 20 per call. If setlist.fm provides ISRCs in the song data Setlistify already fetches, the spike should test ISRC-first lookup with search as the fallback for songs without ISRCs. For a setlist with full ISRC coverage this drops ~25 search calls to ~2 batched lookup calls. Validated in the Phase 0 spike; implemented only if data confirms.
+Tidal v2 has no batch search-by-query endpoint (one `searchResults/{query}` per call — search remains rate-limit-bound). However, `GET /v2/tracks?filter[isrc]=A,B,C&countryCode=US` supports batch lookup by ISRC, up to 20 per call. For a setlist where every song has an ISRC, this could drop ~25 search calls to ~2 batched lookup calls.
+
+Two open questions decide whether this is worth pursuing:
+
+1. Does setlist.fm carry ISRCs in the song data we already fetch? (A grep of `lib/setlistify/setlist_fm/` shows zero ISRC references today — feasibility is unknown.)
+2. Does the Phase 2 rate-limit telemetry review show that search calls are a meaningful bottleneck in real traffic?
+
+**Decision**: Phase 0 includes a brief check of both Tidal's `filter[isrc]` response shape and setlist.fm's data, but the optimization itself is deferred to a Phase 2 follow-up after data justifies it. Phase 1's `ExternalClient` does not include an ISRC fast path.
 
 ### 4. Embed previews included (like Spotify)
 
@@ -192,7 +199,9 @@ The token-endpoint host (`login.tidal.com` vs `auth.tidal.com`) and exact `scope
 
 ### Rate Limit Strategy (deferred)
 
-In v1, no coordination layer. `ExternalClient` returns `{:error, :rate_limited, retry_after}` on 429 and records:
+In v1, no coordination layer. `ExternalClient` returns `{:error, {:rate_limited, retry_after}}` on 429 — a 2-tuple that fits the existing `MusicService.API` callback's `{:error, atom() | {atom(), term()}}` shape. The callback union widens; Spotify and Apple Music keep emitting their existing bare `{:error, atom()}` shapes (no behavioral change), and the LiveView pattern-matches the inner tuple to render retry hints if desired.
+
+Telemetry records:
 
 - `http.status_code` (semconv) on every HTTP span
 - on 429, a `http.rate_limited` span event carrying `http.response.header.retry_after`
@@ -218,12 +227,33 @@ We do not adopt a JSON:API client library. The Elixir `jsonapi` hex package is a
 
 ```elixir
 # Resolves a {type, id} relationships reference against the top-level included list.
-defp extract_included(%{"included" => included}, type, id) do
+defp extract_included(%{"included" => included}, type, id) when is_list(included) do
   Enum.find(included, fn entry -> entry["type"] == type && entry["id"] == id end)
 end
+defp extract_included(_body, _type, _id), do: nil
 ```
 
+Edge cases to handle at the call site: responses with no `relationships` at all (no `included` key in the body), tracks whose artist references resolve to nothing in `included` (treat as unknown artist; falls into the existing cover-fallback path), and the `data` array being empty (no search hits — return `nil`).
+
 Code-generation from an OpenAPI/JSON:API schema is net-negative for ~5 endpoints — the wrappers would be larger than the call sites.
+
+### Session-Building Pattern (mirrors Spotify, not Apple Music)
+
+Two existing patterns:
+
+- **Spotify** has a *private* `build_user_session_from_tokens/1` that `exchange_code/2` and `refresh_to_user_session/1` both call internally. It chases `/me` to get user_id + username, then builds the struct. There is no public constructor — callers always get a fresh session from a tokens response.
+- **Apple Music** has a *public* `build_user_session/3` because its inputs (user_token, storefront, generated UUID) come from the browser hook, not from an API response. Both first-auth and the cookie-only restoration path call it.
+
+**Tidal mirrors Spotify.** A private `build_user_session_from_tokens/1` chases `/v2/users/me` to populate `user_id`, `username`, and `country_code`, called by both `exchange_code/3` and `refresh_to_user_session/1`. Session restoration goes through the refresh path (Tidal access tokens are short-lived, so we always need a fresh access token after process restart). No public `build_user_session/N` constructor is needed.
+
+### Idempotency keys — open implementation question
+
+Tidal's `POST /v2/playlists` accepts an `Idempotency-Key` header. Two consideration points to resolve at implementation time:
+
+- **Value strategy.** A random UUID per call is useless for retries (each retry generates a different key). A hash of `(user_id, name, normalized_description, setlist_id?)` survives retries within a setlist session but would collide across two distinct same-named playlists — usually fine for our flow, since duplicate-named playlists for the same setlist are the bug case we *want* idempotency to prevent.
+- **Whether `add_tracks_to_playlist/3` carries one too.** Add-tracks is naturally near-idempotent for our use (duplicate adds just add the track twice), but with 20-track chunking + 429 retries, chunk-level idempotency keys would prevent double-adds when the server processed the request but the response was lost. Implementation should make the call.
+
+These are flagged here so they get addressed when issue #140 is picked up. The ADR does not pre-commit to a specific scheme.
 
 ### Track ID Abstraction
 
@@ -256,7 +286,7 @@ lib/setlistify_web/
     restore_tidal_token.ex              # new — network-call variant (short-lived tokens)
   controllers/
     oauth_callback_controller.ex        # extend — Tidal sign_in/new/sign_out (PKCE)
-    user_auth.ex                        # extend — preserve :tidal_refresh_token, :tidal_country_code
+    user_auth.ex                        # extend — preserve :country_code (refresh_token preservation already in place)
   auth/
     live_hooks.ex                       # extend — "tidal" to_provider_key clause
   router.ex                             # extend — RestoreTidalToken in :browser pipeline
@@ -294,9 +324,10 @@ The work is tracked as a GitHub project mirroring the Apple Music project (#2). 
 - Call `GET /v2/searchResults/{query}?countryCode=US&include=tracks,tracks.artists` with two real artist/track pairs; record JSON:API `included` resolution
 - Create one playlist via `POST /v2/playlists`; record accepted `accessType` values
 - Add 3 tracks via `POST /v2/playlists/{id}/relationships/items` — **with and without `meta.positionBefore`** — record what works
-- Burst 30 sequential search requests with 200 ms gaps; record 429 incidence and `Retry-After` values
+- **Verify refresh-token rotation behavior**: call the token endpoint with `grant_type=refresh_token`, observe whether the response includes a new `refresh_token` (rotation, à la Spotify) or only `access_token` (no rotation; Tidal's example response implies this). The answer informs how `SessionManager.handle_info(:refresh_token, ...)` updates state.
+- Burst 30 sequential search requests with 200 ms gaps; record 429 incidence and `Retry-After` values. **There are no documented numeric rate limits** — this is the data point.
 - Confirm `https://embed.tidal.com/tracks/{id}` renders without auth
-- **Check whether setlist.fm song data already includes ISRC codes.** If yes, test `GET /v2/tracks?filter[isrc]=A,B,C&countryCode=US` with 5–20 ISRCs and record the response shape (informs §3a)
+- **Informational only (for Phase 2 ISRC follow-up):** spot-check whether setlist.fm song data includes ISRC codes and whether `GET /v2/tracks?filter[isrc]=A,B,C&countryCode=US` returns the expected shape. Phase 1 does **not** depend on this; it informs the Phase 2 decision about an ISRC fast path.
 - Document all answers in the issue body before closing
 
 **Gate:** Phase 1 may not begin until this issue closes with documented answers.
@@ -317,7 +348,7 @@ Each PR is independently mergeable. Issues numbered in dependency order.
 
 3. **feat: implement `Tidal.API` + `Tidal.API.ExternalClient`**
    - `Tidal.API`: `@behaviour Setlistify.MusicService.API`; declares `exchange_code/3` (PKCE verifier), `refresh_token/1`, `refresh_to_user_session/1`, `get_embed/1`; `search_for_track/4` wraps `Cachex.fetch(:tidal_track_cache, ...)` with OTel context propagation
-   - `Tidal.API.ExternalClient` full HTTP impl: JSON:API client; `with_token_refresh/3` for 401 → refresh → retry once; path-segment search with `countryCode` and JSON:API `included` artist resolution; re-derived artist-match + cover-fallback policy (the #130 evidence); optional `filter[isrc]` fast path if the spike confirms ISRC availability; `create_playlist/3` with `Idempotency-Key`; `add_tracks_to_playlist/3` in 20-track chunks; `exchange_code/3` chasing `country` from `/v2/users/me`; refresh paths preserving `country_code`; 429 surfaced as `{:error, :rate_limited, retry_after}` with semconv `http.status_code` + `http.rate_limited` span event — **no `tidal.*` attributes**
+   - `Tidal.API.ExternalClient` full HTTP impl: JSON:API client; `with_token_refresh/3` for 401 → refresh → retry once; path-segment search with `countryCode` and JSON:API `included` artist resolution via the `extract_included/3` helper; re-derived artist-match + cover-fallback policy (the #130 evidence); `create_playlist/3` with `Idempotency-Key` (value strategy decided at implementation per the Implementation Details note); `add_tracks_to_playlist/3` in 20-track chunks; `exchange_code/3` chasing `country` from `/v2/users/me`; refresh paths preserving `country_code`; 429 surfaced as `{:error, {:rate_limited, retry_after}}` with semconv `http.status_code` + `http.rate_limited` span event — **no `tidal.*` attributes**
    - Unit tests via `Req.Test` plug intercept
 
 4. **chore: register Tidal Cachex cache + Hammox mock**
@@ -326,9 +357,9 @@ Each PR is independently mergeable. Issues numbered in dependency order.
 
 5. **feat: Tidal OAuth+PKCE callback + sign-in handlers**
    - `OAuthCallbackController.sign_in/2` Tidal clause: generate state + verifier + challenge; put both in session; redirect with `code_challenge`, `code_challenge_method=S256`, `scope`, `state`
-   - `new/2` Tidal clause: validate state, read + delete `:pkce_code_verifier`, `exchange_code/3`, encrypt refresh token with `tidal_refresh_token` salt, start session, set session keys, `UserAuth.auth_user/2`
+   - `new/2` Tidal clause: validate state, read + delete `:pkce_code_verifier`, `exchange_code/3`, encrypt refresh token with `tidal_refresh_token` salt, start session, `put_session(:auth_provider, "tidal")`, `put_session(:refresh_token, encrypted)` (shared key with Spotify; salt disambiguates per §5), `put_session(:country_code, code)` (unprefixed, matches Apple Music's `:storefront`), `put_session(:user_id, ...)`, `UserAuth.auth_user/2`
    - `sign_out/2` Tidal case clause
-   - `UserAuth.auth_user/2` extended to preserve `:tidal_refresh_token` and `:tidal_country_code` across `renew_session/1`
+   - `UserAuth.auth_user/2` extended to preserve `:country_code` across `renew_session/1` (`:refresh_token` is already preserved by the existing block)
    - Controller tests: state mismatch, missing verifier, success, exchange failure
 
 6. **feat: `RestoreTidalToken` plug + router wiring**
@@ -343,7 +374,7 @@ Each PR is independently mergeable. Issues numbered in dependency order.
    - `Setlists.ShowLive.provider/1` clause; `Playlists.ShowLive.handle_params/3` `"tidal"` clause (embed, Spotify-style)
    - `Layouts` user-display helpers; Tidal header sign-in button; Tidal added to the unauthenticated sign-in options on `Setlists.ShowLive`
 
-### Phase 2 — Wrap-Up (3 issues)
+### Phase 2 — Wrap-Up (3 issues + 1 conditional)
 
 1. **chore: evaluate #130 policy lift with three providers**
    - Side-by-side diff of `artist_match?/2` / `normalize_artist/1` / cover-fallback / policy-boundary telemetry across all three providers
@@ -356,10 +387,12 @@ Each PR is independently mergeable. Issues numbered in dependency order.
 
 3. **docs: update `adding-a-music-provider.md` with Tidal lessons**
    - PKCE callout (generate verifier + challenge in `sign_in/2`, store in session next to `:oauth_state`, replay in token exchange)
-   - Rate-limiting callout (surface 429 as `{:error, :rate_limited, retry_after}`; record via semconv `http.status_code` + `http.rate_limited` span event — never a `<provider>.*` namespace)
+   - Rate-limiting callout (surface 429 as `{:error, {:rate_limited, retry_after}}`; record via semconv `http.status_code` + `http.rate_limited` span event — never a `<provider>.*` namespace)
    - Region-scoping callout (Apple Music `storefront`, Tidal `country_code`) as a per-user session field
    - JSON:API note if Tidal's response shape needed nontrivial parsing
    - Confirm the existing checklist still accurate
+
+4. **(conditional) feat: ISRC batch fast path for Tidal search** — *file only if both conditions hold from the Phase 0 spike + Phase 2 telemetry review:* setlist.fm carries ISRCs in fetched song data **and** search-call volume is shown to be a meaningful bottleneck. Implementation would extend `search_for_track/4` (or a sibling `search_batch/2`) to call `GET /v2/tracks?filter[isrc]=…` first for songs with ISRCs and fall back to the existing search for those without.
 
 ## Consequences
 
@@ -367,7 +400,7 @@ Each PR is independently mergeable. Issues numbered in dependency order.
 
 - ✅ Tidal users get full feature parity with Spotify and Apple Music
 - ✅ Reuses the ADR-003 dispatch architecture wholesale — no web-layer changes beyond provider clauses
-- ✅ PKCE adds ~12 LOC with no new process or table by reusing the `:oauth_state` cookie pattern
+- ✅ PKCE is a small, contained change with no new process or table — it reuses the `:oauth_state` cookie pattern
 - ✅ Provides the third data point needed to settle the #130 abstraction question with evidence rather than speculation
 - ✅ OTel stays provider-agnostic — Grafana queries filter by `peer.service`, not by attribute namespace
 
@@ -406,8 +439,10 @@ Each PR is independently mergeable. Issues numbered in dependency order.
 ## References
 
 - [TIDAL API SDK Quick Start](https://developer.tidal.com/documentation/api-sdk/api-sdk-quick-start) — start here in the Phase 0 spike
+- [TIDAL Authorization Docs](https://developer.tidal.com/documentation/api-sdk/api-sdk-authorization) — PKCE-for-all-clients statement, refresh-token example response
 - [TIDAL API Reference](https://tidal-music.github.io/tidal-api-reference/)
 - [TIDAL Developer Portal](https://developer.tidal.com/)
+- [tidal-music discussion #135 — Retry-After on 429](https://github.com/orgs/tidal-music/discussions/135) — only official statement on rate-limit behavior
 - [OAuth 2.1 / PKCE (RFC 7636)](https://datatracker.ietf.org/doc/html/rfc7636)
 - [JSON:API Specification](https://jsonapi.org/)
 - [ADR-001: Token Session Management](001-token-session-management.md)
