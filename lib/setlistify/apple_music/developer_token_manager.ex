@@ -33,6 +33,10 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
   Every error log carries `apple_music_token_phase` metadata
   (`:generate | :refresh | :regenerate | :retry`) so structured-log queries can
   distinguish which lifecycle hook failed.
+
+  If the cached token's `expires_at` passes while the manager is stuck retrying
+  (e.g. signing has been broken for the token's whole 30-day lifetime),
+  `get_token/0` returns `nil` rather than handing back an expired binary.
   """
 
   use GenServer
@@ -60,7 +64,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
 
   def start_link(opts), do: GenServer.start_link(__MODULE__, opts, name: __MODULE__)
 
-  @doc "Returns the cached developer token, or `nil` if generation has failed (see degraded mode)."
+  @doc "Returns the cached developer token, or `nil` if generation has failed or the token has expired."
   def get_token, do: GenServer.call(__MODULE__, :get_token)
 
   @doc """
@@ -91,7 +95,13 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
     end
   end
 
-  def handle_call(:get_token, _from, %State{} = state), do: {:reply, state.token, state}
+  def handle_call(:get_token, _from, %State{} = state) do
+    if expired?(state) do
+      {:reply, nil, %{state | token: nil, expires_at: nil}}
+    else
+      {:reply, state.token, state}
+    end
+  end
 
   def handle_call(:regenerate_token, _from, %State{} = state) do
     case generate_and_sign() do
@@ -135,6 +145,12 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
         {:noreply, %{state | timer_ref: timer_ref}}
     end
   end
+
+  defp expired?(%State{token: token, expires_at: expires_at}) when is_binary(token) and is_integer(expires_at) do
+    expires_at <= System.system_time(:second)
+  end
+
+  defp expired?(%State{}), do: false
 
   defp generate_and_sign do
     now = System.system_time(:second)

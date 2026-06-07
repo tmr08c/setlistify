@@ -46,6 +46,19 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManagerTest do
 
       refute DeveloperTokenManager.get_token() == token_before
     end
+
+    test "get_token/0 returns nil when the cached token has expired" do
+      token_before = DeveloperTokenManager.get_token()
+      assert is_binary(token_before)
+
+      # Push expires_at into the past without going through the normal refresh
+      # path, so we can verify the expiry guard in handle_call(:get_token, ...).
+      :sys.replace_state(DeveloperTokenManager, fn state ->
+        %{state | expires_at: System.system_time(:second) - 60}
+      end)
+
+      assert DeveloperTokenManager.get_token() == nil
+    end
   end
 
   describe "when the private key is invalid" do
