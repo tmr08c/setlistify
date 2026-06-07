@@ -1,3 +1,12 @@
+<%!--
+  MusicKit v3 is intentionally loaded from Apple's CDN — not bundled via esbuild.
+  Apple does not publish MusicKit as an npm package (neither @apple/musickit nor
+  musickit-js exist on npmjs.com), and the SDK license header explicitly prohibits
+  copying, modifying, re-hosting, or creating derivative works of the file.
+  There is no supported alternative to this CDN script tag. Conditionally injected
+  only when Apple Music is enabled (see SetlistifyWeb.Layouts.needs_music_kit?/1).
+  Deliberate exception to the "no external script tags" rule in AGENTS.md. Refs: #151.
+--%>
 <%= if needs_music_kit?(@current_scope.user_session) do %>
   <script async src="https://js-cdn.music.apple.com/musickit/v3/musickit.js">
   </script>

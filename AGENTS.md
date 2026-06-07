@@ -35,6 +35,12 @@ custom classes must fully style the input
   - You cannot reference an external vendor'd script `src` or link `href` in the layouts
   - You must import the vendor deps into app.js and app.css to use them
   - **Never write inline <script>custom js</script> tags within templates**
+  - **Known exception — Apple MusicKit v3**: Apple does not publish MusicKit as an npm
+    package, and its license header explicitly prohibits copying, modifying, or re-hosting
+    the file. The CDN `<script src="https://js-cdn.music.apple.com/musickit/v3/musickit.js">`
+    tag in `app.html.heex` is the only supported delivery mechanism. It is conditionally
+    injected (see `SetlistifyWeb.Layouts.needs_music_kit?/1`) and is a deliberate, justified
+    exception to the "no external script tags" rule. See issue #151.
 
 ### UI/UX & design guidelines
 
