@@ -105,7 +105,8 @@ defmodule Setlistify.MixProject do
     [
       setup: ["deps.get", "assets.setup"],
       "assets.setup": ["tailwind.install --if-missing", "esbuild.install --if-missing"],
-      "assets.deploy": ["tailwind setlistify --minify", "esbuild default --minify", "phx.digest"]
+      "assets.deploy": ["tailwind setlistify --minify", "esbuild default --minify", "phx.digest"],
+      precommit: ["compile --warnings-as-errors", "deps.unlock --unused", "format", "credo --strict", "test"]
     ]
   end
 
