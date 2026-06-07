@@ -88,8 +88,8 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                         <%= if Scope.authenticated?(@current_scope) && async_result do %>
                           <.async_result :let={result} assign={async_result}>
                             <:loading>
-                              <Heroicons.arrow_path
-                                mini
+                              <.icon
+                                name="hero-arrow-path-mini"
                                 id={"loading-spinner-#{set_index}-#{song_index}"}
                                 class="h-4 w-4 text-gray-400 animate-spin opacity-0"
                                 aria-label="searching for song"
@@ -98,21 +98,21 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                               />
                             </:loading>
                             <:failed :let={_failure}>
-                              <Heroicons.x_mark
-                                mini
+                              <.icon
+                                name="hero-x-mark-mini"
                                 class="h-4 w-4 text-red-500"
                                 aria-label="search failed"
                               />
                             </:failed>
                             <%= if result[:track_info] do %>
-                              <Heroicons.check
-                                mini
+                              <.icon
+                                name="hero-check-mini"
                                 class="h-4 w-4 text-emerald-500"
                                 aria-label="found matching song"
                               />
                             <% else %>
-                              <Heroicons.x_mark
-                                mini
+                              <.icon
+                                name="hero-x-mark-mini"
                                 class="h-4 w-4 text-red-500"
                                 aria-label="no matching song found"
                               />

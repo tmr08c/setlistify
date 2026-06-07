@@ -165,8 +165,8 @@ defmodule SetlistifyWeb.Components.SearchFormComponentTest do
     assert component =~ "bg-emerald-500"
     assert component =~ "hover:bg-emerald-400"
     assert component =~ "rounded-full"
-    # Check for the SVG path instead of the component name
-    assert component =~ "m21 21-5.197-5.197"
+    # Check for the icon component class name
+    assert component =~ "hero-magnifying-glass"
   end
 
   test "component respects different input_id values" do

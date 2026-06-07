@@ -608,10 +608,11 @@ defmodule SetlistifyWeb.CoreComponents do
   """
   attr :name, :string, required: true
   attr :class, :any, default: nil
+  attr :rest, :global
 
   def icon(%{name: "hero-" <> _} = assigns) do
     ~H"""
-    <span class={[@name, @class]} />
+    <span class={[@name, @class]} {@rest} />
     """
   end
 
@@ -732,7 +733,7 @@ defmodule SetlistifyWeb.CoreComponents do
         type="submit"
         class="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 bg-emerald-500 rounded-full flex items-center justify-center hover:bg-emerald-400 transition-colors"
       >
-        <Heroicons.magnifying_glass class="w-4 h-4 sm:w-5 sm:h-5 text-black" />
+        <.icon name="hero-magnifying-glass" class="w-4 h-4 sm:w-5 sm:h-5 text-black" />
       </button>
     </div>
     """
