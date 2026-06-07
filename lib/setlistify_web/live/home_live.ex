@@ -48,7 +48,7 @@ defmodule SetlistifyWeb.HomeLive do
               onclick="document.getElementById('how-it-works').scrollIntoView({ behavior: 'smooth' })"
             >
               <span class="text-sm font-normal">Learn More</span>
-              <Heroicons.chevron_double_down class="w-5 h-5 sm:w-6 sm:h-6" />
+              <.icon name="hero-chevron-double-down" class="w-5 h-5 sm:w-6 sm:h-6" />
             </button>
           </div>
         </div>
