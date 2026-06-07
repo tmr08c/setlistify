@@ -23,7 +23,8 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
             venue_name: setlist.venue.name,
             venue_location: setlist.venue.location,
             date: setlist.date,
-            redirect_to: "/setlist/#{id}"
+            redirect_to: "/setlist/#{id}",
+            song_results: %{}
           )
 
         socket = maybe_start_song_searches(socket, setlist, current_scope)
@@ -42,6 +43,16 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
          |> put_flash(:error, "Failed to load setlist. Please try again.")
          |> push_navigate(to: ~p"/")}
     end
+  end
+
+  def handle_async({set_index, song_index}, {:ok, result}, socket) do
+    song_results = Map.put(socket.assigns.song_results, {set_index, song_index}, {:ok, result})
+    {:noreply, assign(socket, song_results: song_results)}
+  end
+
+  def handle_async({set_index, song_index}, {:exit, reason}, socket) do
+    song_results = Map.put(socket.assigns.song_results, {set_index, song_index}, {:error, reason})
+    {:noreply, assign(socket, song_results: song_results)}
   end
 
   def handle_event("create_playlist", _params, socket) do
@@ -83,14 +94,12 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
 
                 <ol class="list-decimal list-inside space-y-2 ml-6">
                   <%= for {song, song_index} <- Enum.with_index(set.songs) do %>
-                    <% set_index = Enum.find_index(@sets, &(&1 == set))
-                    async_key = String.to_atom("song_#{set_index}_#{song_index}")
-                    async_result = Map.get(assigns, async_key) %>
+                    <% song_result = Map.get(@song_results, {set_index, song_index}) %>
                     <li>
                       <span class="inline-flex items-center gap-2">
-                        <%= if Scope.authenticated?(@current_scope) && async_result do %>
-                          <.async_result :let={result} assign={async_result}>
-                            <:loading>
+                        <%= if Scope.authenticated?(@current_scope) do %>
+                          <%= case song_result do %>
+                            <% nil -> %>
                               <.icon
                                 name="hero-arrow-path-mini"
                                 id={"loading-spinner-#{set_index}-#{song_index}"}
@@ -100,32 +109,30 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                                 phx-update="ignore"
                                 data-delay="250"
                               />
-                            </:loading>
-                            <:failed :let={_failure}>
-                              <.icon
-                                name="hero-x-mark-mini"
-                                class="h-4 w-4 text-red-500"
-                                aria-label="search failed"
-                              />
-                            </:failed>
-                            <%= if result[:track_info] do %>
-                              <.icon
-                                name="hero-check-mini"
-                                class="h-4 w-4 text-emerald-500"
-                                aria-label="found matching song"
-                              />
-                            <% else %>
+                            <% {:ok, %{track_info: nil}} -> %>
                               <.icon
                                 name="hero-x-mark-mini"
                                 class="h-4 w-4 text-red-500"
                                 aria-label="no matching song found"
                               />
-                            <% end %>
-                          </.async_result>
+                            <% {:ok, _result} -> %>
+                              <.icon
+                                name="hero-check-mini"
+                                class="h-4 w-4 text-emerald-500"
+                                aria-label="found matching song"
+                              />
+                            <% {:error, _reason} -> %>
+                              <.icon
+                                name="hero-x-mark-mini"
+                                class="h-4 w-4 text-red-500"
+                                aria-label="search failed"
+                              />
+                          <% end %>
                         <% end %>
                         <span class={[
-                          Scope.authenticated?(@current_scope) && async_result && async_result.ok? &&
-                            !async_result.result[:track_info] && "text-gray-500",
+                          Scope.authenticated?(@current_scope) &&
+                            match?({:ok, %{track_info: nil}}, song_result) &&
+                            "text-gray-500",
                           "inline"
                         ]}>
                           {song.title}
@@ -177,16 +184,13 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
       set.songs
       |> Enum.with_index()
       |> Enum.map(fn {song, song_index} ->
-        key = "song_#{set_index}_#{song_index}"
-        {key, set_index, song_index, song}
+        {set_index, song_index, song}
       end)
     end)
-    |> Enum.reduce(socket, fn {key, set_index, song_index, song}, acc_socket ->
-      atom_key = String.to_atom(key)
-
-      OpentelemetryPhoenixLiveViewProcessPropagator.LiveView.assign_async(
+    |> Enum.reduce(socket, fn {set_index, song_index, song}, acc_socket ->
+      OpentelemetryPhoenixLiveViewProcessPropagator.LiveView.start_async(
         acc_socket,
-        atom_key,
+        {set_index, song_index},
         fn ->
           OpenTelemetry.Tracer.with_span "SetlistifyWeb.Setlists.ShowLive.search_song_async" do
             cover_artist = Map.get(song, :cover_artist)
@@ -208,14 +212,11 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                 cover_artist
               )
 
-            {:ok,
-             %{
-               atom_key => %{
-                 track_info: track_info,
-                 set_index: set_index,
-                 song_index: song_index
-               }
-             }}
+            %{
+              track_info: track_info,
+              set_index: set_index,
+              song_index: song_index
+            }
           end
         end
       )
@@ -252,26 +253,20 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     assigns.sets
     |> Enum.with_index()
     |> Enum.flat_map(fn {set, set_index} ->
-      Enum.with_index(set.songs, fn _song, song_index ->
-        String.to_atom("song_#{set_index}_#{song_index}")
+      set.songs
+      |> Enum.with_index()
+      |> Enum.flat_map(fn {_song, song_index} ->
+        song_result_track_id(assigns.song_results, {set_index, song_index})
       end)
     end)
-    |> Enum.flat_map(fn async_key ->
-      case async_track_id(Map.get(assigns, async_key)) do
-        nil -> []
-        track_id -> [track_id]
-      end
-    end)
   end
 
-  defp async_track_id(%Phoenix.LiveView.AsyncResult{ok?: true, result: result}) do
-    case result[:track_info] do
-      nil -> nil
-      track_info -> track_info.track_id
+  defp song_result_track_id(song_results, key) do
+    case Map.get(song_results, key) do
+      {:ok, %{track_info: track_info}} when not is_nil(track_info) -> [track_info.track_id]
+      _ -> []
     end
   end
-
-  defp async_track_id(_), do: nil
 
   defp set_name(%{encore: encore}) when is_number(encore), do: "Encore #{encore}"
   defp set_name(%{name: nil}), do: "Unnamed Setlist"
