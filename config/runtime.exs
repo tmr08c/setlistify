@@ -233,7 +233,7 @@ if use_grafana_cloud do
       username: loki_user_id,
       password: grafana_api_key,
       level: :info,
-      metadata: [:request_id, :trace_id, :span_id, :user_id, :apple_music_token_phase],
+      metadata: [:request_id, :trace_id, :span_id, :user_id],
       max_buffer: 100,
       labels: %{
         "application" => "setlistify",
@@ -287,7 +287,7 @@ else
   config :logger, Setlistify.LokiLogger,
     url: "http://localhost:3100/loki/api/v1/push",
     level: :info,
-    metadata: [:request_id, :trace_id, :span_id, :user_id, :apple_music_token_phase],
+    metadata: [:request_id, :trace_id, :span_id, :user_id],
     max_buffer: 50,
     labels: %{
       "application" => "setlistify",

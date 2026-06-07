@@ -30,10 +30,6 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
   fixed via `Application.put_env` in a running node. Once the operator restarts
   with corrected config, normal operation resumes.
 
-  Every error log carries `apple_music_token_phase` metadata
-  (`:generate | :refresh | :regenerate | :retry`) so structured-log queries can
-  distinguish which lifecycle hook failed.
-
   If the cached token's `expires_at` passes while the manager is stuck retrying
   (e.g. signing has been broken for the token's whole 30-day lifetime),
   `get_token/0` returns `nil` rather than handing back an expired binary.
@@ -139,10 +135,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
   def handle_info(:retry_generate, %State{} = state) do
     case generate_and_sign() do
       {:ok, token, expires_at} ->
-        Logger.info("Apple Music developer token recovered after earlier failure",
-          apple_music_token_phase: :recovered
-        )
-
+        Logger.info("Apple Music developer token recovered after earlier failure")
         timer_ref = schedule_refresh(expires_at, state.timer_ref)
         {:noreply, %{state | token: token, expires_at: expires_at, timer_ref: timer_ref}}
 
@@ -175,15 +168,12 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
   end
 
   defp log_token_error(phase, {exception, stacktrace}) when phase in [:generate, :refresh, :regenerate, :retry] do
-    Logger.error(
-      """
-      Apple Music sign-in is DISABLED — DeveloperTokenManager failed to #{phase} token.
-      Fix APPLE_MUSIC_PRIVATE_KEY (PKCS#8 PEM), APPLE_MUSIC_KEY_ID, and APPLE_MUSIC_TEAM_ID, then restart.
+    Logger.error("""
+    Apple Music sign-in is DISABLED — DeveloperTokenManager failed to #{phase} token.
+    Fix APPLE_MUSIC_PRIVATE_KEY (PKCS#8 PEM), APPLE_MUSIC_KEY_ID, and APPLE_MUSIC_TEAM_ID, then restart.
 
-      #{Exception.format(:error, exception, stacktrace)}\
-      """,
-      apple_music_token_phase: phase
-    )
+    #{Exception.format(:error, exception, stacktrace)}\
+    """)
   end
 
   defp schedule_refresh(expires_at, existing_timer) do

@@ -19,7 +19,7 @@ config :esbuild,
 # Configures Elixir's Logger
 config :logger, :console,
   format: "$time $metadata[$level] $message\n",
-  metadata: [:request_id, :apple_music_token_phase]
+  metadata: [:request_id]
 
 # This will be overridden in dev/prod
 config :opentelemetry, :resource,

@@ -3,7 +3,7 @@ import Config
 # Console logger configuration - include trace context
 config :logger, :console,
   format: "$time [$level] $message $metadata\n",
-  metadata: [:request_id, :trace_id, :span_id, :user_id, :module, :function, :apple_music_token_phase]
+  metadata: [:request_id, :trace_id, :span_id, :user_id, :module, :function]
 
 # Logger configuration
 config :logger, level: :debug
