@@ -27,11 +27,10 @@ defmodule SetlistifyWeb.Components.SearchFormComponent do
       >
         <div class="w-full max-w-full">
           <div class="relative w-full">
-            <input
+            <.input
+              field={@search[:query]}
               type="text"
               id={@input_id}
-              name="search[query]"
-              value={@search[:query].value}
               placeholder="Search for an artist or band..."
               autocomplete="off"
               class={[
@@ -48,11 +47,6 @@ defmodule SetlistifyWeb.Components.SearchFormComponent do
             >
               <.icon name="hero-magnifying-glass" class="w-4 h-4 sm:w-5 sm:h-5 text-black" />
             </button>
-          </div>
-          <div :if={@search[:query].errors != []} class="mt-2">
-            <.error :for={msg <- @search[:query].errors}>
-              {SetlistifyWeb.CoreComponents.translate_error(msg)}
-            </.error>
           </div>
         </div>
       </.form>
