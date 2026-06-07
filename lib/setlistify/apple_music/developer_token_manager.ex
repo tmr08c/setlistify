@@ -29,6 +29,10 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
   silent launch with bad config is hard to miss, and self-heals if the config is
   fixed via `Application.put_env` in a running node. Once the operator restarts
   with corrected config, normal operation resumes.
+
+  Every error log carries `apple_music_token_phase` metadata
+  (`:generate | :refresh | :regenerate | :retry`) so structured-log queries can
+  distinguish which lifecycle hook failed.
   """
 
   use GenServer
@@ -74,7 +78,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
         {:noreply, %{state | token: token, expires_at: expires_at, timer_ref: timer_ref}}
 
       {:error, reason} ->
-        log_token_error("generate", reason)
+        log_token_error(:generate, reason)
         timer_ref = schedule_retry(state)
         {:noreply, %{state | token: nil, expires_at: nil, timer_ref: timer_ref}}
     end
@@ -90,7 +94,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
         {:reply, token, new_state}
 
       {:error, reason} ->
-        log_token_error("regenerate", reason)
+        log_token_error(:regenerate, reason)
         {:reply, state.token, state}
     end
   end
@@ -102,7 +106,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
         {:noreply, %{state | token: token, expires_at: expires_at, timer_ref: timer_ref}}
 
       {:error, reason} ->
-        log_token_error("refresh", reason)
+        log_token_error(:refresh, reason)
         timer_ref = schedule_retry(state)
         {:noreply, %{state | timer_ref: timer_ref}}
     end
@@ -111,12 +115,15 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
   def handle_info(:retry_generate, state) do
     case generate_and_sign() do
       {:ok, token, expires_at} ->
-        Logger.info("Apple Music developer token recovered after earlier failure")
+        Logger.info("Apple Music developer token recovered after earlier failure",
+          apple_music_token_phase: :recovered
+        )
+
         timer_ref = schedule_refresh(expires_at, state.timer_ref)
         {:noreply, %{state | token: token, expires_at: expires_at, timer_ref: timer_ref}}
 
       {:error, reason} ->
-        log_token_error("generate", reason)
+        log_token_error(:retry, reason)
         timer_ref = schedule_retry(state)
         {:noreply, %{state | timer_ref: timer_ref}}
     end
@@ -137,16 +144,15 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
     e -> {:error, {e, __STACKTRACE__}}
   end
 
-  defp log_token_error(verb, {exception, stacktrace}) do
+  defp log_token_error(phase, {exception, stacktrace}) when phase in [:generate, :refresh, :regenerate, :retry] do
     Logger.error(
-      "DeveloperTokenManager failed to #{verb} token\n" <>
-        Exception.format(:error, exception, stacktrace)
-    )
+      """
+      Apple Music sign-in is DISABLED — DeveloperTokenManager failed to #{phase} token.
+      Fix APPLE_MUSIC_PRIVATE_KEY (PKCS#8 PEM), APPLE_MUSIC_KEY_ID, and APPLE_MUSIC_TEAM_ID, then restart.
 
-    Logger.error(
-      "Apple Music sign-in is DISABLED. Fix APPLE_MUSIC_PRIVATE_KEY (PKCS#8 PEM), " <>
-        "APPLE_MUSIC_KEY_ID, and APPLE_MUSIC_TEAM_ID, then restart. " <>
-        "See preceding stacktrace."
+      #{Exception.format(:error, exception, stacktrace)}\
+      """,
+      apple_music_token_phase: phase
     )
   end
 
