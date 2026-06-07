@@ -46,13 +46,13 @@ defmodule SetlistifyWeb.SearchLiveTest do
        }}
     end)
 
-    {:ok, view, html} = live(conn, ~p"/setlists?query=beatles")
+    {:ok, view, _html} = live(conn, ~p"/setlists?query=beatles")
 
-    # Check that search results are displayed
-    assert html =~ "The Beatles"
-    assert html =~ "Compaq Center"
-    assert html =~ "Houston, TX, United States"
-    assert html =~ "2023-01-01"
+    # Check that search results are displayed using element selectors
+    assert has_element?(view, tid("setlist-#{setlist_id}") <> " h3", "The Beatles")
+    assert has_element?(view, tid("setlist-#{setlist_id}"), "Compaq Center")
+    assert has_element?(view, tid("setlist-#{setlist_id}"), "Houston, TX, United States")
+    assert has_element?(view, "time[datetime='2023-01-01']")
 
     view |> element(tid("setlist-#{setlist_id}")) |> render_click()
     assert_redirected(view, ~p"/setlist/#{setlist_id}")
@@ -63,9 +63,9 @@ defmodule SetlistifyWeb.SearchLiveTest do
       {:error, :not_found}
     end)
 
-    {:ok, _view, html} = live(conn, ~p"/setlists?query=nonexistent")
+    {:ok, view, _html} = live(conn, ~p"/setlists?query=nonexistent")
 
-    assert html =~ "No results found"
+    assert has_element?(view, "p", "No results found")
   end
 
   test "search form is pre-filled with query parameter", %{conn: conn} do
@@ -73,10 +73,10 @@ defmodule SetlistifyWeb.SearchLiveTest do
       {:error, :not_found}
     end)
 
-    {:ok, _view, html} = live(conn, ~p"/setlists?query=some+band")
+    {:ok, view, _html} = live(conn, ~p"/setlists?query=some+band")
 
     # Check that the search input is pre-filled with the query
-    assert html =~ ~s(value="some band")
+    assert has_element?(view, "#search-query-results[value='some band']")
   end
 
   test "displays song count in search results", %{conn: conn} do
@@ -119,12 +119,12 @@ defmodule SetlistifyWeb.SearchLiveTest do
        }}
     end)
 
-    {:ok, _view, html} = live(conn, ~p"/setlists?query=test+artist")
+    {:ok, view, _html} = live(conn, ~p"/setlists?query=test+artist")
 
     # Check that song counts are displayed
-    assert html =~ "0 songs"
-    assert html =~ "15 songs"
-    assert html =~ "1 song"
+    assert has_element?(view, tid("setlist-test-id-1"), "0 songs")
+    assert has_element?(view, tid("setlist-test-id-2"), "15 songs")
+    assert has_element?(view, tid("setlist-test-id-3"), "1 song")
   end
 
   describe "URL validation and manipulation protection" do
@@ -197,8 +197,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
          }}
       end)
 
-      {:ok, _view, html} = live(conn, "/setlists?query=the%20beatles")
-      assert html =~ "The Beatles"
+      {:ok, view, _html} = live(conn, "/setlists?query=the%20beatles")
+      assert has_element?(view, tid("setlist-test-id") <> " h3", "The Beatles")
     end
 
     test "handles special characters in query parameters", %{conn: conn} do
@@ -222,8 +222,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
       end)
 
       # AC/DC URL encoded
-      {:ok, _view, html} = live(conn, "/setlists?query=AC%2FDC")
-      assert html =~ "AC/DC"
+      {:ok, view, _html} = live(conn, "/setlists?query=AC%2FDC")
+      assert has_element?(view, tid("setlist-test-id-acdc") <> " h3", "AC/DC")
     end
 
     test "handles very long query strings appropriately", %{conn: conn} do
@@ -233,8 +233,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
         {:error, :not_found}
       end)
 
-      {:ok, _view, html} = live(conn, "/setlists?query=#{URI.encode(long_query)}")
-      assert html =~ "No results found"
+      {:ok, view, _html} = live(conn, "/setlists?query=#{URI.encode(long_query)}")
+      assert has_element?(view, "p", "No results found")
     end
 
     test "handles unicode characters in queries", %{conn: conn} do
@@ -259,8 +259,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
          }}
       end)
 
-      {:ok, _view, html} = live(conn, "/setlists?query=#{URI.encode(unicode_query)}")
-      assert html =~ "Björk"
+      {:ok, view, _html} = live(conn, "/setlists?query=#{URI.encode(unicode_query)}")
+      assert has_element?(view, tid("setlist-test-id-bjork") <> " h3", "Björk")
     end
 
     test "trims whitespace from valid queries", %{conn: conn} do
@@ -284,8 +284,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
       end)
 
       # Test that leading/trailing spaces are trimmed but query still works
-      {:ok, _view, html} = live(conn, "/setlists?query=%20%20radiohead%20%20")
-      assert html =~ "Radiohead"
+      {:ok, view, _html} = live(conn, "/setlists?query=%20%20radiohead%20%20")
+      assert has_element?(view, tid("setlist-test-id-radiohead") <> " h3", "Radiohead")
     end
   end
 
@@ -310,8 +310,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
          }}
       end)
 
-      {:ok, _view, html} = live(conn, ~p"/setlists?query=test+band")
-      assert html =~ "Test Band"
+      {:ok, view, _html} = live(conn, ~p"/setlists?query=test+band")
+      assert has_element?(view, tid("setlist-test-id") <> " h3", "Test Band")
     end
 
     test "uses correct page when page parameter is provided", %{conn: conn} do
@@ -334,9 +334,9 @@ defmodule SetlistifyWeb.SearchLiveTest do
          }}
       end)
 
-      {:ok, _view, html} = live(conn, ~p"/setlists?query=test+band&page=3")
-      assert html =~ "Test Band Page 3"
-      assert html =~ "Page 3 Venue"
+      {:ok, view, _html} = live(conn, ~p"/setlists?query=test+band&page=3")
+      assert has_element?(view, tid("setlist-test-id-page3") <> " h3", "Test Band Page 3")
+      assert has_element?(view, tid("setlist-test-id-page3"), "Page 3 Venue")
     end
 
     test "defaults to page 1 when page parameter is empty string", %{conn: conn} do
@@ -396,8 +396,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
         {:error, :not_found}
       end)
 
-      {:ok, _view, html} = live(conn, ~p"/setlists?query=artist&page=999999")
-      assert html =~ "No results found"
+      {:ok, view, _html} = live(conn, ~p"/setlists?query=artist&page=999999")
+      assert has_element?(view, "p", "No results found")
     end
 
     test "handles decimal page numbers by truncating to integer", %{conn: conn} do
@@ -420,8 +420,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
          }}
       end)
 
-      {:ok, _view, html} = live(conn, ~p"/setlists?query=artist&page=2.5")
-      assert html =~ "Artist"
+      {:ok, view, _html} = live(conn, ~p"/setlists?query=artist&page=2.5")
+      assert has_element?(view, tid("setlist-id") <> " h3", "Artist")
     end
 
     test "handles page parameter with special characters", %{conn: conn} do
@@ -467,8 +467,8 @@ defmodule SetlistifyWeb.SearchLiveTest do
       end)
 
       # Phoenix uses the last parameter value when there are duplicates
-      {:ok, _view, html} = live(conn, "/setlists?query=artist&page=2&page=3")
-      assert html =~ "Artist Page 3"
+      {:ok, view, _html} = live(conn, "/setlists?query=artist&page=2&page=3")
+      assert has_element?(view, tid("setlist-id") <> " h3", "Artist Page 3")
     end
 
     test "preserves query parameter when navigating with page parameter", %{conn: conn} do
@@ -493,9 +493,9 @@ defmodule SetlistifyWeb.SearchLiveTest do
          }}
       end)
 
-      {:ok, _view, html} = live(conn, "/setlists?query=#{URI.encode(unicode_query)}&page=2")
-      assert html =~ "Sigur Rós"
-      assert html =~ "Harpa"
+      {:ok, view, _html} = live(conn, "/setlists?query=#{URI.encode(unicode_query)}&page=2")
+      assert has_element?(view, tid("setlist-test-id") <> " h3", "Sigur Rós")
+      assert has_element?(view, tid("setlist-test-id"), "Harpa")
     end
   end
 end

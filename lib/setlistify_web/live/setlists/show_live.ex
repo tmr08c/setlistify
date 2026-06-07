@@ -59,21 +59,21 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
     <.section_container class="py-6 sm:py-10">
       <div class="max-w-4xl mx-auto px-4">
         <div class="text-center mb-6 sm:mb-8">
-          <h1 class="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">
+          <h1 id="setlist-artist" class="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">
             <span class="text-emerald-400">{@artist}</span>
           </h1>
-          <p class="text-lg sm:text-xl text-gray-400">
+          <p id="venue-name" class="text-lg sm:text-xl text-gray-400">
             {@venue_name}
           </p>
-          <p class="text-gray-400">
+          <p id="venue-location" class="text-gray-400">
             {format_location(@venue_location)} • {@date}
           </p>
         </div>
 
-        <div class="bg-black/50 border border-gray-800 rounded-xl p-4 sm:p-6 md:p-8 mb-6 sm:mb-8">
+        <div id="setlist-sets" class="bg-black/50 border border-gray-800 rounded-xl p-4 sm:p-6 md:p-8 mb-6 sm:mb-8">
           <div class="space-y-8">
-            <%= for set <- @sets do %>
-              <article>
+            <%= for {set, set_index} <- Enum.with_index(@sets) do %>
+              <article id={"set-#{set_index}"}>
                 <h2 class="text-xl font-semibold mb-4 text-emerald-400">
                   {set_name(set)}
                 </h2>
