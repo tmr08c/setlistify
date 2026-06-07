@@ -60,17 +60,20 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
        }}
     end)
 
-    {:ok, _view, html} = live(conn, ~p"/setlist/#{setlist_id}")
+    {:ok, view, _html} = live(conn, ~p"/setlist/#{setlist_id}")
 
-    assert html =~ "warm up"
-    assert html =~ "a warm up song"
+    # First set: "Warm up" label and song
+    assert has_element?(view, "#set-0 h2", "Warm up")
+    assert has_element?(view, "#set-0", "a warm up song")
 
-    assert html =~ "main set song1"
-    assert html =~ "main set song2"
+    # Second set: songs present (unnamed set)
+    assert has_element?(view, "#set-1", "main set song1")
+    assert has_element?(view, "#set-1", "main set song2")
 
-    assert html =~ "Encore 1"
-    assert html =~ "encore song1"
-    assert html =~ "encore song2"
+    # Third set: encore label and songs
+    assert has_element?(view, "#set-2 h2", "Encore 1")
+    assert has_element?(view, "#set-2", "encore song1")
+    assert has_element?(view, "#set-2", "encore song2")
   end
 
   test "displays venue location when viewing a setlist", %{conn: conn} do
@@ -95,10 +98,10 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
        }}
     end)
 
-    {:ok, _view, html} = live(conn, ~p"/setlist/#{setlist_id}")
+    {:ok, view, _html} = live(conn, ~p"/setlist/#{setlist_id}")
 
-    assert html =~ "Compaq Center"
-    assert html =~ "Houston, TX, United States"
+    assert has_element?(view, "#venue-name", "Compaq Center")
+    assert has_element?(view, "#venue-location", "Houston, TX, United States")
   end
 
   test "viewing a setlist when authenticated with Spotify searches for songs", %{conn: conn} do
@@ -151,10 +154,10 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
       end
     end)
 
-    {:ok, view, html} = live(conn, ~p"/setlist/#{setlist_id}")
+    {:ok, view, _html} = live(conn, ~p"/setlist/#{setlist_id}")
 
-    assert html =~ "song1"
-    assert html =~ "song2"
+    assert has_element?(view, "#setlist-sets", "song1")
+    assert has_element?(view, "#setlist-sets", "song2")
 
     # Wait for async Spotify searches to complete
     final_html = render_async(view)
@@ -292,10 +295,10 @@ defmodule SetlistifyWeb.Setlists.ShowLiveTest do
       end
     end)
 
-    {:ok, view, html} = live(conn, ~p"/setlist/#{setlist_id}")
+    {:ok, view, _html} = live(conn, ~p"/setlist/#{setlist_id}")
 
-    assert html =~ "song1"
-    assert html =~ "song2"
+    assert has_element?(view, "#setlist-sets", "song1")
+    assert has_element?(view, "#setlist-sets", "song2")
 
     final_html = render_async(view)
 
