@@ -37,7 +37,22 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
 
   use GenServer
 
+  alias __MODULE__.State
+
   require Logger
+
+  defmodule State do
+    @moduledoc false
+    @type t :: %__MODULE__{
+            token: String.t() | nil,
+            expires_at: integer() | nil,
+            timer_ref: reference() | nil,
+            retry_interval_ms: pos_integer()
+          }
+
+    @enforce_keys [:retry_interval_ms]
+    defstruct [:token, :expires_at, :timer_ref, :retry_interval_ms]
+  end
 
   @refresh_threshold 5 * 60
   @default_ttl_seconds 30 * 24 * 60 * 60
@@ -60,18 +75,10 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
 
   def init(opts) do
     retry_interval_ms = Keyword.get(opts, :retry_interval_ms, @default_retry_interval_ms)
-
-    state = %{
-      token: nil,
-      expires_at: nil,
-      timer_ref: nil,
-      retry_interval_ms: retry_interval_ms
-    }
-
-    {:ok, state, {:continue, :generate_token}}
+    {:ok, %State{retry_interval_ms: retry_interval_ms}, {:continue, :generate_token}}
   end
 
-  def handle_continue(:generate_token, state) do
+  def handle_continue(:generate_token, %State{} = state) do
     case generate_and_sign() do
       {:ok, token, expires_at} ->
         timer_ref = schedule_refresh(expires_at, state.timer_ref)
@@ -84,9 +91,9 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
     end
   end
 
-  def handle_call(:get_token, _from, state), do: {:reply, state.token, state}
+  def handle_call(:get_token, _from, %State{} = state), do: {:reply, state.token, state}
 
-  def handle_call(:regenerate_token, _from, state) do
+  def handle_call(:regenerate_token, _from, %State{} = state) do
     case generate_and_sign() do
       {:ok, token, expires_at} ->
         timer_ref = schedule_refresh(expires_at, state.timer_ref)
@@ -99,7 +106,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
     end
   end
 
-  def handle_info(:refresh_token, state) do
+  def handle_info(:refresh_token, %State{} = state) do
     case generate_and_sign() do
       {:ok, token, expires_at} ->
         timer_ref = schedule_refresh(expires_at, state.timer_ref)
@@ -112,7 +119,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
     end
   end
 
-  def handle_info(:retry_generate, state) do
+  def handle_info(:retry_generate, %State{} = state) do
     case generate_and_sign() do
       {:ok, token, expires_at} ->
         Logger.info("Apple Music developer token recovered after earlier failure",
@@ -162,7 +169,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
     Process.send_after(self(), :refresh_token, ms)
   end
 
-  defp schedule_retry(%{timer_ref: existing_timer, retry_interval_ms: ms}) do
+  defp schedule_retry(%State{timer_ref: existing_timer, retry_interval_ms: ms}) do
     if existing_timer, do: Process.cancel_timer(existing_timer)
     Process.send_after(self(), :retry_generate, ms)
   end
