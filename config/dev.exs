@@ -3,7 +3,7 @@ import Config
 # Console logger configuration - include trace context
 config :logger, :console,
   format: "$time [$level] $message $metadata\n",
-  metadata: [:request_id, :trace_id, :span_id, :user_id, :module, :function]
+  metadata: [:request_id, :trace_id, :span_id, :user_id, :module, :function, :apple_music_token_phase]
 
 # Logger configuration
 config :logger, level: :debug
@@ -69,10 +69,10 @@ config :setlistify, SetlistifyWeb.Endpoint,
     ]
   ]
 
-# Enable dev routes for dashboard and mailbox
-config :setlistify, dev_routes: true
-
 # Aggressive retry interval for DeveloperTokenManager in dev so a misconfigured
 # Apple Music PEM surfaces quickly. Prod uses the 5-minute default baked into
 # the module.
 config :setlistify, apple_music_retry_interval_ms: 30 * 1_000
+
+# Enable dev routes for dashboard and mailbox
+config :setlistify, dev_routes: true
