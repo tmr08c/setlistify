@@ -779,6 +779,7 @@ defmodule SetlistifyWeb.CoreComponents do
         id="rotating-text"
         class={[@computed_text_classes]}
         phx-hook="RotatingText"
+        phx-update="ignore"
         data-texts={JSON.encode!(@texts)}
       >
         <span>{List.first(@texts)}</span>

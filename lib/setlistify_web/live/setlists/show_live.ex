@@ -97,6 +97,7 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
                                 class="h-4 w-4 text-gray-400 animate-spin opacity-0"
                                 aria-label="searching for song"
                                 phx-hook="DelayedShow"
+                                phx-update="ignore"
                                 data-delay="250"
                               />
                             </:loading>
