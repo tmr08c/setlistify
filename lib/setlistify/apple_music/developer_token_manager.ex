@@ -78,7 +78,14 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManager do
   def regenerate_token, do: GenServer.call(__MODULE__, :regenerate_token)
 
   def init(opts) do
-    retry_interval_ms = Keyword.get(opts, :retry_interval_ms, @default_retry_interval_ms)
+    default =
+      Application.get_env(
+        :setlistify,
+        :apple_music_retry_interval_ms,
+        @default_retry_interval_ms
+      )
+
+    retry_interval_ms = Keyword.get(opts, :retry_interval_ms, default)
     {:ok, %State{retry_interval_ms: retry_interval_ms}, {:continue, :generate_token}}
   end
 
