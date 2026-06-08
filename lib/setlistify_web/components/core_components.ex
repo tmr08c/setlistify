@@ -290,6 +290,9 @@ defmodule SetlistifyWeb.CoreComponents do
   attr :options, :list, doc: "the options to pass to Phoenix.HTML.Form.options_for_select/2"
   attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
 
+  attr :class, :string, default: nil, doc: "the input class to use over defaults"
+  attr :error_class, :string, default: nil
+
   attr :rest, :global, include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
                 multiple pattern placeholder readonly required rows size step)
 
@@ -338,7 +341,10 @@ defmodule SetlistifyWeb.CoreComponents do
           name={@name}
           value="true"
           checked={@checked}
-          class="rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500"
+          class={[
+            @class || "rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500",
+            @errors != [] && (@error_class || "border-rose-400")
+          ]}
           {@rest}
         /> {@label}
       </label>
@@ -350,11 +356,15 @@ defmodule SetlistifyWeb.CoreComponents do
   def input(%{type: "select"} = assigns) do
     ~H"""
     <div>
-      <.label for={@id}>{@label}</.label>
+      <.label :if={@label} for={@id}>{@label}</.label>
       <select
         id={@id}
         name={@name}
-        class="mt-2 block w-full rounded-lg border border-gray-800 bg-gray-900 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 sm:text-sm"
+        class={[
+          @class ||
+            "mt-2 block w-full rounded-lg border border-gray-800 bg-gray-900 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 sm:text-sm",
+          @errors != [] && (@error_class || "border-rose-400 focus:border-rose-400")
+        ]}
         multiple={@multiple}
         {@rest}
       >
@@ -369,14 +379,14 @@ defmodule SetlistifyWeb.CoreComponents do
   def input(%{type: "textarea"} = assigns) do
     ~H"""
     <div>
-      <.label for={@id}>{@label}</.label>
+      <.label :if={@label} for={@id}>{@label}</.label>
       <textarea
         id={@id}
         name={@name}
         class={[
-          "mt-2 block w-full rounded-lg bg-gray-900 text-white focus:ring-2 focus:ring-emerald-500 sm:text-sm sm:leading-6 min-h-[6rem]",
-          @errors == [] && "border-gray-800 focus:border-emerald-500",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+          @class ||
+            "mt-2 block w-full rounded-lg bg-gray-900 text-white focus:ring-2 focus:ring-emerald-500 sm:text-sm sm:leading-6 min-h-[6rem] border-gray-800 focus:border-emerald-500",
+          @errors != [] && (@error_class || "border-rose-400 focus:border-rose-400")
         ]}
         {@rest}
       >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
@@ -389,16 +399,16 @@ defmodule SetlistifyWeb.CoreComponents do
   def input(assigns) do
     ~H"""
     <div>
-      <.label for={@id}>{@label}</.label>
+      <.label :if={@label} for={@id}>{@label}</.label>
       <input
         type={@type}
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
         class={[
-          "mt-2 block w-full rounded-lg bg-gray-900 text-white border focus:ring-2 focus:ring-emerald-500 sm:text-sm sm:leading-6",
-          @errors == [] && "border-gray-800 focus:border-emerald-500",
-          @errors != [] && "border-rose-400 focus:border-rose-400"
+          @class ||
+            "mt-2 block w-full rounded-lg bg-gray-900 text-white border border-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 sm:text-sm sm:leading-6",
+          @errors != [] && (@error_class || "border-rose-400 focus:border-rose-400")
         ]}
         {@rest}
       />
