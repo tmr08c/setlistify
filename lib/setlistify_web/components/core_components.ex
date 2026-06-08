@@ -3,7 +3,7 @@ defmodule SetlistifyWeb.CoreComponents do
   Provides core UI components.
 
   At first glance, this module may seem daunting, but its goal is to provide
-  core building blocks for your application, such as modals, tables, and
+  core building blocks for your application, such as tables and
   forms. The components consist mostly of markup and are well-documented
   with doc strings and declarative assigns. You may customize and style
   them in any way you want, based on your application growth and needs.
@@ -163,7 +163,7 @@ defmodule SetlistifyWeb.CoreComponents do
   attr :multiple, :boolean, default: false, doc: "the multiple flag for select inputs"
 
   attr :class, :string, default: nil, doc: "the input class to use over defaults"
-  attr :error_class, :string, default: nil
+  attr :error_class, :string, default: nil, doc: "the error class to apply over the default error classes"
 
   attr :rest, :global, include: ~w(accept autocomplete capture cols disabled form list max maxlength min minlength
                 multiple pattern placeholder readonly required rows size step)
