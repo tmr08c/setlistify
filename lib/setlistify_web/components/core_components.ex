@@ -113,31 +113,51 @@ defmodule SetlistifyWeb.CoreComponents do
   @doc """
   Renders a button.
 
+  When `href`, `navigate`, or `patch` is passed, renders a `<.link>` styled as
+  a button. Otherwise renders a `<button>` element.
+
   ## Examples
 
       <.button>Send!</.button>
       <.button phx-click="go" class="ml-2">Send!</.button>
+      <.button navigate={~p"/playlists"}>View Playlists</.button>
   """
   attr :type, :string, default: nil
   attr :class, :string, default: nil
-  attr :rest, :global, include: ~w(disabled form name value)
+  attr :rest, :global, include: ~w(href navigate patch method download disabled form name value)
 
   slot :inner_block, required: true
 
-  def button(assigns) do
-    ~H"""
-    <button
-      type={@type}
-      class={[
-        "phx-submit-loading:opacity-75 rounded-full bg-emerald-500 hover:bg-emerald-400 px-8 py-3",
-        "text-base font-semibold text-black transition-colors",
-        @class
-      ]}
-      {@rest}
-    >
-      {render_slot(@inner_block)}
-    </button>
-    """
+  def button(%{rest: rest} = assigns) do
+    if rest[:href] || rest[:navigate] || rest[:patch] do
+      ~H"""
+      <.link
+        class={[
+          "phx-submit-loading:opacity-75 inline-flex items-center justify-center rounded-full",
+          "bg-emerald-500 hover:bg-emerald-400 px-8 py-3",
+          "text-base font-semibold text-black transition-colors",
+          @class
+        ]}
+        {@rest}
+      >
+        {render_slot(@inner_block)}
+      </.link>
+      """
+    else
+      ~H"""
+      <button
+        type={@type}
+        class={[
+          "phx-submit-loading:opacity-75 rounded-full bg-emerald-500 hover:bg-emerald-400 px-8 py-3",
+          "text-base font-semibold text-black transition-colors",
+          @class
+        ]}
+        {@rest}
+      >
+        {render_slot(@inner_block)}
+      </button>
+      """
+    end
   end
 
   @doc """
