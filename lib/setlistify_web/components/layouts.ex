@@ -9,6 +9,7 @@ defmodule SetlistifyWeb.Layouts do
   `use SetlistifyWeb, :live_view`.
   """
   use SetlistifyWeb, :html
+  use Gettext, backend: SetlistifyWeb.Gettext
 
   alias Setlistify.Scope
   alias Setlistify.Spotify.UserSession
