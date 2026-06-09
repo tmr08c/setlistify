@@ -3,7 +3,6 @@ defmodule SetlistifyWeb.Playlists.ShowLive do
   use SetlistifyWeb, :live_view
 
   alias Setlistify.MusicService
-  alias SetlistifyWeb.Layouts
 
   def mount(_params, _session, socket) do
     {:ok, assign(socket, error: nil, playlist_href: nil, provider: nil, embed_html: nil)}

@@ -4,7 +4,6 @@ defmodule SetlistifyWeb.SearchLive do
   use Gettext, backend: SetlistifyWeb.Gettext
 
   alias SetlistifyWeb.Components.SearchFormComponent
-  alias SetlistifyWeb.Layouts
 
   require Logger
   require OpenTelemetry.Tracer

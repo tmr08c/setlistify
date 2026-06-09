@@ -4,7 +4,6 @@ defmodule SetlistifyWeb.HomeLive do
   use Gettext, backend: SetlistifyWeb.Gettext
 
   alias SetlistifyWeb.Components.SearchFormComponent
-  alias SetlistifyWeb.Layouts
 
   def render(assigns) do
     ~H"""

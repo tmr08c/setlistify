@@ -7,7 +7,6 @@ defmodule SetlistifyWeb.Setlists.ShowLive do
   alias Setlistify.Scope
   alias Setlistify.SetlistFm
   alias Setlistify.Spotify
-  alias SetlistifyWeb.Layouts
 
   require OpenTelemetry.Tracer
   require OpentelemetryPhoenixLiveViewProcessPropagator.LiveView
