@@ -55,7 +55,7 @@ defmodule SetlistifyWeb.Playlists.ShowLive do
     ~H"""
     <Layouts.app
       flash={@flash}
-      user_session={@user_session}
+      current_scope={@current_scope}
       redirect_to={@redirect_to}
       apple_music_trigger={@apple_music_trigger}
       apple_music_user_token={@apple_music_user_token}

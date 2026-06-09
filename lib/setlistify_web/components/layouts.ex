@@ -15,7 +15,7 @@ defmodule SetlistifyWeb.Layouts do
   embed_templates "layouts/*"
 
   attr :flash, :map, required: true
-  attr :user_session, :any, default: nil
+  attr :current_scope, Scope, required: true
   attr :redirect_to, :string, default: nil
   attr :apple_music_trigger, :boolean, default: false
   attr :apple_music_user_token, :string, default: nil
