@@ -69,7 +69,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManagerTest do
 
     test "stays alive with get_token/0 returning nil instead of crashing" do
       capture_log(fn ->
-        start_supervised!({DeveloperTokenManager, retry_interval_ms: 60_000})
+        start_supervised!({DeveloperTokenManager, retry_base_ms: 60_000})
         :sys.get_state(DeveloperTokenManager)
       end)
 
@@ -82,7 +82,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManagerTest do
     test "logs a stacktraced error identifying the failure step" do
       log =
         capture_log(fn ->
-          start_supervised!({DeveloperTokenManager, retry_interval_ms: 60_000})
+          start_supervised!({DeveloperTokenManager, retry_base_ms: 60_000})
           :sys.get_state(DeveloperTokenManager)
         end)
 
@@ -94,7 +94,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManagerTest do
     test "logs a human-readable 'Apple Music sign-in is DISABLED' banner" do
       log =
         capture_log(fn ->
-          start_supervised!({DeveloperTokenManager, retry_interval_ms: 60_000})
+          start_supervised!({DeveloperTokenManager, retry_base_ms: 60_000})
           :sys.get_state(DeveloperTokenManager)
         end)
 
@@ -105,8 +105,9 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManagerTest do
     test "retries on the configured interval and re-logs the banner on continued failure" do
       log =
         capture_log(fn ->
-          start_supervised!({DeveloperTokenManager, retry_interval_ms: 10})
-          Process.sleep(100)
+          start_supervised!({DeveloperTokenManager, retry_base_ms: 10, retry_max_ms: 50, retry_multiplier: 2})
+
+          Process.sleep(150)
           :sys.get_state(DeveloperTokenManager)
         end)
 
@@ -122,7 +123,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManagerTest do
 
     test "recovers via regenerate_token/0 once the configured PEM is valid" do
       capture_log(fn ->
-        start_supervised!({DeveloperTokenManager, retry_interval_ms: 60_000})
+        start_supervised!({DeveloperTokenManager, retry_base_ms: 60_000})
         :sys.get_state(DeveloperTokenManager)
       end)
 
@@ -137,7 +138,7 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManagerTest do
 
     test "recovers via the periodic retry once the configured PEM is valid" do
       capture_log(fn ->
-        start_supervised!({DeveloperTokenManager, retry_interval_ms: 10})
+        start_supervised!({DeveloperTokenManager, retry_base_ms: 10})
         :sys.get_state(DeveloperTokenManager)
       end)
 
@@ -149,6 +150,155 @@ defmodule Setlistify.AppleMusic.DeveloperTokenManagerTest do
 
       token = DeveloperTokenManager.get_token()
       assert is_binary(token)
+    end
+  end
+
+  describe "retry backoff schedule" do
+    setup do
+      Application.put_env(:setlistify, :apple_music_private_key, "not-a-pem")
+      :ok
+    end
+
+    test "current_retry_ms grows by the multiplier on each failure, capped at max_ms" do
+      capture_log(fn ->
+        start_supervised!({DeveloperTokenManager, retry_base_ms: 10_000, retry_max_ms: 40_000, retry_multiplier: 2})
+
+        :sys.get_state(DeveloperTokenManager)
+      end)
+
+      # First failure happened during init/continue. The *next* retry interval
+      # was advanced to base * multiplier = 20_000.
+      assert state().current_retry_ms == 20_000
+
+      drive_retry()
+      assert state().current_retry_ms == 40_000
+
+      drive_retry()
+      # Capped at max_ms instead of doubling to 80_000.
+      assert state().current_retry_ms == 40_000
+
+      drive_retry()
+      assert state().current_retry_ms == 40_000
+    end
+
+    test "current_retry_ms resets to retry_base_ms after a successful recovery" do
+      capture_log(fn ->
+        start_supervised!({DeveloperTokenManager, retry_base_ms: 5_000, retry_max_ms: 60_000, retry_multiplier: 4})
+
+        :sys.get_state(DeveloperTokenManager)
+      end)
+
+      drive_retry()
+      drive_retry()
+      assert state().current_retry_ms > 5_000
+
+      Application.put_env(:setlistify, :apple_music_private_key, @test_private_pem)
+      drive_retry()
+
+      assert state().current_retry_ms == 5_000
+    end
+
+    test "regenerate_token/0 resets the backoff even when regeneration fails" do
+      capture_log(fn ->
+        start_supervised!({DeveloperTokenManager, retry_base_ms: 5_000, retry_max_ms: 60_000, retry_multiplier: 4})
+
+        :sys.get_state(DeveloperTokenManager)
+      end)
+
+      drive_retry()
+      drive_retry()
+      grown = state().current_retry_ms
+      assert grown > 5_000
+
+      capture_log(fn -> DeveloperTokenManager.regenerate_token() end)
+
+      # Reset to the base interval so the next scheduled retry starts fresh.
+      assert state().current_retry_ms == 5_000
+    end
+
+    defp drive_retry do
+      capture_log(fn ->
+        send(Process.whereis(DeveloperTokenManager), :retry_generate)
+        :sys.get_state(DeveloperTokenManager)
+      end)
+    end
+
+    defp state, do: :sys.get_state(DeveloperTokenManager)
+  end
+
+  describe "telemetry" do
+    setup do
+      handler_id = {__MODULE__, self()}
+      test_pid = self()
+
+      :telemetry.attach(
+        handler_id,
+        DeveloperTokenManager.telemetry_event(),
+        fn event, measurements, metadata, _config ->
+          send(test_pid, {:telemetry, event, measurements, metadata})
+        end,
+        nil
+      )
+
+      on_exit(fn -> :telemetry.detach(handler_id) end)
+      :ok
+    end
+
+    test "emits :ok event with phase: :generate on a healthy startup" do
+      start_supervised!(DeveloperTokenManager)
+
+      assert_receive {:telemetry, [:setlistify, :apple_music, :developer_token, :attempt], %{count: 1, healthy: 1},
+                      %{phase: :generate, outcome: :ok}}
+    end
+
+    test "emits :error event with phase: :generate when the PEM is invalid" do
+      Application.put_env(:setlistify, :apple_music_private_key, "not-a-pem")
+
+      capture_log(fn ->
+        start_supervised!({DeveloperTokenManager, retry_base_ms: 60_000})
+        :sys.get_state(DeveloperTokenManager)
+      end)
+
+      assert_receive {:telemetry, [:setlistify, :apple_music, :developer_token, :attempt], %{count: 1, healthy: 0},
+                      %{phase: :generate, outcome: :error}}
+    end
+
+    test "emits phase: :regenerate when regenerate_token/0 is called" do
+      start_supervised!(DeveloperTokenManager)
+      # Drain the startup :generate event so the :regenerate assertion can't pick it up.
+      assert_receive {:telemetry, _, _, %{phase: :generate}}
+
+      DeveloperTokenManager.regenerate_token()
+
+      assert_receive {:telemetry, _, %{healthy: 1}, %{phase: :regenerate, outcome: :ok}}
+    end
+
+    test "emits phase: :refresh when the scheduled refresh fires" do
+      start_supervised!(DeveloperTokenManager)
+      assert_receive {:telemetry, _, _, %{phase: :generate}}
+
+      send(Process.whereis(DeveloperTokenManager), :refresh_token)
+      :sys.get_state(DeveloperTokenManager)
+
+      assert_receive {:telemetry, _, %{healthy: 1}, %{phase: :refresh, outcome: :ok}}
+    end
+
+    test "emits phase: :retry when the retry timer fires" do
+      Application.put_env(:setlistify, :apple_music_private_key, "not-a-pem")
+
+      capture_log(fn ->
+        start_supervised!({DeveloperTokenManager, retry_base_ms: 60_000})
+        :sys.get_state(DeveloperTokenManager)
+      end)
+
+      assert_receive {:telemetry, _, _, %{phase: :generate, outcome: :error}}
+
+      capture_log(fn ->
+        send(Process.whereis(DeveloperTokenManager), :retry_generate)
+        :sys.get_state(DeveloperTokenManager)
+      end)
+
+      assert_receive {:telemetry, _, %{healthy: 0}, %{phase: :retry, outcome: :error}}
     end
   end
 end
