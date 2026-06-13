@@ -52,8 +52,7 @@ defmodule SetlistifyWeb do
 
   def live_view do
     quote do
-      use Phoenix.LiveView,
-        layout: false
+      use Phoenix.LiveView
 
       unquote(html_helpers())
 
