@@ -52,14 +52,14 @@ defmodule SetlistifyWeb do
 
   def live_view do
     quote do
-      use Phoenix.LiveView,
-        layout: {SetlistifyWeb.Layouts, :app}
+      use Phoenix.LiveView
 
       unquote(html_helpers())
 
       # Handle token refresh messages from PubSub
       def handle_info({:token_refreshed, new_session}, socket) do
-        {:noreply, Phoenix.Component.assign(socket, :user_session, new_session)}
+        scope = Setlistify.Scope.for_user_session(new_session)
+        {:noreply, Phoenix.Component.assign(socket, :current_scope, scope)}
       end
     end
   end
@@ -95,6 +95,7 @@ defmodule SetlistifyWeb do
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS
+      alias SetlistifyWeb.Layouts
 
       # Routes generation with the ~p sigil
       unquote(verified_routes())

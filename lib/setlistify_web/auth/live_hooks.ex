@@ -50,6 +50,7 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
       socket
       |> Phoenix.Component.assign_new(:current_scope, fn -> Scope.for_user_session(user_session) end)
       |> Phoenix.Component.assign(:redirect_to, nil)
+      |> assign_apple_music_defaults()
 
     {:cont, socket}
   end
@@ -82,11 +83,16 @@ defmodule SetlistifyWeb.Auth.LiveHooks do
     socket =
       if_result
       |> Phoenix.Component.assign(:current_scope, Scope.for_user_session(nil))
-      |> Phoenix.Component.assign(:apple_music_trigger, false)
-      |> Phoenix.Component.assign(:apple_music_user_token, nil)
-      |> Phoenix.Component.assign(:apple_music_storefront, nil)
+      |> assign_apple_music_defaults()
 
     {:cont, socket}
+  end
+
+  defp assign_apple_music_defaults(socket) do
+    socket
+    |> Phoenix.Component.assign(:apple_music_trigger, false)
+    |> Phoenix.Component.assign(:apple_music_user_token, nil)
+    |> Phoenix.Component.assign(:apple_music_storefront, nil)
   end
 
   # If the user is not logged in, we want to track the current URL so, if they
