@@ -19,9 +19,12 @@ defmodule Setlistify.UserSessionManager do
 
   alias Setlistify.AppleMusic
   alias Setlistify.Spotify
+  alias Setlistify.Tidal
 
-  @type provider_key :: {:spotify, String.t()} | {:apple_music, String.t()}
-  @type user_session :: Spotify.UserSession.t() | AppleMusic.UserSession.t()
+  @type provider_key ::
+          {:spotify, String.t()} | {:apple_music, String.t()} | {:tidal, String.t()}
+  @type user_session ::
+          Spotify.UserSession.t() | AppleMusic.UserSession.t() | Tidal.UserSession.t()
 
   @callback start_link({String.t(), user_session()}) :: GenServer.on_start()
   @callback get_session(String.t()) :: {:ok, user_session()} | {:error, :not_found}
@@ -29,8 +32,10 @@ defmodule Setlistify.UserSessionManager do
 
   defp impl(%Spotify.UserSession{}), do: Spotify.SessionManager
   defp impl(%AppleMusic.UserSession{}), do: AppleMusic.SessionManager
+  defp impl(%Tidal.UserSession{}), do: Tidal.SessionManager
   defp impl({:spotify, _}), do: Spotify.SessionManager
   defp impl({:apple_music, _}), do: AppleMusic.SessionManager
+  defp impl({:tidal, _}), do: Tidal.SessionManager
 
   def start(%_{user_id: uid} = session), do: impl(session).start_link({uid, session})
   def get_session({_, uid} = key), do: impl(key).get_session(uid)
