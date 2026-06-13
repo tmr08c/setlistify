@@ -168,7 +168,7 @@ defmodule SetlistifyWeb.SearchLive do
     ~H"""
     <nav class="flex justify-center mt-8" aria-label="Pagination Navigation">
       <div class="flex items-center gap-6">
-        <!-- Previous -->
+        <%!-- Previous --%>
         <%= if @page > 1 do %>
           <.link
             navigate={build_pagination_url(@query, @page - 1)}
@@ -181,13 +181,13 @@ defmodule SetlistifyWeb.SearchLive do
             ← Prev
           </span>
         <% end %>
-        
-    <!-- Page Numbers -->
+
+        <%!-- Page Numbers --%>
         <div class="flex items-center gap-4">
           {render_page_numbers(assigns)}
         </div>
-        
-    <!-- Next -->
+
+        <%!-- Next --%>
         <%= if @page < @total_pages do %>
           <.link
             navigate={build_pagination_url(@query, @page + 1)}

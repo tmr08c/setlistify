@@ -697,12 +697,12 @@ defmodule SetlistifyWeb.CoreComponents do
   def logo(assigns) do
     ~H"""
     <div class="w-8 h-8 bg-emerald-500 rounded-full flex items-center justify-center relative">
-      <!-- Record grooves with better spacing and contrast -->
+      <%!-- Record grooves with better spacing and contrast --%>
       <div class="absolute w-7 h-7 border-[1.5px] border-black/20 rounded-full"></div>
       <div class="absolute w-5 h-5 border-[1.5px] border-black/20 rounded-full"></div>
       <div class="absolute w-3 h-3 border border-black/20 rounded-full"></div>
-      
-    <!-- Center hole -->
+
+      <%!-- Center hole --%>
       <div class="w-2 h-2 bg-black rounded-full"></div>
     </div>
     """

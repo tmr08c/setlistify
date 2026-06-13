@@ -11,7 +11,7 @@ defmodule SetlistifyWeb.HomeLive do
       <.hero_section>
         <div class="flex flex-col h-full items-center justify-between px-4">
           <div class="flex-1 flex flex-col justify-center items-center text-center max-w-3xl mx-auto">
-            <h1 class="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
+            <h1 id="hero-headline" class="text-3xl sm:text-4xl md:text-5xl font-bold mb-6">
               Transform <span class="text-emerald-400 font-extrabold">Live Shows</span>
               into <span class="text-emerald-400 font-extrabold">Playlists</span>
               with
