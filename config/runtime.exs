@@ -112,6 +112,12 @@ config :setlistify, setlist_fm_api_key: System.fetch_env!("SETLIST_FM_API_SECRET
 config :setlistify, spotify_client_id: System.fetch_env!("SPOTIFY_CLIENT_ID")
 config :setlistify, spotify_client_secret: System.fetch_env!("SPOTIFY_CLIENT_SECRET")
 
+## Tidal API
+# Note: Tidal's developer portal rejects `localhost` redirect URIs in dev — use
+# `127.0.0.1` instead (see ADR-004 Phase 0 findings).
+config :setlistify, tidal_client_id: System.fetch_env!("TIDAL_CLIENT_ID")
+config :setlistify, tidal_client_secret: System.fetch_env!("TIDAL_CLIENT_SECRET")
+
 if prom_ex_port = System.get_env("PROM_EX_PORT") do
   config :setlistify, Setlistify.PromEx,
     port: String.to_integer(prom_ex_port),

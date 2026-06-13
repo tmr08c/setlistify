@@ -8,4 +8,5 @@ defmodule Setlistify.Auth.TokenSalts do
 
   def spotify_refresh_token, do: "user auth"
   def apple_music_user_token, do: "apple music user token"
+  def tidal_refresh_token, do: "tidal refresh token"
 end
