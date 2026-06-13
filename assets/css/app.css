@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@plugin "../vendor/heroicons";
+
 /* This file is for your main application CSS */
 
 /* Bouncing animation */
