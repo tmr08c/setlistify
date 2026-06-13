@@ -41,6 +41,7 @@ npm-debug.log
 /priv/plts/*.plt.hash
 
 **/.claude/settings.local.json
+**/.claude/worktrees/
 
 # OpenTelemetry Docker data directories
 docker/tempo-data/
