@@ -2,14 +2,9 @@ defmodule Setlistify.Tidal.UserSession do
   @moduledoc """
   Represents an authenticated Tidal user session.
 
-  Two ways this differs from `Setlistify.Spotify.UserSession` (per ADR-004 §1):
-
-    * No `:username` — Tidal's `/me` username is just the user's email, which we
-      never display. Mirrors `Setlistify.AppleMusic.UserSession`'s no-username
-      shape.
-    * Carries `:country_code` — required on essentially every Tidal catalog
-      request (mirrors Apple Music's `:storefront`). It is derived from the
-      access-token JWT at sign-in, not re-fetched on refresh.
+  Carries `:country_code`, which is required on essentially every Tidal catalog
+  request. Like `Setlistify.AppleMusic.UserSession`, it has no `:username`
+  field.
   """
 
   @type t :: %__MODULE__{

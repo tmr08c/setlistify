@@ -114,7 +114,7 @@ config :setlistify, spotify_client_secret: System.fetch_env!("SPOTIFY_CLIENT_SEC
 
 ## Tidal API
 # Note: Tidal's developer portal rejects `localhost` redirect URIs in dev — use
-# `127.0.0.1` instead (see ADR-004 Phase 0 findings).
+# `127.0.0.1` instead.
 config :setlistify, tidal_client_id: System.fetch_env!("TIDAL_CLIENT_ID")
 config :setlistify, tidal_client_secret: System.fetch_env!("TIDAL_CLIENT_SECRET")
 

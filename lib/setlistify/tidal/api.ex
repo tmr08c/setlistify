@@ -7,9 +7,6 @@ defmodule Setlistify.Tidal.API do
   `create_playlist/3`, `add_tracks_to_playlist/3`, OAuth `exchange_code/3` and
   the `Setlistify.MusicService.API` behaviour — lands with the
   `Setlistify.Tidal.API.ExternalClient` HTTP implementation in #140.
-
-  Like the Spotify and Apple Music interface modules, the concrete client is
-  resolved at runtime so tests can substitute a Hammox mock.
   """
 
   require OpenTelemetry.Tracer
@@ -17,9 +14,9 @@ defmodule Setlistify.Tidal.API do
   @doc """
   Exchanges a Tidal refresh token for a fresh access token.
 
-  Tidal does NOT rotate refresh tokens (verified in the ADR-004 Phase 0 spike):
-  the response carries only a new `access_token` and `expires_in`, so callers
-  preserve the refresh token they already hold.
+  Tidal does not rotate refresh tokens: the response carries only a new
+  `access_token` and `expires_in`, so callers preserve the refresh token
+  they already hold.
   """
   @callback refresh_token(String.t()) ::
               {:ok, %{access_token: String.t(), expires_in: non_neg_integer()}}
