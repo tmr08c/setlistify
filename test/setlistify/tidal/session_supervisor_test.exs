@@ -22,12 +22,9 @@ defmodule Setlistify.Tidal.SessionSupervisorTest do
 
   describe "start_user_token/2" do
     test "starts a new token process", %{user_id: user_id, session: session} do
-      assert {:error, :not_found} = SessionSupervisor.get_token(user_id)
-
       assert {:ok, pid} = SessionSupervisor.start_user_token(user_id, session)
       assert Process.alive?(pid)
-
-      assert {:ok, "initial_access_token"} = SessionSupervisor.get_token(user_id)
+      assert assert_in_registry({:tidal, user_id}) == pid
     end
 
     test "can start multiple user token processes", %{session: session} do
@@ -66,7 +63,8 @@ defmodule Setlistify.Tidal.SessionSupervisorTest do
   describe "get_token/1" do
     test "retrieves the token from a running process", %{user_id: user_id, session: session} do
       {:ok, _pid} = SessionSupervisor.start_user_token(user_id, session)
-      assert {:ok, "initial_access_token"} = SessionSupervisor.get_token(user_id)
+      assert {:ok, access_token} = SessionSupervisor.get_token(user_id)
+      assert access_token == session.access_token
     end
 
     test "returns error when process not found" do

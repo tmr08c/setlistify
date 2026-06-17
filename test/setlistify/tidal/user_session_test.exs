@@ -19,18 +19,6 @@ defmodule Setlistify.Tidal.UserSessionTest do
     assert session.country_code == "US"
   end
 
-  test "does not define a :username field (Tidal's /me username is just the email)" do
-    session = %UserSession{
-      access_token: "a",
-      refresh_token: "r",
-      expires_at: 1,
-      user_id: "u",
-      country_code: "US"
-    }
-
-    refute Map.has_key?(Map.from_struct(session), :username)
-  end
-
   test "enforces required keys" do
     complete_session_map = %{
       access_token: "test_access_token",

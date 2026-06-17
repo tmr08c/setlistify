@@ -48,7 +48,7 @@ defmodule Setlistify.Tidal.SessionManagerTest do
   end
 
   describe "get_session/1" do
-    test "returns the UserSession struct with country_code", %{user_id: user_id, session: session} do
+    test "returns the UserSession struct", %{user_id: user_id, session: session} do
       {:ok, _pid} = SessionManager.start_link({user_id, session})
 
       assert {:ok, returned} = SessionManager.get_session(user_id)
