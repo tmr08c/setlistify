@@ -4,7 +4,7 @@ defmodule Setlistify.Tidal.SessionManager do
   duration of a user's session.
 
   Mirrors `Setlistify.Spotify.SessionManager` (OAuth with a refresh timer), with
-  two Tidal-specific differences from the ADR-004 Phase 0 spike:
+  two Tidal-specific differences:
 
     * **Short-lived access tokens.** Tidal access tokens last ~4 hours
       (`expires_in: 14400`), so the refresh timer fires at roughly the 3.5 hour
@@ -48,7 +48,6 @@ defmodule Setlistify.Tidal.SessionManager do
       case GenServer.start_link(__MODULE__, {user_id, session}, name: name) do
         {:ok, pid} = result ->
           Logger.info("Tidal session manager started", %{user_id: user_id, pid: inspect(pid)})
-          OpenTelemetry.Tracer.set_status(:ok, "")
           result
 
         {:error, reason} = error ->
@@ -78,7 +77,6 @@ defmodule Setlistify.Tidal.SessionManager do
 
           case result do
             {:ok, _token} ->
-              OpenTelemetry.Tracer.set_status(:ok, "")
               result
 
             {:error, reason} ->
@@ -112,7 +110,6 @@ defmodule Setlistify.Tidal.SessionManager do
           case result do
             {:ok, _session} ->
               Logger.info("Tidal session refreshed", %{user_id: user_id})
-              OpenTelemetry.Tracer.set_status(:ok, "")
               OpenTelemetry.Tracer.set_attribute("session.refreshed", true)
               result
 
@@ -144,7 +141,6 @@ defmodule Setlistify.Tidal.SessionManager do
 
           case result do
             {:ok, _session} ->
-              OpenTelemetry.Tracer.set_status(:ok, "")
               result
 
             {:error, reason} ->
@@ -172,7 +168,6 @@ defmodule Setlistify.Tidal.SessionManager do
         {:ok, pid} ->
           result = GenServer.stop(pid, :normal)
           Logger.info("Tidal session manager stopped", %{user_id: user_id})
-          OpenTelemetry.Tracer.set_status(:ok, "")
           result
 
         :error ->
@@ -201,7 +196,6 @@ defmodule Setlistify.Tidal.SessionManager do
 
       # Use the passed user_id to ensure consistency with the Registry key.
       state = Map.put(session, :user_id, user_id)
-      OpenTelemetry.Tracer.set_status(:ok, "")
       {:ok, state, {:continue, :schedule_refresh}}
     end
   end
@@ -223,7 +217,6 @@ defmodule Setlistify.Tidal.SessionManager do
         {"genserver.message", "get_token"}
       ])
 
-      OpenTelemetry.Tracer.set_status(:ok, "")
       {:reply, {:ok, token}, state}
     end
   end
@@ -238,7 +231,6 @@ defmodule Setlistify.Tidal.SessionManager do
         {"genserver.message", "get_session"}
       ])
 
-      OpenTelemetry.Tracer.set_status(:ok, "")
       {:reply, {:ok, to_user_session(state)}, state}
     end
   end
@@ -255,7 +247,6 @@ defmodule Setlistify.Tidal.SessionManager do
 
       case do_refresh_token(state) do
         {:ok, new_state} ->
-          OpenTelemetry.Tracer.set_status(:ok, "")
           {:reply, {:ok, to_user_session(new_state)}, new_state}
 
         {:error, reason} = error ->
@@ -278,7 +269,6 @@ defmodule Setlistify.Tidal.SessionManager do
 
       case do_refresh_token(state) do
         {:ok, new_state} ->
-          OpenTelemetry.Tracer.set_status(:ok, "")
           {:noreply, new_state}
 
         {:error, reason} ->
@@ -318,7 +308,11 @@ defmodule Setlistify.Tidal.SessionManager do
             |> Map.put(:access_token, new_tokens.access_token)
             |> Map.put(:expires_at, timestamp() + new_tokens.expires_in)
 
-          broadcast_token_refreshed(new_state)
+          Phoenix.PubSub.broadcast(
+            Setlistify.PubSub,
+            "user:#{new_state.user_id}",
+            {:token_refreshed, to_user_session(new_state)}
+          )
 
           OpenTelemetry.Tracer.set_attributes([
             {"session.token.expires_in", new_tokens.expires_in},
@@ -329,8 +323,6 @@ defmodule Setlistify.Tidal.SessionManager do
             "user.id" => state.user_id,
             "expires_in" => new_tokens.expires_in
           })
-
-          OpenTelemetry.Tracer.set_status(:ok, "")
 
           {:ok, new_state}
 
@@ -345,14 +337,6 @@ defmodule Setlistify.Tidal.SessionManager do
           error
       end
     end
-  end
-
-  defp broadcast_token_refreshed(state) do
-    Phoenix.PubSub.broadcast(
-      Setlistify.PubSub,
-      "user:#{state.user_id}",
-      {:token_refreshed, to_user_session(state)}
-    )
   end
 
   defp to_user_session(state) do

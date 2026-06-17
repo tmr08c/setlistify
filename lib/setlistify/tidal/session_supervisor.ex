@@ -31,7 +31,6 @@ defmodule Setlistify.Tidal.SessionSupervisor do
             {"supervisor.child.started", true}
           ])
 
-          OpenTelemetry.Tracer.set_status(:ok, "")
           result
 
         {:ok, pid, _info} = result ->
@@ -45,7 +44,6 @@ defmodule Setlistify.Tidal.SessionSupervisor do
             {"supervisor.child.started", true}
           ])
 
-          OpenTelemetry.Tracer.set_status(:ok, "")
           result
 
         {:error, {:already_started, pid}} ->
@@ -54,7 +52,6 @@ defmodule Setlistify.Tidal.SessionSupervisor do
             pid: inspect(pid)
           })
 
-          OpenTelemetry.Tracer.set_status(:ok, "")
           {:ok, pid}
 
         {:error, reason} = error ->
@@ -84,7 +81,6 @@ defmodule Setlistify.Tidal.SessionSupervisor do
                 {"supervisor.child.terminated", true}
               ])
 
-              OpenTelemetry.Tracer.set_status(:ok, "")
               :ok
 
             {:error, reason} = error ->
@@ -116,7 +112,7 @@ defmodule Setlistify.Tidal.SessionSupervisor do
 
       case result do
         {:ok, _token} ->
-          OpenTelemetry.Tracer.set_status(:ok, "")
+          :ok
 
         {:error, reason} ->
           OpenTelemetry.Tracer.set_status(:error, "Failed to get token: #{inspect(reason)}")
@@ -138,7 +134,7 @@ defmodule Setlistify.Tidal.SessionSupervisor do
 
       case result do
         {:ok, _session} ->
-          OpenTelemetry.Tracer.set_status(:ok, "")
+          :ok
 
         {:error, reason} ->
           OpenTelemetry.Tracer.set_status(:error, "Failed to refresh session: #{inspect(reason)}")
