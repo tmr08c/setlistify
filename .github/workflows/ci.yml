@@ -55,9 +55,13 @@ jobs:
           cache-name: cache-elixir-deps
         with:
           path: deps
-          key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
+          # Key on the Elixir/OTP version too: deps are compiled artifacts, so a
+          # BEAM upgrade must bust the cache. Otherwise a stale build compiled
+          # under the old Elixir gets restored and reused, hiding source-level
+          # incompatibilities (e.g. a dep that no longer compiles on the new Elixir).
+          key: ${{ runner.os }}-${{ steps.beam.outputs.elixir-version }}-${{ steps.beam.outputs.otp-version }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-mix-${{ env.cache-name }}-
+            ${{ runner.os }}-${{ steps.beam.outputs.elixir-version }}-${{ steps.beam.outputs.otp-version }}-mix-${{ env.cache-name }}-
 
       # Step: Define how to cache the `_build` directory. After the first run,
       # this speeds up tests runs a lot. This includes not re-compiling our
@@ -69,10 +73,14 @@ jobs:
           cache-name: cache-compiled-build
         with:
           path: _build
-          key: ${{ runner.os }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
+          # Same as deps above: include the Elixir/OTP version so a BEAM upgrade
+          # forces a clean rebuild instead of restoring artifacts compiled under
+          # the previous Elixir. The restore-keys stay BEAM-scoped for the same
+          # reason — falling back to a version-agnostic key would reintroduce the
+          # stale-artifact problem this guards against.
+          key: ${{ runner.os }}-${{ steps.beam.outputs.elixir-version }}-${{ steps.beam.outputs.otp-version }}-mix-${{ env.cache-name }}-${{ hashFiles('**/mix.lock') }}
           restore-keys: |
-            ${{ runner.os }}-mix-${{ env.cache-name }}-
-            ${{ runner.os }}-mix-
+            ${{ runner.os }}-${{ steps.beam.outputs.elixir-version }}-${{ steps.beam.outputs.otp-version }}-mix-${{ env.cache-name }}-
 
       # Step: Download project dependencies. If unchanged, uses
       # the cached version.

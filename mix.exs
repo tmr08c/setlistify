@@ -43,7 +43,7 @@ defmodule Setlistify.MixProject do
   defp deps do
     [
       {:dotenv_parser, "~> 2.0", only: [:dev, :test]},
-      {:cachex, "~> 3.6.0"},
+      {:cachex, "~> 4.1"},
       {:dialyxir, "~> 1.0", only: [:dev, :test], runtime: false},
       {:esbuild, "~> 0.5", runtime: Mix.env() == :dev},
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},
