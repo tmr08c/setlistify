@@ -59,7 +59,8 @@ defmodule SetlistifyWeb do
 
       # Handle token refresh messages from PubSub
       def handle_info({:token_refreshed, new_session}, socket) do
-        {:noreply, Phoenix.Component.assign(socket, :user_session, new_session)}
+        scope = Setlistify.Scope.for_user_session(new_session)
+        {:noreply, Phoenix.Component.assign(socket, :current_scope, scope)}
       end
     end
   end
