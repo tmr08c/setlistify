@@ -69,10 +69,12 @@ config :setlistify, SetlistifyWeb.Endpoint,
     ]
   ]
 
-# Aggressive retry interval for DeveloperTokenManager in dev so a misconfigured
-# Apple Music PEM surfaces quickly. Prod uses the 5-minute default baked into
-# the module.
-config :setlistify, apple_music_retry_interval_ms: 30 * 1_000
+# Aggressive backoff schedule for DeveloperTokenManager in dev so a misconfigured
+# Apple Music PEM surfaces quickly and keeps surfacing. Prod uses the module defaults
+# (30s base → 15m cap).
+config :setlistify, apple_music_retry_base_ms: 30 * 1_000
+config :setlistify, apple_music_retry_max_ms: 60 * 1_000
+config :setlistify, apple_music_retry_multiplier: 2
 
 # Enable dev routes for dashboard and mailbox
 config :setlistify, dev_routes: true
