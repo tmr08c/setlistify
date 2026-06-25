@@ -9,4 +9,7 @@ Application.put_env(:setlistify, :spotify_api_client, Setlistify.Spotify.API.Moc
 Hammox.defmock(Setlistify.AppleMusic.API.MockClient, for: Setlistify.AppleMusic.API)
 Application.put_env(:setlistify, :apple_music_api_client, Setlistify.AppleMusic.API.MockClient)
 
+Hammox.defmock(Setlistify.Tidal.API.MockClient, for: Setlistify.Tidal.API)
+Application.put_env(:setlistify, :tidal_api_client, Setlistify.Tidal.API.MockClient)
+
 ExUnit.start()
