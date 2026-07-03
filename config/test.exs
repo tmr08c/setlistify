@@ -37,6 +37,10 @@ config :setlistify,
   apple_music_req_options: [
     plug: {Req.Test, MyAppleMusicStub},
     retry: false
+  ],
+  tidal_req_options: [
+    plug: {Req.Test, MyTidalStub},
+    retry: false
   ]
 
 # Disable Apple Music token manager in tests (uses placeholder PEM from .env.example)
