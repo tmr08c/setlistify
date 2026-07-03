@@ -13,14 +13,18 @@ defmodule Setlistify.MusicService.API do
 
   @type user_session :: Spotify.UserSession.t() | AppleMusic.UserSession.t()
 
+  # Errors are either a bare atom or a tagged 2-tuple; Tidal uses the tuple
+  # form to surface rate limiting as `{:error, {:rate_limited, retry_after}}`.
+  @type error :: {:error, atom() | {atom(), term()}}
+
   @callback search_for_track(user_session(), String.t(), String.t(), String.t() | nil) ::
-              nil | %{track_id: String.t()} | {:error, atom()}
+              nil | %{track_id: String.t()} | error()
 
   @callback create_playlist(user_session(), String.t(), String.t()) ::
-              {:ok, %{id: String.t(), external_url: String.t()}} | {:error, atom()}
+              {:ok, %{id: String.t(), external_url: String.t()}} | error()
 
   @callback add_tracks_to_playlist(user_session(), String.t(), [String.t()]) ::
-              {:ok, atom()} | {:error, atom()}
+              {:ok, atom()} | error()
 
   defp impl(%Spotify.UserSession{}) do
     OpenTelemetry.Tracer.set_attribute("peer.service", "spotify")
