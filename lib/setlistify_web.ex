@@ -43,8 +43,9 @@ defmodule SetlistifyWeb do
         formats: [:html, :json],
         layouts: [html: SetlistifyWeb.Layouts]
 
+      use Gettext, backend: SetlistifyWeb.Gettext
+
       import Plug.Conn
-      import SetlistifyWeb.Gettext
 
       unquote(verified_routes())
     end
@@ -87,11 +88,11 @@ defmodule SetlistifyWeb do
 
   defp html_helpers do
     quote do
+      use Gettext, backend: SetlistifyWeb.Gettext
       # HTML escaping functionality
       import Phoenix.HTML
       # Core UI components and translation
       import SetlistifyWeb.CoreComponents
-      import SetlistifyWeb.Gettext
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS

@@ -1,7 +1,6 @@
 defmodule SetlistifyWeb.SearchLive do
   @moduledoc false
   use SetlistifyWeb, :live_view
-  use Gettext, backend: SetlistifyWeb.Gettext
 
   alias SetlistifyWeb.Components.SearchFormComponent
 

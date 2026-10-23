@@ -1,7 +1,6 @@
 defmodule SetlistifyWeb.Components.SearchFormComponent do
   @moduledoc false
   use SetlistifyWeb, :live_component
-  use Gettext, backend: SetlistifyWeb.Gettext
 
   require OpenTelemetry.Tracer
 

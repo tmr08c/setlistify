@@ -74,6 +74,11 @@ defmodule SetlistifyWeb.CoreComponents do
   When `href`, `navigate`, or `patch` is passed, renders a `<.link>` styled as
   a button. Otherwise renders a `<button>` element.
 
+  Button-only attributes (`type`, `disabled`, `form`, `name`, `value`) have no
+  meaning on a link, so passing them together with `href`, `navigate`, or
+  `patch` raises an `ArgumentError` rather than rendering a link that only
+  looks disabled.
+
   ## Examples
 
       <.button>Send!</.button>
@@ -86,36 +91,44 @@ defmodule SetlistifyWeb.CoreComponents do
 
   slot :inner_block, required: true
 
+  @button_only_attrs [:disabled, :form, :name, :value]
+
   def button(%{rest: rest} = assigns) do
     if rest[:href] || rest[:navigate] || rest[:patch] do
+      validate_link_button!(assigns)
+
       ~H"""
-      <.link
-        class={[
-          "phx-submit-loading:opacity-75 inline-flex items-center justify-center rounded-full",
-          "bg-emerald-500 hover:bg-emerald-400 px-8 py-3",
-          "text-base font-semibold text-black transition-colors",
-          @class
-        ]}
-        {@rest}
-      >
+      <.link class={[button_classes(), @class]} {@rest}>
         {render_slot(@inner_block)}
       </.link>
       """
     else
       ~H"""
-      <button
-        type={@type}
-        class={[
-          "phx-submit-loading:opacity-75 rounded-full bg-emerald-500 hover:bg-emerald-400 px-8 py-3",
-          "text-base font-semibold text-black transition-colors",
-          @class
-        ]}
-        {@rest}
-      >
+      <button type={@type} class={["phx-submit-loading:opacity-75", button_classes(), @class]} {@rest}>
         {render_slot(@inner_block)}
       </button>
       """
     end
+  end
+
+  defp validate_link_button!(%{type: type, rest: rest}) do
+    invalid =
+      Enum.filter(@button_only_attrs, &(rest[&1] not in [nil, false])) ++
+        if(type, do: [:type], else: [])
+
+    if invalid != [] do
+      raise ArgumentError,
+            "<.button> with href, navigate, or patch renders a link, which does not support " <>
+              "#{Enum.map_join(invalid, ", ", &inspect/1)}"
+    end
+  end
+
+  defp button_classes do
+    [
+      "inline-flex items-center justify-center rounded-full",
+      "bg-emerald-500 hover:bg-emerald-400 px-8 py-3",
+      "text-base font-semibold text-black transition-colors"
+    ]
   end
 
   @doc """
@@ -186,6 +199,7 @@ defmodule SetlistifyWeb.CoreComponents do
       name={@name}
       id={@id}
       value={Phoenix.HTML.Form.normalize_value(@type, @value)}
+      class={@class}
       {@rest}
     />
     """
@@ -213,10 +227,14 @@ defmodule SetlistifyWeb.CoreComponents do
           name={@name}
           value="true"
           checked={@checked}
-          class={[
-            @class || "rounded border-gray-700 bg-gray-800 text-emerald-500 focus:ring-emerald-500",
-            @errors != [] && (@error_class || "border-rose-400")
-          ]}
+          class={
+            input_class(
+              assigns,
+              "size-4 rounded accent-emerald-500 focus:outline-2 focus:outline-offset-2 focus:outline-emerald-500",
+              "",
+              "outline-2 outline-offset-2 outline-rose-400 focus:outline-rose-400"
+            )
+          }
           {@rest}
         /> {@label}
       </label>
@@ -232,11 +250,14 @@ defmodule SetlistifyWeb.CoreComponents do
       <select
         id={@id}
         name={@name}
-        class={[
-          @class ||
-            "mt-2 block w-full rounded-lg border border-gray-800 bg-gray-900 text-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 sm:text-sm",
-          @errors != [] && (@error_class || "border-rose-400 focus:border-rose-400")
-        ]}
+        class={
+          input_class(
+            assigns,
+            "mt-2 block w-full rounded-lg border bg-gray-900 text-white focus:ring-2 sm:text-sm",
+            input_valid_border(),
+            input_error_border()
+          )
+        }
         multiple={@multiple}
         {@rest}
       >
@@ -255,11 +276,14 @@ defmodule SetlistifyWeb.CoreComponents do
       <textarea
         id={@id}
         name={@name}
-        class={[
-          @class ||
-            "mt-2 block w-full rounded-lg bg-gray-900 text-white focus:ring-2 focus:ring-emerald-500 sm:text-sm sm:leading-6 min-h-[6rem] border-gray-800 focus:border-emerald-500",
-          @errors != [] && (@error_class || "border-rose-400 focus:border-rose-400")
-        ]}
+        class={
+          input_class(
+            assigns,
+            "mt-2 block w-full rounded-lg border bg-gray-900 text-white focus:ring-2 sm:text-sm sm:leading-6 min-h-[6rem]",
+            input_valid_border(),
+            input_error_border()
+          )
+        }
         {@rest}
       >{Phoenix.HTML.Form.normalize_value("textarea", @value)}</textarea>
       <.error :for={msg <- @errors}>{msg}</.error>
@@ -277,16 +301,36 @@ defmodule SetlistifyWeb.CoreComponents do
         name={@name}
         id={@id}
         value={Phoenix.HTML.Form.normalize_value(@type, @value)}
-        class={[
-          @class ||
-            "mt-2 block w-full rounded-lg bg-gray-900 text-white border border-gray-800 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500 sm:text-sm sm:leading-6",
-          @errors != [] && (@error_class || "border-rose-400 focus:border-rose-400")
-        ]}
+        class={
+          input_class(
+            assigns,
+            "mt-2 block w-full rounded-lg border bg-gray-900 text-white focus:ring-2 sm:text-sm sm:leading-6",
+            input_valid_border(),
+            input_error_border()
+          )
+        }
         {@rest}
       />
       <.error :for={msg <- @errors}>{msg}</.error>
     </div>
     """
+  end
+
+  defp input_valid_border, do: "border-gray-800 focus:border-emerald-500 focus:ring-emerald-500"
+  defp input_error_border, do: "border-rose-400 focus:border-rose-400 focus:ring-rose-400"
+
+  # Builds an input's class list so that the valid and error color utilities
+  # are mutually exclusive. Both set the same CSS properties, so emitting both
+  # would leave the winner up to Tailwind's stylesheet order.
+  #
+  # A caller-supplied `class` replaces `base` and the valid colors entirely;
+  # `error_class` (or `error`) is added only when there are errors.
+  defp input_class(%{class: class, error_class: error_class, errors: errors}, base, valid, error) do
+    cond do
+      errors != [] -> [class || base, error_class || error]
+      class -> class
+      true -> [base, valid]
+    end
   end
 
   @doc """
