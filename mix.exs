@@ -49,8 +49,8 @@ defmodule Setlistify.MixProject do
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},
       {:finch, "~> 0.13"},
       {:lazy_html, "~> 0.1", only: :test},
-      {:gettext, "~> 0.20"},
-      {:hammox, "~> 0.7", only: :test},
+      {:gettext, "~> 1.0"},
+      {:hammox, "~> 1.0", only: :test},
       {:heroicons,
        github: "tailwindlabs/heroicons", tag: "v2.2.0", sparse: "optimized", app: false, compile: false, depth: 1},
       {:logger_backends, "~> 1.0"},
@@ -63,9 +63,9 @@ defmodule Setlistify.MixProject do
       {:plug_cowboy, "~> 2.5"},
       {:req, "~> 0.3"},
       {:tailwind, "~> 0.3", runtime: Mix.env() == :dev},
-      {:telemetry_metrics, "~> 0.6"},
+      {:telemetry_metrics, "~> 1.0"},
       {:telemetry_poller, "~> 1.0"},
-      {:prom_ex, "~> 1.9"},
+      {:prom_ex, "~> 1.12"},
 
       # OpenTelemetry
       {:opentelemetry_exporter, "~> 1.8"},
