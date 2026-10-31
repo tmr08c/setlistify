@@ -9,7 +9,9 @@ cd "$(dirname "$0")/.."
 bin/setup
 
 is_port_available() {
-    ! lsof -i:$1 >/dev/null 2>&1
+    # bash's /dev/tcp needs no external tools (lsof/ss/nc), so it behaves the
+    # same on macOS and Linux. The connect succeeds only if something is listening.
+    ! (: </dev/tcp/127.0.0.1/"$1") 2>/dev/null
 }
 
 find_available_port() {
@@ -37,7 +39,9 @@ export PORT
 # Update MCP config with actual port
 if [ -f ".mcp.json" ]; then
     # Update the tidewave URL with the actual port
-    sed -i "" "s|http://localhost:[0-9]*/tidewave/mcp|http://localhost:$PORT/tidewave/mcp|" .mcp.json
+    # -i.bak works on both BSD (macOS) and GNU (Linux) sed
+    sed -i.bak "s|http://localhost:[0-9]*/tidewave/mcp|http://localhost:$PORT/tidewave/mcp|" .mcp.json
+    rm -f .mcp.json.bak
     echo "==> Updated MCP config with port $PORT"
 fi
 
