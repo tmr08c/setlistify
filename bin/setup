@@ -4,6 +4,32 @@
 
 cd "$(dirname "$0")/.."
 
+# mise only has precompiled Erlang builds for macOS and Ubuntu. Anywhere else
+# (Arch, Fedora, Debian, …) Erlang has to be compiled from source.
+if [ "$(uname -s)" = "Linux" ]; then
+  # shellcheck disable=SC1091
+  OS_ID="$(. /etc/os-release 2>/dev/null && echo "${ID:-unknown}")"
+
+  if [ "$OS_ID" != "ubuntu" ]; then
+    echo "==> Non-Ubuntu Linux detected ($OS_ID): Erlang will be compiled from source…"
+
+    missing=()
+    for tool in gcc make autoconf m4 perl; do
+      command -v "$tool" &>/dev/null || missing+=("$tool")
+    done
+
+    if [ ${#missing[@]} -gt 0 ]; then
+      echo "    Missing build tools: ${missing[*]}"
+      echo "    Arch:          sudo pacman -S --needed base-devel ncurses openssl"
+      echo "    Debian/Ubuntu: sudo apt install build-essential autoconf m4 libncurses-dev libssl-dev"
+      echo "    Fedora:        sudo dnf install @development-tools autoconf m4 ncurses-devel openssl-devel"
+      exit 1
+    fi
+
+    export MISE_ERLANG_COMPILE=1
+  fi
+fi
+
 echo "==> Installing languages via mise…"
 mise install
 
@@ -37,7 +63,29 @@ elif [ "$(uname -s)" = "Darwin" ]; then
 
   echo "    Tidewave installed!"
   echo "    Open Tidewave and connect to Claude Code via: Settings → Providers → Claude Code → Connect"
+elif [ "$(uname -s)" = "Linux" ]; then
+  echo "    Tidewave not found — downloading…"
+
+  case "$(uname -m)" in
+    x86_64)  TIDEWAVE_ARCH="amd64" ;;
+    aarch64) TIDEWAVE_ARCH="aarch64" ;;
+    *)       TIDEWAVE_ARCH="" ;;
+  esac
+
+  if [ -z "$TIDEWAVE_ARCH" ]; then
+    echo "    Unsupported architecture $(uname -m). Visit https://tidewave.ai to download."
+  else
+    TIDEWAVE_BIN="$HOME/.local/bin/tidewave"
+    mkdir -p "$(dirname "$TIDEWAVE_BIN")"
+    curl -L --progress-bar \
+      "https://github.com/tidewave-ai/tidewave_app/releases/latest/download/tidewave-app-$TIDEWAVE_ARCH.AppImage" \
+      -o "$TIDEWAVE_BIN"
+    chmod +x "$TIDEWAVE_BIN"
+
+    echo "    Tidewave installed to $TIDEWAVE_BIN (make sure ~/.local/bin is on your PATH)."
+    echo "    AppImages need FUSE 2 (Arch: sudo pacman -S fuse2)."
+  fi
 else
-  echo "    Tidewave auto-install is only supported on macOS."
+  echo "    Tidewave auto-install is only supported on macOS and Linux."
   echo "    Visit https://tidewave.ai to download for your platform."
 fi
